@@ -63,11 +63,14 @@ export interface ExpenseFormData {
 // Settings
 export interface AppSettings {
   defaultMonthlyBudget: number;
+  initialBudget: number;
 }
 
 // Import Result
 export interface ImportResult {
   success: number;
   failed: number;
+  created: number;
+  updated: number;
   errors: string[];
 }

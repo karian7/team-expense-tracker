@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSettings, useUpdateSettings } from '../hooks/useSettings';
+import { useSettings, useUpdateSettings, useSetInitialBudget } from '../hooks/useSettings';
 import { useExportExpenses, useDownloadTemplate, useImportExpenses } from '../hooks/useExport';
 import { formatCurrency } from '../utils/format';
 
@@ -10,16 +10,19 @@ interface SettingsPageProps {
 export default function SettingsPage({ onClose }: SettingsPageProps) {
   const { data: settings, isLoading } = useSettings();
   const updateMutation = useUpdateSettings();
+  const setInitialBudgetMutation = useSetInitialBudget();
   const exportMutation = useExportExpenses();
   const templateMutation = useDownloadTemplate();
   const importMutation = useImportExpenses();
 
   const [defaultBudget, setDefaultBudget] = useState<number>(0);
+  const [initialBudget, setInitialBudget] = useState<number>(0);
   const [importFile, setImportFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (settings) {
       setDefaultBudget(settings.defaultMonthlyBudget);
+      setInitialBudget(settings.initialBudget);
     }
   }, [settings]);
 
@@ -32,6 +35,27 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     } catch (error) {
       console.error('Save error:', error);
       alert('설정 저장에 실패했습니다.');
+    }
+  };
+
+  const handleSetInitialBudget = async () => {
+    const confirmMessage = `⚠️ 경고: 초기 예산을 설정하면 모든 데이터가 삭제됩니다!\n\n- 모든 사용 내역 삭제\n- 모든 월별 예산 삭제\n- 초기 예산: ${formatCurrency(initialBudget)}\n\n정말로 초기화하시겠습니까?`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    // 한번 더 확인
+    if (!window.confirm('정말로 모든 데이터를 삭제하고 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다!')) {
+      return;
+    }
+
+    try {
+      await setInitialBudgetMutation.mutateAsync(initialBudget);
+      alert('초기 예산이 설정되었습니다.\n모든 데이터가 초기화되었습니다.');
+    } catch (error) {
+      console.error('Initial budget error:', error);
+      alert('초기 예산 설정에 실패했습니다.');
     }
   };
 
@@ -52,18 +76,23 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     try {
       const result = await importMutation.mutateAsync(importFile);
 
+      let message = `복원 완료\n`;
+      message += `생성: ${result.created}건\n`;
+      message += `업데이트: ${result.updated}건\n`;
+      message += `실패: ${result.failed}건`;
+
       if (result.failed > 0) {
-        alert(
-          `Import 완료\n성공: ${result.success}건\n실패: ${result.failed}건\n\n실패 내역:\n${result.errors.slice(0, 5).join('\n')}`
-        );
-      } else {
-        alert(`Import 완료\n성공: ${result.success}건`);
+        message += `\n\n실패 내역:\n${result.errors.slice(0, 5).join('\n')}`;
+        if (result.errors.length > 5) {
+          message += `\n... 외 ${result.errors.length - 5}건`;
+        }
       }
 
+      alert(message);
       setImportFile(null);
     } catch (error) {
       console.error('Import error:', error);
-      alert('Import에 실패했습니다.');
+      alert('복원에 실패했습니다.');
     }
   };
 
@@ -113,9 +142,52 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
         </div>
 
         <div className="p-6 space-y-8">
+          {/* 초기 예산 설정 */}
+          <section>
+            <h3 className="text-lg font-semibold mb-4 text-red-600">⚠️ 초기 예산 설정 (위험)</h3>
+            <div className="card border-2 border-red-200 bg-red-50">
+              <div className="p-4 bg-red-100 rounded-lg mb-4">
+                <p className="text-sm text-red-800 font-semibold mb-2">
+                  ⚠️ 경고: 이 작업은 모든 데이터를 삭제합니다!
+                </p>
+                <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
+                  <li>모든 사용 내역이 삭제됩니다</li>
+                  <li>모든 월별 예산이 삭제됩니다</li>
+                  <li>이 작업은 되돌릴 수 없습니다</li>
+                </ul>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  초기 예산 금액
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={initialBudget}
+                    onChange={(e) => setInitialBudget(parseFloat(e.target.value) || 0)}
+                    className="input-field pr-12"
+                    placeholder="1000000"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    원
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleSetInitialBudget}
+                className="btn-danger w-full"
+                disabled={setInitialBudgetMutation.isPending || initialBudget <= 0}
+              >
+                {setInitialBudgetMutation.isPending ? '초기화 중...' : '🚨 모든 데이터 삭제 및 초기 예산 설정'}
+              </button>
+            </div>
+          </section>
+
           {/* 기본 예산 설정 */}
           <section>
-            <h3 className="text-lg font-semibold mb-4">기본 회식비 설정</h3>
+            <h3 className="text-lg font-semibold mb-4">월별 기본 회식비 설정</h3>
             <div className="card">
               <p className="text-sm text-gray-600 mb-4">
                 매월 자동으로 생성되는 기본 회식비 금액을 설정합니다.
@@ -152,12 +224,12 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
             </div>
           </section>
 
-          {/* CSV Export */}
+          {/* CSV Backup (Export) */}
           <section>
-            <h3 className="text-lg font-semibold mb-4">데이터 내보내기</h3>
+            <h3 className="text-lg font-semibold mb-4">데이터 백업 (Export)</h3>
             <div className="card">
               <p className="text-sm text-gray-600 mb-4">
-                모든 사용 내역을 CSV 파일로 다운로드합니다.
+                모든 사용 내역을 CSV 파일로 백업합니다.
               </p>
 
               <button
@@ -165,17 +237,21 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 className="btn-secondary w-full"
                 disabled={exportMutation.isPending}
               >
-                {exportMutation.isPending ? '다운로드 중...' : '📥 CSV 다운로드'}
+                {exportMutation.isPending ? '다운로드 중...' : '💾 백업 다운로드 (CSV)'}
               </button>
             </div>
           </section>
 
-          {/* CSV Import */}
+          {/* CSV Restore (Import) */}
           <section>
-            <h3 className="text-lg font-semibold mb-4">데이터 가져오기</h3>
+            <h3 className="text-lg font-semibold mb-4">데이터 복원 (Import)</h3>
             <div className="card">
               <p className="text-sm text-gray-600 mb-4">
-                CSV 파일을 업로드하여 사용 내역을 일괄 등록합니다.
+                백업한 CSV 파일을 업로드하여 데이터를 복원합니다.
+                <br />
+                <span className="text-xs text-blue-600">
+                  💡 ID가 일치하는 데이터는 업데이트되고, 새로운 데이터는 추가됩니다.
+                </span>
               </p>
 
               <div className="mb-4">
@@ -210,13 +286,13 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 className="btn-primary w-full"
                 disabled={!importFile || importMutation.isPending}
               >
-                {importMutation.isPending ? '업로드 중...' : '📤 CSV 업로드'}
+                {importMutation.isPending ? '복원 중...' : '📂 데이터 복원 (CSV)'}
               </button>
 
               {importMutation.isError && (
                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm text-red-600">
-                    Import 실패: {importMutation.error?.message || '알 수 없는 오류'}
+                    복원 실패: {importMutation.error?.message || '알 수 없는 오류'}
                   </p>
                 </div>
               )}
@@ -228,16 +304,18 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
             <h3 className="text-lg font-semibold mb-4">CSV 파일 형식</h3>
             <div className="card bg-gray-50">
               <p className="text-sm text-gray-700 mb-2 font-medium">
-                다음 형식으로 작성해주세요:
+                백업/복원 형식:
               </p>
               <pre className="text-xs bg-white p-3 rounded border overflow-x-auto">
-{`작성자,금액,사용날짜(YYYY-MM-DD),상호명
-홍길동,50000,2024-12-03,맛있는식당
-김철수,35000,2024-12-02,카페`}
+{`ID,작성자,금액,사용날짜(YYYY-MM-DD),상호명
+expense-id-123,홍길동,50000,2024-12-03,맛있는식당
+expense-id-456,김철수,35000,2024-12-02,카페`}
               </pre>
-              <p className="text-xs text-gray-600 mt-2">
-                ⚠️ 첫 줄은 헤더이므로 제외하고 두 번째 줄부터 데이터를 입력해주세요.
-              </p>
+              <ul className="text-xs text-gray-600 mt-2 space-y-1">
+                <li>• ID가 있으면 해당 데이터를 업데이트 (복원)</li>
+                <li>• ID가 없으면 새로운 데이터로 추가</li>
+                <li>• 영수증 이미지는 백업/복원되지 않습니다</li>
+              </ul>
             </div>
           </section>
         </div>

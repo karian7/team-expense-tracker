@@ -2,18 +2,17 @@ import { Expense } from '@prisma/client';
 import { format } from 'date-fns';
 
 /**
- * Expense 배열을 CSV 문자열로 변환
+ * Expense 배열을 CSV 문자열로 변환 (백업용)
+ * ID를 포함하여 복원 시 동일한 ID로 복원 가능
  */
 export function expensesToCsv(expenses: Expense[]): string {
-  // CSV 헤더
+  // CSV 헤더 (영수증 URL 제외)
   const headers = [
     'ID',
     '작성자',
     '금액',
     '사용날짜',
     '상호명',
-    '영수증URL',
-    '생성일시',
   ];
 
   // CSV 행
@@ -23,8 +22,6 @@ export function expensesToCsv(expenses: Expense[]): string {
     expense.amount.toString(),
     format(new Date(expense.expenseDate), 'yyyy-MM-dd'),
     escapeCsvValue(expense.storeName || ''),
-    expense.receiptImageUrl,
-    format(new Date(expense.createdAt), 'yyyy-MM-dd HH:mm:ss'),
   ]);
 
   // CSV 생성
@@ -49,9 +46,10 @@ function escapeCsvValue(value: string): string {
 }
 
 /**
- * CSV 문자열을 파싱하여 Expense 생성 데이터로 변환
+ * CSV 문자열을 파싱하여 Expense 데이터로 변환 (복원용)
  */
 export interface CsvExpenseRow {
+  id?: string; // ID가 있으면 update, 없으면 create
   authorName: string;
   amount: number;
   expenseDate: string;
@@ -74,13 +72,25 @@ export function parseCsvToExpenses(csvContent: string): CsvExpenseRow[] {
     try {
       const values = parseCsvLine(dataLines[i]);
 
-      // 최소 3개 컬럼 필요 (작성자, 금액, 날짜)
-      if (values.length < 3) {
+      // ID 포함 형식: ID, 작성자, 금액, 날짜, 상호명 (5개)
+      // ID 미포함 형식: 작성자, 금액, 날짜, 상호명 (4개)
+
+      let id: string | undefined;
+      let authorName: string;
+      let amountStr: string;
+      let dateStr: string;
+      let storeName: string | undefined;
+
+      if (values.length >= 5) {
+        // ID 포함 형식
+        [id, authorName, amountStr, dateStr, storeName] = values;
+      } else if (values.length >= 3) {
+        // ID 미포함 형식 (구 버전 호환)
+        [authorName, amountStr, dateStr, storeName] = values;
+      } else {
         console.warn(`Line ${i + 2}: 필수 컬럼이 부족합니다. 건너뜁니다.`);
         continue;
       }
-
-      const [authorName, amountStr, dateStr, storeName] = values;
 
       const amount = parseFloat(amountStr);
       if (isNaN(amount) || amount <= 0) {
@@ -89,6 +99,7 @@ export function parseCsvToExpenses(csvContent: string): CsvExpenseRow[] {
       }
 
       expenses.push({
+        id: id?.trim() || undefined,
         authorName: authorName.trim(),
         amount,
         expenseDate: dateStr.trim(),
@@ -140,11 +151,11 @@ function parseCsvLine(line: string): string[] {
 }
 
 /**
- * CSV 템플릿 생성
+ * CSV 템플릿 생성 (백업/복원용)
  */
 export function generateCsvTemplate(): string {
-  const headers = ['작성자', '금액', '사용날짜(YYYY-MM-DD)', '상호명'];
-  const example = ['홍길동', '50000', '2024-12-03', '맛있는식당'];
+  const headers = ['ID', '작성자', '금액', '사용날짜(YYYY-MM-DD)', '상호명'];
+  const example = ['expense-id-123', '홍길동', '50000', '2024-12-03', '맛있는식당'];
 
   return [headers.join(','), example.join(',')].join('\n');
 }

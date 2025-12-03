@@ -91,6 +91,7 @@ export interface ExpenseQueryParams {
 // Settings Types
 export interface AppSettings {
   defaultMonthlyBudget: number;
+  initialBudget: number;
 }
 
 export interface UpdateSettingsRequest {
@@ -101,6 +102,8 @@ export interface UpdateSettingsRequest {
 export interface ImportResult {
   success: number;
   failed: number;
+  created: number;
+  updated: number;
   errors: string[];
 }
 

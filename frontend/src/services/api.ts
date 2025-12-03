@@ -115,7 +115,14 @@ export const settingsApi = {
   },
 
   update: async (settings: Partial<AppSettings>): Promise<AppSettings> => {
-    const { data } = await apiClient.put<ApiResponse<AppSettings>>('/settings', settings);
+    const { data} = await apiClient.put<ApiResponse<AppSettings>>('/settings', settings);
+    return data.data!;
+  },
+
+  setInitialBudget: async (initialBudget: number): Promise<AppSettings> => {
+    const { data } = await apiClient.post<ApiResponse<AppSettings>>('/settings/initial-budget', {
+      initialBudget,
+    });
     return data.data!;
   },
 };

@@ -21,3 +21,16 @@ export function useUpdateSettings() {
     },
   });
 }
+
+export function useSetInitialBudget() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (initialBudget: number) => settingsApi.setInitialBudget(initialBudget),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['settings'], data);
+      // 모든 데이터가 리셋되므로 모든 쿼리 무효화
+      queryClient.invalidateQueries();
+    },
+  });
+}
