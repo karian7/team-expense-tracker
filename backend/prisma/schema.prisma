@@ -45,3 +45,14 @@ model Expense {
   @@index([authorName])
   @@map("expenses")
 }
+
+model Settings {
+  id                   String   @id @default(uuid())
+  key                  String   @unique // 설정 키 (예: "default_monthly_budget")
+  value                String   // 설정 값 (JSON string)
+  description          String?  // 설정 설명
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("settings")
+}

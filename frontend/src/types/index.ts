@@ -59,3 +59,15 @@ export interface ExpenseFormData {
   receiptImageUrl: string;
   ocrRawData?: any;
 }
+
+// Settings
+export interface AppSettings {
+  defaultMonthlyBudget: number;
+}
+
+// Import Result
+export interface ImportResult {
+  success: number;
+  failed: number;
+  errors: string[];
+}

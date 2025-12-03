@@ -3,6 +3,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { getCurrentYearMonth, getPreviousYearMonth } from '../utils/date';
 import { convertDecimalsToNumbers } from '../utils/decimal';
 import { MonthlyBudgetResponse } from '../types';
+import { getDefaultMonthlyBudget } from './settingsService';
 
 /**
  * 월별 예산 조회 또는 생성
@@ -30,7 +31,11 @@ export async function getOrCreateMonthlyBudget(
 
     // 이전 달 잔액 가져오기 (없으면 0)
     const carriedAmount = previousBudget?.balance || new Decimal(0);
-    const baseAmount = new Decimal(0); // 기본값은 0, 관리자가 설정해야 함
+
+    // Settings에서 기본 월별 예산 가져오기
+    const defaultBudget = await getDefaultMonthlyBudget();
+    const baseAmount = new Decimal(defaultBudget);
+
     const totalBudget = baseAmount.plus(carriedAmount);
 
     budget = await prisma.monthlyBudget.create({

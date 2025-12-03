@@ -5,6 +5,8 @@ import path from 'path';
 import budgetRoutes from './routes/budgetRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import receiptRoutes from './routes/receiptRoutes';
+import settingsRoutes from './routes/settingsRoutes';
+import exportRoutes from './routes/exportRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 // Load environment variables
@@ -34,6 +36,9 @@ app.get('/health', (req, res) => {
 app.use('/api/monthly-budgets', budgetRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/receipts', receiptRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/import', exportRoutes);
 
 // 404 handler
 app.use((req, res) => {

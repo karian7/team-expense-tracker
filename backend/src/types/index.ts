@@ -88,6 +88,22 @@ export interface ExpenseQueryParams {
   offset?: string;
 }
 
+// Settings Types
+export interface AppSettings {
+  defaultMonthlyBudget: number;
+}
+
+export interface UpdateSettingsRequest {
+  defaultMonthlyBudget?: number;
+}
+
+// Export/Import Types
+export interface ImportResult {
+  success: number;
+  failed: number;
+  errors: string[];
+}
+
 // Utility type to convert Decimal to number
 export type DecimalToNumber<T> = {
   [K in keyof T]: T[K] extends Decimal ? number : T[K];

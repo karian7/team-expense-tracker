@@ -5,6 +5,8 @@ import type {
   Expense,
   ReceiptUploadResponse,
   ExpenseFormData,
+  AppSettings,
+  ImportResult,
 } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -101,6 +103,52 @@ export const receiptApi = {
     const { data } = await apiClient.post<ApiResponse<ReceiptUploadResponse>>('/receipts/parse', {
       imageUrl,
     });
+    return data.data!;
+  },
+};
+
+// Settings API
+export const settingsApi = {
+  get: async (): Promise<AppSettings> => {
+    const { data } = await apiClient.get<ApiResponse<AppSettings>>('/settings');
+    return data.data!;
+  },
+
+  update: async (settings: Partial<AppSettings>): Promise<AppSettings> => {
+    const { data } = await apiClient.put<ApiResponse<AppSettings>>('/settings', settings);
+    return data.data!;
+  },
+};
+
+// Export/Import API
+export const exportApi = {
+  exportExpenses: async (): Promise<Blob> => {
+    const { data } = await apiClient.get('/export/expenses', {
+      responseType: 'blob',
+    });
+    return data;
+  },
+
+  downloadTemplate: async (): Promise<Blob> => {
+    const { data } = await apiClient.get('/export/template', {
+      responseType: 'blob',
+    });
+    return data;
+  },
+
+  importExpenses: async (file: File): Promise<ImportResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const { data } = await apiClient.post<ApiResponse<ImportResult>>(
+      '/import/expenses',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
     return data.data!;
   },
 };
