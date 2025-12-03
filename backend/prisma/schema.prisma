@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model MonthlyBudget {
+  id            String    @id @default(uuid())
+  year          Int
+  month         Int
+  baseAmount    Decimal   @default(0) // 기본 회식비
+  carriedAmount Decimal   @default(0) // 이월 금액
+  totalBudget   Decimal   @default(0) // 총 예산 (자동 계산)
+  totalSpent    Decimal   @default(0) // 총 사용액 (자동 계산)
+  balance       Decimal   @default(0) // 잔액 (자동 계산)
+  expenses      Expense[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([year, month])
+  @@map("monthly_budgets")
+}
+
+model Expense {
+  id              String        @id @default(uuid())
+  monthlyBudgetId String
+  monthlyBudget   MonthlyBudget @relation(fields: [monthlyBudgetId], references: [id], onDelete: Cascade)
+  authorName      String // 작성자 이름
+  amount          Decimal // 사용 금액
+  expenseDate     DateTime // 사용 날짜
+  storeName       String? // 상호명
+  receiptImageUrl String // 영수증 이미지 경로
+  ocrRawData      String? // OCR 원본 데이터 (JSON string)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([monthlyBudgetId])
+  @@index([expenseDate])
+  @@index([authorName])
+  @@map("expenses")
+}

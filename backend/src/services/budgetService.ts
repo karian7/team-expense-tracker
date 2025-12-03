@@ -1,0 +1,164 @@
+import prisma from '../utils/prisma';
+import { Decimal } from '@prisma/client/runtime/library';
+import { getCurrentYearMonth, getPreviousYearMonth } from '../utils/date';
+import { convertDecimalsToNumbers } from '../utils/decimal';
+import { MonthlyBudgetResponse } from '../types';
+
+/**
+ * 월별 예산 조회 또는 생성
+ * 해당 월이 없으면 자동으로 생성하고 이전 달 잔액을 이월
+ */
+export async function getOrCreateMonthlyBudget(
+  year: number,
+  month: number
+): Promise<MonthlyBudgetResponse> {
+  // 기존 예산 조회
+  let budget = await prisma.monthlyBudget.findUnique({
+    where: {
+      year_month: { year, month },
+    },
+  });
+
+  // 없으면 생성
+  if (!budget) {
+    const previousMonth = getPreviousYearMonth(year, month);
+    const previousBudget = await prisma.monthlyBudget.findUnique({
+      where: {
+        year_month: { year: previousMonth.year, month: previousMonth.month },
+      },
+    });
+
+    // 이전 달 잔액 가져오기 (없으면 0)
+    const carriedAmount = previousBudget?.balance || new Decimal(0);
+    const baseAmount = new Decimal(0); // 기본값은 0, 관리자가 설정해야 함
+    const totalBudget = baseAmount.plus(carriedAmount);
+
+    budget = await prisma.monthlyBudget.create({
+      data: {
+        year,
+        month,
+        baseAmount,
+        carriedAmount,
+        totalBudget,
+        totalSpent: new Decimal(0),
+        balance: totalBudget,
+      },
+    });
+  }
+
+  return convertDecimalsToNumbers(budget);
+}
+
+/**
+ * 현재 월의 예산 조회
+ */
+export async function getCurrentMonthlyBudget(): Promise<MonthlyBudgetResponse> {
+  const { year, month } = getCurrentYearMonth();
+  return getOrCreateMonthlyBudget(year, month);
+}
+
+/**
+ * 월별 예산의 기본 금액 설정
+ */
+export async function updateMonthlyBudgetBaseAmount(
+  year: number,
+  month: number,
+  baseAmount: number
+): Promise<MonthlyBudgetResponse> {
+  const budget = await getOrCreateMonthlyBudget(year, month);
+
+  const newBaseAmount = new Decimal(baseAmount);
+  const newTotalBudget = newBaseAmount.plus(budget.carriedAmount);
+  const newBalance = newTotalBudget.minus(budget.totalSpent);
+
+  const updatedBudget = await prisma.monthlyBudget.update({
+    where: { id: budget.id },
+    data: {
+      baseAmount: newBaseAmount,
+      totalBudget: newTotalBudget,
+      balance: newBalance,
+    },
+  });
+
+  return convertDecimalsToNumbers(updatedBudget);
+}
+
+/**
+ * 월별 예산 재계산
+ * Expense가 추가/수정/삭제될 때 호출됨
+ */
+export async function recalculateMonthlyBudget(
+  monthlyBudgetId: string
+): Promise<MonthlyBudgetResponse> {
+  const budget = await prisma.monthlyBudget.findUnique({
+    where: { id: monthlyBudgetId },
+    include: { expenses: true },
+  });
+
+  if (!budget) {
+    throw new Error('Monthly budget not found');
+  }
+
+  // 총 사용액 계산
+  const totalSpent = budget.expenses.reduce(
+    (sum, expense) => sum.plus(expense.amount),
+    new Decimal(0)
+  );
+
+  // 잔액 계산
+  const balance = budget.totalBudget.minus(totalSpent);
+
+  // 업데이트
+  const updatedBudget = await prisma.monthlyBudget.update({
+    where: { id: monthlyBudgetId },
+    data: {
+      totalSpent,
+      balance,
+    },
+  });
+
+  return convertDecimalsToNumbers(updatedBudget);
+}
+
+/**
+ * 월 이월 처리
+ * 새 달을 수동으로 생성하고 이전 달 잔액을 이월
+ */
+export async function rolloverMonth(
+  fromYear: number,
+  fromMonth: number,
+  toYear: number,
+  toMonth: number,
+  newBaseAmount: number
+): Promise<MonthlyBudgetResponse> {
+  const fromBudget = await getOrCreateMonthlyBudget(fromYear, fromMonth);
+
+  // 대상 월이 이미 존재하는지 확인
+  const existingBudget = await prisma.monthlyBudget.findUnique({
+    where: {
+      year_month: { year: toYear, month: toMonth },
+    },
+  });
+
+  if (existingBudget) {
+    throw new Error('Target month budget already exists');
+  }
+
+  const carriedAmount = new Decimal(fromBudget.balance);
+  const baseAmount = new Decimal(newBaseAmount);
+  const totalBudget = baseAmount.plus(carriedAmount);
+
+  const newBudget = await prisma.monthlyBudget.create({
+    data: {
+      year: toYear,
+      month: toMonth,
+      baseAmount,
+      carriedAmount,
+      totalBudget,
+      totalSpent: new Decimal(0),
+      balance: totalBudget,
+    },
+  });
+
+  return convertDecimalsToNumbers(newBudget);
+}
