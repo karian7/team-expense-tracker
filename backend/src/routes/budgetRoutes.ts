@@ -4,6 +4,7 @@ import {
   getBudgetByMonth,
   updateBudgetBaseAmount,
   handleRollover,
+  getReport,
 } from '../controllers/budgetController';
 
 const router: Router = Router();
@@ -13,6 +14,9 @@ router.get('/current', getCurrentBudget);
 
 // POST /api/monthly-budgets/rollover
 router.post('/rollover', handleRollover);
+
+// GET /api/monthly-budgets/:year/:month/report
+router.get('/:year/:month/report', getReport);
 
 // GET /api/monthly-budgets/:year/:month
 router.get('/:year/:month', getBudgetByMonth);

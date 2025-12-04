@@ -111,3 +111,27 @@ export interface ImportResult {
 export type DecimalToNumber<T> = {
   [K in keyof T]: T[K] extends Decimal ? number : T[K];
 };
+
+// Monthly Report Types
+export interface DailyBreakdown {
+  date: string;
+  amount: number;
+  count: number;
+}
+
+export interface AuthorBreakdown {
+  authorName: string;
+  amount: number;
+  count: number;
+}
+
+export interface MonthlyReportResponse {
+  budget: MonthlyBudgetResponse;
+  statistics: {
+    totalExpenses: number;
+    expenseCount: number;
+    dailyBreakdown: DailyBreakdown[];
+    authorBreakdown: AuthorBreakdown[];
+    topExpenses: ExpenseResponse[];
+  };
+}

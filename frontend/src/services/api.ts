@@ -7,6 +7,7 @@ import type {
   ExpenseFormData,
   AppSettings,
   ImportResult,
+  MonthlyReport,
 } from '../types';
 
 const inferBackendOrigin = () => {
@@ -34,6 +35,13 @@ export const budgetApi = {
   getByMonth: async (year: number, month: number): Promise<MonthlyBudget> => {
     const { data } = await apiClient.get<ApiResponse<MonthlyBudget>>(
       `/monthly-budgets/${year}/${month}`
+    );
+    return data.data!;
+  },
+
+  getReport: async (year: number, month: number): Promise<MonthlyReport> => {
+    const { data } = await apiClient.get<ApiResponse<MonthlyReport>>(
+      `/monthly-budgets/${year}/${month}/report`
     );
     return data.data!;
   },

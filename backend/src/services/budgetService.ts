@@ -2,7 +2,7 @@ import prisma from '../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 import { getCurrentYearMonth, getPreviousYearMonth } from '../utils/date';
 import { convertDecimalsToNumbers } from '../utils/decimal';
-import { MonthlyBudgetResponse } from '../types';
+import { MonthlyBudgetResponse, MonthlyReportResponse, DailyBreakdown, AuthorBreakdown, ExpenseResponse } from '../types';
 import { getDefaultMonthlyBudget } from './settingsService';
 
 const toMonthlyBudgetResponse = (budget: unknown): MonthlyBudgetResponse =>
@@ -169,4 +169,86 @@ export async function rolloverMonth(
   });
 
   return toMonthlyBudgetResponse(newBudget);
+}
+
+/**
+ * 월별 리포트 조회
+ * 특정 월의 예산 정보와 상세 통계를 반환
+ */
+export async function getMonthlyReport(
+  year: number,
+  month: number
+): Promise<MonthlyReportResponse> {
+  // 예산 정보 조회
+  const budget = await getOrCreateMonthlyBudget(year, month);
+
+  // 해당 월의 모든 지출 내역 조회
+  const expenses = await prisma.expense.findMany({
+    where: {
+      monthlyBudget: {
+        year,
+        month,
+      },
+    },
+    orderBy: {
+      expenseDate: 'desc',
+    },
+  });
+
+  const expenseResponses: ExpenseResponse[] = expenses.map((expense) =>
+    convertDecimalsToNumbers(expense as unknown as Record<string, unknown>)
+  ) as unknown as ExpenseResponse[];
+
+  // 일별 통계 계산
+  const dailyMap = new Map<string, { amount: Decimal; count: number }>();
+  expenses.forEach((expense) => {
+    const dateKey = expense.expenseDate.toISOString().split('T')[0];
+    const existing = dailyMap.get(dateKey) || { amount: new Decimal(0), count: 0 };
+    dailyMap.set(dateKey, {
+      amount: existing.amount.plus(expense.amount),
+      count: existing.count + 1,
+    });
+  });
+
+  const dailyBreakdown: DailyBreakdown[] = Array.from(dailyMap.entries())
+    .map(([date, data]) => ({
+      date,
+      amount: data.amount.toNumber(),
+      count: data.count,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // 작성자별 통계 계산
+  const authorMap = new Map<string, { amount: Decimal; count: number }>();
+  expenses.forEach((expense) => {
+    const existing = authorMap.get(expense.authorName) || { amount: new Decimal(0), count: 0 };
+    authorMap.set(expense.authorName, {
+      amount: existing.amount.plus(expense.amount),
+      count: existing.count + 1,
+    });
+  });
+
+  const authorBreakdown: AuthorBreakdown[] = Array.from(authorMap.entries())
+    .map(([authorName, data]) => ({
+      authorName,
+      amount: data.amount.toNumber(),
+      count: data.count,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
+  // 상위 5개 지출 내역
+  const topExpenses = expenseResponses
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
+
+  return {
+    budget,
+    statistics: {
+      totalExpenses: budget.totalSpent,
+      expenseCount: expenses.length,
+      dailyBreakdown,
+      authorBreakdown,
+      topExpenses,
+    },
+  };
 }

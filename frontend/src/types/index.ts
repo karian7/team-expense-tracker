@@ -74,3 +74,29 @@ export interface ImportResult {
   updated: number;
   errors: string[];
 }
+
+// Monthly Report
+export interface DailyBreakdown {
+  date: string;
+  amount: number;
+  count: number;
+}
+
+export interface AuthorBreakdown {
+  authorName: string;
+  amount: number;
+  count: number;
+}
+
+export interface MonthlyReportStatistics {
+  totalExpenses: number;
+  expenseCount: number;
+  dailyBreakdown: DailyBreakdown[];
+  authorBreakdown: AuthorBreakdown[];
+  topExpenses: Expense[];
+}
+
+export interface MonthlyReport {
+  budget: MonthlyBudget;
+  statistics: MonthlyReportStatistics;
+}

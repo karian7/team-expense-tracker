@@ -14,7 +14,16 @@ interface ExpenseFormProps {
 
 export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }: ExpenseFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedAuthorName, setSavedAuthorName] = useState<string>('');
   const createMutation = useCreateExpense();
+
+  // 로컬 스토리지에서 저장된 작성자 이름 읽어오기
+  useEffect(() => {
+    const saved = localStorage.getItem('lastAuthorName');
+    if (saved) {
+      setSavedAuthorName(saved);
+    }
+  }, []);
 
   const {
     register,
@@ -23,7 +32,7 @@ export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }
     setValue,
   } = useForm<ExpenseFormData>({
     defaultValues: {
-      authorName: '',
+      authorName: savedAuthorName,
       amount: ocrResult.amount || 0,
       expenseDate: ocrResult.date || getCurrentDate(),
       storeName: ocrResult.storeName || '',
@@ -32,15 +41,19 @@ export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }
   });
 
   useEffect(() => {
+    if (savedAuthorName) setValue('authorName', savedAuthorName);
     if (ocrResult.amount) setValue('amount', ocrResult.amount);
     if (ocrResult.date) setValue('expenseDate', ocrResult.date);
     if (ocrResult.storeName) setValue('storeName', ocrResult.storeName);
-  }, [ocrResult, setValue]);
+  }, [ocrResult, savedAuthorName, setValue]);
 
   const onSubmit = async (data: ExpenseFormData) => {
     setIsSubmitting(true);
 
     try {
+      // 작성자 이름을 로컬 스토리지에 저장
+      localStorage.setItem('lastAuthorName', data.authorName);
+      
       await createMutation.mutateAsync({
         ...data,
         receiptImageUrl: imageUrl,

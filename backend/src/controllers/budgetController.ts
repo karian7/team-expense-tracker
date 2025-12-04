@@ -4,6 +4,7 @@ import {
   getOrCreateMonthlyBudget,
   updateMonthlyBudgetBaseAmount,
   rolloverMonth,
+  getMonthlyReport,
 } from '../services/budgetService';
 import { ApiResponse, UpdateMonthlyBudgetRequest } from '../types';
 import { AppError } from '../middleware/errorHandler';
@@ -118,6 +119,34 @@ export async function handleRollover(
       success: true,
       data: budget,
       message: 'Month rolled over successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/monthly-budgets/:year/:month/report
+ * 월별 리포트 조회
+ */
+export async function getReport(
+  req: Request<{ year: string; month: string }>,
+  res: Response<ApiResponse>,
+  next: NextFunction
+) {
+  try {
+    const year = parseInt(req.params.year);
+    const month = parseInt(req.params.month);
+
+    if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+      throw new AppError('Invalid year or month', 400);
+    }
+
+    const report = await getMonthlyReport(year, month);
+
+    res.json({
+      success: true,
+      data: report,
     });
   } catch (error) {
     next(error);
