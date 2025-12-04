@@ -27,7 +27,7 @@ export default function BudgetSummary() {
   const totalBudget = budget.totalBudget;
   const carriedAmount = budget.carriedAmount;
   const totalSpent = budget.totalSpent;
-  const percentage = (totalSpent / totalBudget) * 100;
+  const percentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
   const getProgressColor = (percentage: number) => {
     if (percentage >= 100) return 'bg-red-500';

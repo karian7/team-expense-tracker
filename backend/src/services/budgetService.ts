@@ -10,6 +10,7 @@ import {
   ExpenseResponse,
 } from '../types';
 import { getDefaultMonthlyBudget } from './settingsService';
+import { AppError } from '../middleware/errorHandler';
 
 const toMonthlyBudgetResponse = (budget: unknown): MonthlyBudgetResponse =>
   convertDecimalsToNumbers(
@@ -187,8 +188,13 @@ export async function getMonthlyReport(
   year: number,
   month: number
 ): Promise<MonthlyReportResponse> {
-  // 예산 정보 조회
-  const budget = await getOrCreateMonthlyBudget(year, month);
+  const budget = await prisma.monthlyBudget.findUnique({
+    where: { year_month: { year, month } },
+  });
+
+  if (!budget) {
+    throw new AppError('Monthly budget not found', 404);
+  }
 
   // 해당 월의 모든 지출 내역 조회
   const expenses = await prisma.expense.findMany({
@@ -248,7 +254,7 @@ export async function getMonthlyReport(
   const topExpenses = expenseResponses.sort((a, b) => b.amount - a.amount).slice(0, 5);
 
   return {
-    budget,
+    budget: toMonthlyBudgetResponse(budget),
     statistics: {
       totalExpenses: budget.totalSpent,
       expenseCount: expenses.length,
