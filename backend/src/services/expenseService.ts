@@ -124,7 +124,8 @@ export async function updateExpense(
     throw new Error('Expense not found');
   }
 
-  const updateData: Prisma.ExpenseUpdateInput = {};
+  const updateData: Prisma.ExpenseUncheckedUpdateInput = {};
+  let newMonthlyBudgetId: string | null = null;
 
   if (data.authorName !== undefined) {
     updateData.authorName = data.authorName;
@@ -143,6 +144,7 @@ export async function updateExpense(
     if (year !== oldYearMonth.year || month !== oldYearMonth.month) {
       const newMonthlyBudget = await getOrCreateMonthlyBudget(year, month);
       updateData.monthlyBudgetId = newMonthlyBudget.id;
+      newMonthlyBudgetId = newMonthlyBudget.id;
     }
 
     updateData.expenseDate = newExpenseDate;
@@ -163,8 +165,8 @@ export async function updateExpense(
   await recalculateMonthlyBudget(oldMonthlyBudgetId);
 
   // 새 월 예산 재계산 (월이 변경된 경우)
-  if (updateData.monthlyBudgetId && updateData.monthlyBudgetId !== oldMonthlyBudgetId) {
-    await recalculateMonthlyBudget(updateData.monthlyBudgetId);
+  if (newMonthlyBudgetId && newMonthlyBudgetId !== oldMonthlyBudgetId) {
+    await recalculateMonthlyBudget(newMonthlyBudgetId);
   }
 
   return toExpenseResponse(updatedExpense);
