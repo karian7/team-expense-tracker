@@ -39,7 +39,7 @@ export async function exportExpensesByPeriodToCsv(startDate: Date, endDate: Date
  */
 export async function importExpensesFromCsv(
   csvContent: string,
-  defaultReceiptUrl: string = '/uploads/imported.jpg'
+  defaultReceiptUrl: string = '/uploads/imported.png'
 ): Promise<{
   success: number;
   failed: number;

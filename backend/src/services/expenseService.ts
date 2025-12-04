@@ -5,6 +5,7 @@ import { convertDecimalsToNumbers } from '../utils/decimal';
 import { extractYearMonth } from '../utils/date';
 import { ExpenseResponse, CreateExpenseRequest, UpdateExpenseRequest } from '../types';
 import { getOrCreateMonthlyBudget, recalculateMonthlyBudget } from './budgetService';
+import { AppError } from '../middleware/errorHandler';
 
 const toExpenseResponse = (expense: unknown): ExpenseResponse =>
   convertDecimalsToNumbers(
@@ -121,7 +122,7 @@ export async function updateExpense(
   });
 
   if (!expense) {
-    throw new Error('Expense not found');
+    throw new AppError('Expense not found', 404);
   }
 
   const updateData: Prisma.ExpenseUncheckedUpdateInput = {};
@@ -181,7 +182,7 @@ export async function deleteExpense(id: string): Promise<void> {
   });
 
   if (!expense) {
-    throw new Error('Expense not found');
+    throw new AppError('Expense not found', 404);
   }
 
   const monthlyBudgetId = expense.monthlyBudgetId;
