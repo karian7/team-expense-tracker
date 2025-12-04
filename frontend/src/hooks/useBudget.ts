@@ -30,7 +30,7 @@ export function useUpdateBudgetBaseAmount() {
       month: number;
       baseAmount: number;
     }) => budgetApi.updateBaseAmount(year, month, baseAmount),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budget'] });
     },
   });

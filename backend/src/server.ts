@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -12,14 +12,58 @@ import { errorHandler } from './middleware/errorHandler';
 // Load environment variables
 dotenv.config();
 
-const app = express();
+const app: Express = express();
 const PORT = process.env.PORT || 3001;
+const parseOrigins = (raw: string | undefined): string[] =>
+  raw
+    ?.split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean) ?? [];
+
+const defaultOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://kit.dev.9rum.cc:5173',
+  'https://kit.dev.9rum.cc',
+  'http://kit.dev.9rum.cc',
+];
+
+const allowedOrigins = [...new Set([...parseOrigins(process.env.ALLOWED_ORIGINS), ...defaultOrigins])];
+
+const isOriginAllowed = (origin: string): boolean => {
+  const normalized = origin.replace(/\/$/, '');
+  const withoutPort = normalized.replace(/:\d+$/, '');
+
+  return allowedOrigins.some(allowed => {
+    const allowedNormalized = allowed.replace(/\/$/, '');
+    const allowedWithoutPort = allowedNormalized.replace(/:\d+$/, '');
+    return (
+      allowedNormalized === normalized ||
+      allowedWithoutPort === normalized ||
+      allowedNormalized === withoutPort ||
+      allowedWithoutPort === withoutPort
+    );
+  });
+};
 
 // Middleware
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Not allowed by CORS: ${origin}`));
+      }
+    },
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -28,7 +72,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 

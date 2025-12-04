@@ -6,7 +6,7 @@ import {
   downloadTemplate,
 } from '../controllers/exportController';
 
-const router = Router();
+const router: Router = Router();
 
 // GET /api/export/expenses
 router.get('/expenses', exportExpenses);

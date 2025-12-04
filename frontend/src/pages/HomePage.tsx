@@ -141,6 +141,14 @@ export default function HomePage() {
             </div>
 
             <h2 className="text-xl font-semibold mb-4">사용 내역 확인</h2>
+            {uploadResult.ocrResult.error && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                OCR 분석 중 오류가 발생했습니다. 직접 내용을 확인해 입력해 주세요.
+                <div className="mt-1 text-xs text-red-600">
+                  {uploadResult.ocrResult.error}
+                </div>
+              </div>
+            )}
             <ExpenseForm
               imageUrl={uploadResult.imageUrl}
               ocrResult={uploadResult.ocrResult}

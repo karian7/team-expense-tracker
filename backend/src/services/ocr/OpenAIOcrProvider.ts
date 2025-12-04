@@ -28,7 +28,7 @@ export class OpenAIOcrProvider implements IOcrProvider {
       const mimeType = this.getMimeType(imagePath);
 
       const response = await this.client.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5.1',
         messages: [
           {
             role: 'user',
@@ -62,7 +62,6 @@ confidence는 추출한 정보에 대한 확신도입니다 (0.0~1.0).`,
             ],
           },
         ],
-        max_tokens: 500,
       });
 
       const content = response.choices[0]?.message?.content;

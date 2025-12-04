@@ -6,7 +6,7 @@ import {
   handleRollover,
 } from '../controllers/budgetController';
 
-const router = Router();
+const router: Router = Router();
 
 // GET /api/monthly-budgets/current
 router.get('/current', getCurrentBudget);

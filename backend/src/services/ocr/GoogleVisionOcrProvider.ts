@@ -1,4 +1,4 @@
-import vision from '@google-cloud/vision';
+import vision, { ImageAnnotatorClient } from '@google-cloud/vision';
 import fs from 'fs';
 import { OcrResult } from '../../types';
 import { IOcrProvider } from './IOcrProvider';
@@ -7,14 +7,12 @@ import { IOcrProvider } from './IOcrProvider';
  * Google Cloud Vision API를 사용한 OCR 프로바이더
  */
 export class GoogleVisionOcrProvider implements IOcrProvider {
-  private client: vision.ImageAnnotatorClient;
+  private client: ImageAnnotatorClient;
   public readonly providerName = 'Google Vision';
 
   constructor(keyFilename?: string) {
     // keyFilename이 제공되면 사용, 아니면 환경변수(GOOGLE_APPLICATION_CREDENTIALS) 사용
-    this.client = new vision.ImageAnnotatorClient(
-      keyFilename ? { keyFilename } : {}
-    );
+    this.client = new ImageAnnotatorClient(keyFilename ? { keyFilename } : {});
   }
 
   /**

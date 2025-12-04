@@ -40,9 +40,7 @@ export async function exportExpenses(
       `attachment; filename="expenses_${new Date().toISOString().split('T')[0]}.csv"`
     );
 
-    // UTF-8 BOM 추가 (엑셀에서 한글 깨짐 방지)
-    res.write('\uFEFF');
-    res.send(csvContent);
+    res.send(`\uFEFF${csvContent}`);
   } catch (error) {
     next(error);
   }
@@ -94,9 +92,7 @@ export async function downloadTemplate(
       'attachment; filename="expense_import_template.csv"'
     );
 
-    // UTF-8 BOM 추가
-    res.write('\uFEFF');
-    res.send(template);
+    res.send(`\uFEFF${template}`);
   } catch (error) {
     next(error);
   }

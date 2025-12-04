@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { upload } from '../middleware/upload';
 import { uploadReceipt, parseReceipt, getOcrProvider } from '../controllers/receiptController';
 
-const router = Router();
+const router: Router = Router();
 
 // GET /api/receipts/ocr-provider
 router.get('/ocr-provider', getOcrProvider);

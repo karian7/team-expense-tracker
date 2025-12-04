@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getSettings, updateSettings, setInitialBudgetController } from '../controllers/settingsController';
 
-const router = Router();
+const router: Router = Router();
 
 // GET /api/settings
 router.get('/', getSettings);

@@ -84,7 +84,6 @@ export default function ReceiptUploader({ onUploadSuccess, onUploadError }: Rece
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             onChange={handleFileInputChange}
             className="hidden"
             id="receipt-upload"

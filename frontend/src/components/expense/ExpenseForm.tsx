@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useCreateExpense } from '../../hooks/useExpenses';
 import { getCurrentDate } from '../../utils/format';
+import { API_ORIGIN } from '../../services/api';
 import type { ExpenseFormData, OcrResult } from '../../types';
 
 interface ExpenseFormProps {
@@ -87,7 +88,7 @@ export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }
       {/* 영수증 미리보기 */}
       <div className="relative">
         <img
-          src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${imageUrl}`}
+          src={`${API_ORIGIN}${imageUrl}`}
           alt="Receipt"
           className="w-full h-48 object-cover rounded-lg"
         />
@@ -139,11 +140,13 @@ export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }
           <label className="block text-sm font-medium text-gray-700 mb-1">
             사용 날짜 <span className="text-red-500">*</span>
           </label>
-          <input
-            type="date"
-            {...register('expenseDate', { required: '날짜를 선택해주세요' })}
-            className="input-field"
-          />
+          <div className="w-full max-w-full overflow-hidden">
+            <input
+              type="date"
+              {...register('expenseDate', { required: '날짜를 선택해주세요' })}
+              className="input-field w-full min-w-0"
+            />
+          </div>
           {errors.expenseDate && (
             <p className="text-sm text-red-600 mt-1">{errors.expenseDate.message}</p>
           )}

@@ -1,8 +1,74 @@
+import fs from 'fs/promises';
 import { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import sharp from 'sharp';
+import heicConvert from 'heic-convert';
 import { analyzeReceiptWithOpenAI, reanalyzeReceipt, getOcrProviderInfo } from '../services/ocrService';
 import { ApiResponse, ReceiptUploadResponse } from '../types';
 import { AppError } from '../middleware/errorHandler';
+
+const HEIC_MIME_TYPES = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence']);
+const MAX_IMAGE_WIDTH = 800;
+
+async function normalizeReceiptImage(
+  file: Express.Multer.File
+): Promise<{ filename: string; path: string }> {
+  const originalPath = path.resolve(file.path);
+  const uploadsDir = path.resolve(path.dirname(file.path));
+  const parsed = path.parse(file.filename);
+  const ext = parsed.ext.toLowerCase();
+  const isHeic = HEIC_MIME_TYPES.has(file.mimetype.toLowerCase()) || ext === '.heic' || ext === '.heif';
+  const targetExt = isHeic ? '.jpg' : ext || '.jpg';
+  const filename = `${parsed.name}${targetExt}`;
+  const outputPath = path.join(uploadsDir, filename);
+  const tempOutputPath = path.join(uploadsDir, `tmp-${Date.now()}-${parsed.name}${targetExt}`);
+
+  const sourceBuffer = await fs.readFile(originalPath);
+
+  const inputBuffer = isHeic
+    ? await heicConvert({
+        buffer: sourceBuffer,
+        format: 'JPEG',
+        quality: 90,
+      })
+    : sourceBuffer;
+
+  const metadata = await sharp(inputBuffer, { failOnError: false }).metadata();
+  const shouldResize = (metadata.width ?? MAX_IMAGE_WIDTH) > MAX_IMAGE_WIDTH;
+
+  const transformer = sharp(inputBuffer, { failOnError: false }).rotate();
+
+  if (shouldResize) {
+    transformer.resize({ width: MAX_IMAGE_WIDTH, withoutEnlargement: true });
+  }
+
+  switch (targetExt) {
+    case '.png':
+      transformer.png();
+      break;
+    case '.webp':
+      transformer.webp();
+      break;
+    case '.gif':
+      transformer.gif();
+      break;
+    default:
+      transformer.jpeg({ quality: 90 });
+      break;
+  }
+
+  await transformer.toFile(tempOutputPath);
+
+  // 파일 이름 충돌을 피하기 위해 tempOutputPath로 쓴 뒤 최종 위치로 rename
+  await fs.rename(tempOutputPath, outputPath);
+
+  // 원본 파일 정리 (확장자 변환 등으로 이름이 달라진 경우에만 삭제)
+  if (originalPath !== outputPath) {
+    await fs.unlink(originalPath).catch(() => undefined);
+  }
+
+  return { filename, path: outputPath };
+}
 
 /**
  * POST /api/receipts/upload
@@ -13,13 +79,17 @@ export async function uploadReceipt(
   res: Response<ApiResponse<ReceiptUploadResponse>>,
   next: NextFunction
 ) {
+  let processedFilePath: string | undefined;
+
   try {
     if (!req.file) {
       throw new AppError('No file uploaded', 400);
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
-    const imagePath = req.file.path;
+    const { filename, path: imagePath } = await normalizeReceiptImage(req.file);
+    processedFilePath = imagePath;
+
+    const imageUrl = `/uploads/${filename}`;
 
     // OpenAI Vision API로 OCR 수행
     const ocrResult = await analyzeReceiptWithOpenAI(imagePath);
@@ -33,10 +103,10 @@ export async function uploadReceipt(
       message: 'Receipt uploaded and analyzed successfully',
     });
   } catch (error) {
-    // 업로드된 파일이 있으면 삭제
-    if (req.file) {
-      const fs = require('fs');
-      fs.unlinkSync(req.file.path);
+    const targetPath = processedFilePath ?? req.file?.path;
+
+    if (targetPath) {
+      await fs.unlink(targetPath).catch(() => undefined);
     }
 
     next(error);
@@ -63,11 +133,9 @@ export async function parseReceipt(
     const filename = path.basename(imageUrl);
     const imagePath = path.join('uploads', filename);
 
-    // 파일 존재 확인
-    const fs = require('fs');
-    if (!fs.existsSync(imagePath)) {
+    await fs.access(imagePath).catch(() => {
       throw new AppError('Image file not found', 404);
-    }
+    });
 
     // OCR 재실행
     const ocrResult = await reanalyzeReceipt(imagePath);

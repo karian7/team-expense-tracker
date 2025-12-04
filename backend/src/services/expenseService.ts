@@ -5,6 +5,9 @@ import { extractYearMonth } from '../utils/date';
 import { ExpenseResponse, CreateExpenseRequest, UpdateExpenseRequest } from '../types';
 import { getOrCreateMonthlyBudget, recalculateMonthlyBudget } from './budgetService';
 
+const toExpenseResponse = (expense: unknown): ExpenseResponse =>
+  convertDecimalsToNumbers(expense as unknown as Record<string, unknown>) as unknown as ExpenseResponse;
+
 /**
  * 사용 내역 생성
  */
@@ -31,7 +34,7 @@ export async function createExpense(data: CreateExpenseRequest): Promise<Expense
   // 월별 예산 재계산
   await recalculateMonthlyBudget(monthlyBudget.id);
 
-  return convertDecimalsToNumbers(expense);
+  return toExpenseResponse(expense);
 }
 
 /**
@@ -68,7 +71,6 @@ export async function getExpenses(params: {
   if (params.authorName) {
     where.authorName = {
       contains: params.authorName,
-      mode: 'insensitive',
     };
   }
 
@@ -90,7 +92,7 @@ export async function getExpenses(params: {
     skip: params.offset || undefined,
   });
 
-  return expenses.map(convertDecimalsToNumbers);
+  return expenses.map((item) => toExpenseResponse(item));
 }
 
 /**
@@ -101,7 +103,7 @@ export async function getExpenseById(id: string): Promise<ExpenseResponse | null
     where: { id },
   });
 
-  return expense ? convertDecimalsToNumbers(expense) : null;
+  return expense ? toExpenseResponse(expense) : null;
 }
 
 /**
@@ -162,7 +164,7 @@ export async function updateExpense(
     await recalculateMonthlyBudget(updateData.monthlyBudgetId);
   }
 
-  return convertDecimalsToNumbers(updatedExpense);
+  return toExpenseResponse(updatedExpense);
 }
 
 /**

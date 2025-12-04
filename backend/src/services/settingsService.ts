@@ -77,25 +77,37 @@ export async function getDefaultMonthlyBudget(): Promise<number> {
  */
 export async function setInitialBudget(amount: number): Promise<void> {
   // 트랜잭션으로 모든 작업 수행
-  await prisma.$transaction(async (tx) => {
-    // 1. 모든 사용 내역 삭제
-    await tx.expense.deleteMany({});
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.expense.deleteMany({});
+      await tx.monthlyBudget.deleteMany({});
 
-    // 2. 모든 월별 예산 삭제
-    await tx.monthlyBudget.deleteMany({});
+      await tx.settings.upsert({
+        where: { key: SETTINGS_KEYS.INITIAL_BUDGET },
+        create: {
+          key: SETTINGS_KEYS.INITIAL_BUDGET,
+          value: amount.toString(),
+          description: '초기 설정된 회식비 예산',
+        },
+        update: {
+          value: amount.toString(),
+          description: '초기 설정된 회식비 예산',
+        },
+      });
 
-    // 3. 초기 예산 설정 저장
-    await setSetting(
-      SETTINGS_KEYS.INITIAL_BUDGET,
-      amount.toString(),
-      '초기 설정된 회식비 예산'
-    );
-
-    // 4. 기본 월별 예산도 같이 설정
-    await setSetting(
-      SETTINGS_KEYS.DEFAULT_MONTHLY_BUDGET,
-      amount.toString(),
-      '매월 자동 생성되는 기본 회식비 금액'
-    );
-  });
+      await tx.settings.upsert({
+        where: { key: SETTINGS_KEYS.DEFAULT_MONTHLY_BUDGET },
+        create: {
+          key: SETTINGS_KEYS.DEFAULT_MONTHLY_BUDGET,
+          value: amount.toString(),
+          description: '매월 자동 생성되는 기본 회식비 금액',
+        },
+        update: {
+          value: amount.toString(),
+          description: '매월 자동 생성되는 기본 회식비 금액',
+        },
+      });
+    },
+    { timeout: 15000 }
+  );
 }

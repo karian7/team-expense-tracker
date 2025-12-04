@@ -5,6 +5,9 @@ import { convertDecimalsToNumbers } from '../utils/decimal';
 import { MonthlyBudgetResponse } from '../types';
 import { getDefaultMonthlyBudget } from './settingsService';
 
+const toMonthlyBudgetResponse = (budget: unknown): MonthlyBudgetResponse =>
+  convertDecimalsToNumbers(budget as unknown as Record<string, unknown>) as unknown as MonthlyBudgetResponse;
+
 /**
  * 월별 예산 조회 또는 생성
  * 해당 월이 없으면 자동으로 생성하고 이전 달 잔액을 이월
@@ -51,7 +54,7 @@ export async function getOrCreateMonthlyBudget(
     });
   }
 
-  return convertDecimalsToNumbers(budget);
+  return toMonthlyBudgetResponse(budget);
 }
 
 /**
@@ -85,7 +88,7 @@ export async function updateMonthlyBudgetBaseAmount(
     },
   });
 
-  return convertDecimalsToNumbers(updatedBudget);
+  return toMonthlyBudgetResponse(updatedBudget);
 }
 
 /**
@@ -122,7 +125,7 @@ export async function recalculateMonthlyBudget(
     },
   });
 
-  return convertDecimalsToNumbers(updatedBudget);
+  return toMonthlyBudgetResponse(updatedBudget);
 }
 
 /**
@@ -165,5 +168,5 @@ export async function rolloverMonth(
     },
   });
 
-  return convertDecimalsToNumbers(newBudget);
+  return toMonthlyBudgetResponse(newBudget);
 }

@@ -7,7 +7,7 @@ import {
   deleteExistingExpense,
 } from '../controllers/expenseController';
 
-const router = Router();
+const router: Router = Router();
 
 // GET /api/expenses
 router.get('/', listExpenses);

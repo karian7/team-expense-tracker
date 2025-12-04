@@ -1,8 +1,9 @@
 import { IOcrProvider } from './IOcrProvider';
 import { OpenAIOcrProvider } from './OpenAIOcrProvider';
 import { GoogleVisionOcrProvider } from './GoogleVisionOcrProvider';
+import { DummyOcrProvider } from './DummyOcrProvider';
 
-export type OcrProviderType = 'openai' | 'google';
+export type OcrProviderType = 'openai' | 'google' | 'dummy';
 
 /**
  * OCR 프로바이더 팩토리
@@ -14,14 +15,21 @@ export class OcrProviderFactory {
    * @returns IOcrProvider 인스턴스
    */
   static createProvider(): IOcrProvider {
-    const providerType = (process.env.OCR_PROVIDER || 'openai').toLowerCase() as OcrProviderType;
+    const providerType = (process.env.OCR_PROVIDER || 'dummy').toLowerCase() as OcrProviderType;
 
     switch (providerType) {
+      case 'dummy':
+        return new DummyOcrProvider();
       case 'google':
         return new GoogleVisionOcrProvider(process.env.GOOGLE_APPLICATION_CREDENTIALS);
       case 'openai':
-      default:
+      default: {
+        if (!process.env.OPENAI_API_KEY) {
+          console.warn('[OCR] OPENAI_API_KEY is missing. Falling back to Dummy OCR provider.');
+          return new DummyOcrProvider();
+        }
         return new OpenAIOcrProvider(process.env.OPENAI_API_KEY);
+      }
     }
   }
 
@@ -33,6 +41,8 @@ export class OcrProviderFactory {
    */
   static createProviderByType(type: OcrProviderType, apiKey?: string): IOcrProvider {
     switch (type) {
+      case 'dummy':
+        return new DummyOcrProvider();
       case 'google':
         return new GoogleVisionOcrProvider(apiKey);
       case 'openai':

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
 import { useCurrentBudget } from '../../hooks/useBudget';
 import { formatCurrency, formatDateKorean } from '../../utils/format';
+import { API_ORIGIN } from '../../services/api';
 import type { Expense } from '../../types';
 
 export default function ExpenseList() {
@@ -164,7 +165,7 @@ export default function ExpenseList() {
           onClick={() => setSelectedExpense(null)}
         >
           <div
-            className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-hidden shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
@@ -192,14 +193,12 @@ export default function ExpenseList() {
               </div>
 
               <img
-                src={`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${
-                  selectedExpense.receiptImageUrl
-                }`}
+                src={`${API_ORIGIN}${selectedExpense.receiptImageUrl}`}
                 alt="Receipt"
                 className="w-full rounded-lg mb-4"
               />
 
-              <div className="space-y-3">
+              <div className="space-y-3 overflow-hidden break-words">
                 <div>
                   <span className="text-sm text-gray-600">작성자</span>
                   <p className="font-semibold">{selectedExpense.authorName}</p>
@@ -212,7 +211,7 @@ export default function ExpenseList() {
 
                 <div>
                   <span className="text-sm text-gray-600">날짜</span>
-                  <p className="font-semibold">{formatDateKorean(selectedExpense.expenseDate)}</p>
+                  <p className="font-semibold break-words">{formatDateKorean(selectedExpense.expenseDate)}</p>
                 </div>
 
                 {selectedExpense.storeName && (

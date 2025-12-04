@@ -9,10 +9,16 @@ import type {
   ImportResult,
 } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const inferBackendOrigin = () => {
+  const { protocol, hostname, port } = window.location;
+  const targetPort = port && port !== '80' && port !== '443' ? '3001' : port || '3001';
+  return `${protocol}//${hostname}:${targetPort}`;
+};
+
+export const API_ORIGIN = (import.meta.env.VITE_API_URL ?? inferBackendOrigin()).replace(/\/$/, '');
 
 const apiClient = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: `${API_ORIGIN}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
