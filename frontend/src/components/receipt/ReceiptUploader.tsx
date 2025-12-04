@@ -89,10 +89,7 @@ export default function ReceiptUploader({ onUploadSuccess, onUploadError }: Rece
             id="receipt-upload"
           />
 
-          <label
-            htmlFor="receipt-upload"
-            className="cursor-pointer block"
-          >
+          <label htmlFor="receipt-upload" className="cursor-pointer block">
             <div className="mx-auto w-16 h-16 mb-4 text-gray-400">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -120,21 +117,13 @@ export default function ReceiptUploader({ onUploadSuccess, onUploadError }: Rece
               <span className="font-semibold text-primary-600">파일 선택</span>
             </div>
 
-            <p className="text-sm text-gray-500">
-              사진을 찍거나 갤러리에서 선택하세요
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              JPG, PNG, GIF, WebP (최대 10MB)
-            </p>
+            <p className="text-sm text-gray-500">사진을 찍거나 갤러리에서 선택하세요</p>
+            <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF, WebP (최대 10MB)</p>
           </label>
         </div>
       ) : (
         <div className="relative">
-          <img
-            src={preview}
-            alt="Receipt preview"
-            className="w-full h-auto rounded-lg shadow-md"
-          />
+          <img src={preview} alt="Receipt preview" className="w-full h-auto rounded-lg shadow-md" />
 
           {uploadMutation.isPending && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">

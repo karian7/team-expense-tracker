@@ -63,7 +63,7 @@ export async function getBudgetByMonth(
  * 월 예산의 기본 금액 설정
  */
 export async function updateBudgetBaseAmount(
-  req: Request<{ year: string; month: string }, any, UpdateMonthlyBudgetRequest>,
+  req: Request<{ year: string; month: string }, ApiResponse, UpdateMonthlyBudgetRequest>,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
@@ -97,7 +97,11 @@ export async function updateBudgetBaseAmount(
  * 월 이월 처리
  */
 export async function handleRollover(
-  req: Request<any, any, { fromYear: number; fromMonth: number; toYear: number; toMonth: number; newBaseAmount: number }>,
+  req: Request<
+    Record<string, never>,
+    ApiResponse,
+    { fromYear: number; fromMonth: number; toYear: number; toMonth: number; newBaseAmount: number }
+  >,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
@@ -105,10 +109,16 @@ export async function handleRollover(
     const { fromYear, fromMonth, toYear, toMonth, newBaseAmount } = req.body;
 
     if (
-      !fromYear || !fromMonth || !toYear || !toMonth ||
-      fromMonth < 1 || fromMonth > 12 ||
-      toMonth < 1 || toMonth > 12 ||
-      newBaseAmount === undefined || newBaseAmount < 0
+      !fromYear ||
+      !fromMonth ||
+      !toYear ||
+      !toMonth ||
+      fromMonth < 1 ||
+      fromMonth > 12 ||
+      toMonth < 1 ||
+      toMonth > 12 ||
+      newBaseAmount === undefined ||
+      newBaseAmount < 0
     ) {
       throw new AppError('Invalid rollover parameters', 400);
     }

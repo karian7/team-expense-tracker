@@ -1,6 +1,6 @@
 import prisma from '../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
-import { expensesToCsv, parseCsvToExpenses, CsvExpenseRow } from '../utils/csv';
+import { expensesToCsv, parseCsvToExpenses } from '../utils/csv';
 import { extractYearMonth } from '../utils/date';
 import { getOrCreateMonthlyBudget, recalculateMonthlyBudget } from './budgetService';
 
@@ -18,10 +18,7 @@ export async function exportAllExpensesToCsv(): Promise<string> {
 /**
  * 특정 기간의 사용 내역을 CSV로 export
  */
-export async function exportExpensesByPeriodToCsv(
-  startDate: Date,
-  endDate: Date
-): Promise<string> {
+export async function exportExpensesByPeriodToCsv(startDate: Date, endDate: Date): Promise<string> {
   const expenses = await prisma.expense.findMany({
     where: {
       expenseDate: {
@@ -43,7 +40,13 @@ export async function exportExpensesByPeriodToCsv(
 export async function importExpensesFromCsv(
   csvContent: string,
   defaultReceiptUrl: string = '/uploads/imported.jpg'
-): Promise<{ success: number; failed: number; updated: number; created: number; errors: string[] }> {
+): Promise<{
+  success: number;
+  failed: number;
+  updated: number;
+  created: number;
+  errors: string[];
+}> {
   const rows = parseCsvToExpenses(csvContent);
 
   let created = 0;

@@ -7,9 +7,11 @@ import type { Expense } from '../../types';
 
 export default function ExpenseList() {
   const { data: budget } = useCurrentBudget();
-  const { data: expenses, isLoading, error } = useExpenses(
-    budget ? { year: budget.year, month: budget.month } : undefined
-  );
+  const {
+    data: expenses,
+    isLoading,
+    error,
+  } = useExpenses(budget ? { year: budget.year, month: budget.month } : undefined);
   const deleteMutation = useDeleteExpense();
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
@@ -108,9 +110,7 @@ export default function ExpenseList() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-gray-600">
-                      {expense.authorName}
-                    </span>
+                    <span className="text-sm font-medium text-gray-600">{expense.authorName}</span>
                     {expense.storeName && (
                       <>
                         <span className="text-gray-400">·</span>
@@ -211,7 +211,9 @@ export default function ExpenseList() {
 
                 <div>
                   <span className="text-sm text-gray-600">날짜</span>
-                  <p className="font-semibold break-words">{formatDateKorean(selectedExpense.expenseDate)}</p>
+                  <p className="font-semibold break-words">
+                    {formatDateKorean(selectedExpense.expenseDate)}
+                  </p>
                 </div>
 
                 {selectedExpense.storeName && (
@@ -222,10 +224,7 @@ export default function ExpenseList() {
                 )}
               </div>
 
-              <button
-                onClick={() => setSelectedExpense(null)}
-                className="btn-primary w-full mt-6"
-              >
+              <button onClick={() => setSelectedExpense(null)} className="btn-primary w-full mt-6">
                 닫기
               </button>
             </div>

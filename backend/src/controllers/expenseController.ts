@@ -6,7 +6,12 @@ import {
   updateExpense,
   deleteExpense,
 } from '../services/expenseService';
-import { ApiResponse, CreateExpenseRequest, UpdateExpenseRequest, ExpenseQueryParams } from '../types';
+import {
+  ApiResponse,
+  CreateExpenseRequest,
+  UpdateExpenseRequest,
+  ExpenseQueryParams,
+} from '../types';
 import { AppError } from '../middleware/errorHandler';
 
 /**
@@ -14,14 +19,22 @@ import { AppError } from '../middleware/errorHandler';
  * 사용 내역 목록 조회
  */
 export async function listExpenses(
-  req: Request<any, any, any, ExpenseQueryParams>,
+  req: Request<Record<string, never>, ApiResponse, Record<string, never>, ExpenseQueryParams>,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
   try {
     const { year, month, authorName, startDate, endDate, limit, offset } = req.query;
 
-    const params: any = {};
+    const params: {
+      year?: number;
+      month?: number;
+      authorName?: string;
+      startDate?: Date;
+      endDate?: Date;
+      limit?: number;
+      offset?: number;
+    } = {};
 
     if (year) params.year = parseInt(year);
     if (month) params.month = parseInt(month);
@@ -73,7 +86,7 @@ export async function getExpense(
  * 사용 내역 생성
  */
 export async function createNewExpense(
-  req: Request<any, any, CreateExpenseRequest>,
+  req: Request<Record<string, never>, ApiResponse, CreateExpenseRequest>,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
@@ -121,7 +134,7 @@ export async function createNewExpense(
  * 사용 내역 수정
  */
 export async function updateExistingExpense(
-  req: Request<{ id: string }, any, UpdateExpenseRequest>,
+  req: Request<{ id: string }, ApiResponse, UpdateExpenseRequest>,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {

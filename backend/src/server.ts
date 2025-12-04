@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3001;
 const parseOrigins = (raw: string | undefined): string[] =>
   raw
     ?.split(',')
-    .map(origin => origin.trim())
+    .map((origin) => origin.trim())
     .filter(Boolean) ?? [];
 
 const defaultOrigins = [
@@ -28,13 +28,15 @@ const defaultOrigins = [
   'http://kit.dev.9rum.cc',
 ];
 
-const allowedOrigins = [...new Set([...parseOrigins(process.env.ALLOWED_ORIGINS), ...defaultOrigins])];
+const allowedOrigins = [
+  ...new Set([...parseOrigins(process.env.ALLOWED_ORIGINS), ...defaultOrigins]),
+];
 
 const isOriginAllowed = (origin: string): boolean => {
   const normalized = origin.replace(/\/$/, '');
   const withoutPort = normalized.replace(/:\d+$/, '');
 
-  return allowedOrigins.some(allowed => {
+  return allowedOrigins.some((allowed) => {
     const allowedNormalized = allowed.replace(/\/$/, '');
     const allowedWithoutPort = allowedNormalized.replace(/:\d+$/, '');
     return (

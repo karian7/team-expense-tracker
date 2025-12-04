@@ -1,12 +1,15 @@
 import prisma from '../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
 import { convertDecimalsToNumbers } from '../utils/decimal';
 import { extractYearMonth } from '../utils/date';
 import { ExpenseResponse, CreateExpenseRequest, UpdateExpenseRequest } from '../types';
 import { getOrCreateMonthlyBudget, recalculateMonthlyBudget } from './budgetService';
 
 const toExpenseResponse = (expense: unknown): ExpenseResponse =>
-  convertDecimalsToNumbers(expense as unknown as Record<string, unknown>) as unknown as ExpenseResponse;
+  convertDecimalsToNumbers(
+    expense as unknown as Record<string, unknown>
+  ) as unknown as ExpenseResponse;
 
 /**
  * 사용 내역 생성
@@ -49,7 +52,7 @@ export async function getExpenses(params: {
   limit?: number;
   offset?: number;
 }): Promise<ExpenseResponse[]> {
-  const where: any = {};
+  const where: Prisma.ExpenseWhereInput = {};
 
   // 연도/월 필터
   if (params.year && params.month) {
@@ -121,7 +124,7 @@ export async function updateExpense(
     throw new Error('Expense not found');
   }
 
-  const updateData: any = {};
+  const updateData: Prisma.ExpenseUpdateInput = {};
 
   if (data.authorName !== undefined) {
     updateData.authorName = data.authorName;
@@ -192,9 +195,6 @@ export async function deleteExpense(id: string): Promise<void> {
 /**
  * 특정 월의 모든 사용 내역 조회
  */
-export async function getExpensesByMonth(
-  year: number,
-  month: number
-): Promise<ExpenseResponse[]> {
+export async function getExpensesByMonth(year: number, month: number): Promise<ExpenseResponse[]> {
   return getExpenses({ year, month });
 }

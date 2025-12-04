@@ -94,7 +94,7 @@ confidence는 추출한 정보에 대한 확신도입니다 (0.0~1.0).`,
     try {
       // JSON 블록 추출 (마크다운 코드 블록 제거)
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
-      const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
+      const jsonString = jsonMatch ? jsonMatch[1] || jsonMatch[0] : content;
 
       const parsed = JSON.parse(jsonString);
 

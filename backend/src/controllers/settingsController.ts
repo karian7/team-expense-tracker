@@ -11,11 +11,7 @@ import { AppError } from '../middleware/errorHandler';
  * GET /api/settings
  * 앱 설정 조회
  */
-export async function getSettings(
-  req: Request,
-  res: Response<ApiResponse>,
-  next: NextFunction
-) {
+export async function getSettings(req: Request, res: Response<ApiResponse>, next: NextFunction) {
   try {
     const settings = await getAppSettings();
 
@@ -33,7 +29,7 @@ export async function getSettings(
  * 앱 설정 업데이트
  */
 export async function updateSettings(
-  req: Request<any, any, UpdateSettingsRequest>,
+  req: Request<Record<string, never>, ApiResponse, UpdateSettingsRequest>,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
@@ -65,7 +61,7 @@ export async function updateSettings(
  * 초기 예산 설정 (전체 데이터 리셋)
  */
 export async function setInitialBudgetController(
-  req: Request<any, any, { initialBudget: number }>,
+  req: Request<Record<string, never>, ApiResponse, { initialBudget: number }>,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { budgetApi } from '../services/api';
+import type { AuthorBreakdown } from '../types';
 import {
   BarChart,
   Bar,
@@ -26,7 +27,11 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
 
-  const { data: report, isLoading, error } = useQuery({
+  const {
+    data: report,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['monthlyReport', year, month],
     queryFn: () => budgetApi.getReport(year, month),
   });
@@ -72,9 +77,7 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-8 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="text-center py-12 text-red-600">
-            리포트를 불러오는데 실패했습니다.
-          </div>
+          <div className="text-center py-12 text-red-600">리포트를 불러오는데 실패했습니다.</div>
           <button onClick={onClose} className="btn-secondary w-full mt-4">
             닫기
           </button>
@@ -88,9 +91,8 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
   }
 
   const { budget, statistics } = report;
-  const usagePercentage = budget.totalBudget > 0
-    ? (budget.totalSpent / budget.totalBudget) * 100
-    : 0;
+  const usagePercentage =
+    budget.totalBudget > 0 ? (budget.totalSpent / budget.totalBudget) * 100 : 0;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -98,17 +100,8 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">월별 리포트</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-            aria-label="닫기"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700" aria-label="닫기">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -126,12 +119,7 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
             className="p-2 hover:bg-gray-100 rounded-full"
             aria-label="이전 달"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -148,18 +136,8 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
             className="p-2 hover:bg-gray-100 rounded-full"
             aria-label="다음 달"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
         </div>
@@ -180,15 +158,15 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
           </div>
           <div className="card">
             <div className="text-sm text-gray-600 mb-1">잔액</div>
-            <div className={`text-2xl font-bold ${budget.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div
+              className={`text-2xl font-bold ${budget.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}
+            >
               ₩{formatCurrency(budget.balance)}
             </div>
           </div>
           <div className="card">
             <div className="text-sm text-gray-600 mb-1">사용률</div>
-            <div className="text-2xl font-bold text-purple-600">
-              {usagePercentage.toFixed(1)}%
-            </div>
+            <div className="text-2xl font-bold text-purple-600">{usagePercentage.toFixed(1)}%</div>
           </div>
         </div>
 
@@ -196,17 +174,14 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="card">
             <div className="text-sm text-gray-600 mb-1">총 지출 건수</div>
-            <div className="text-xl font-semibold text-gray-900">
-              {statistics.expenseCount}건
-            </div>
+            <div className="text-xl font-semibold text-gray-900">{statistics.expenseCount}건</div>
           </div>
           <div className="card">
             <div className="text-sm text-gray-600 mb-1">평균 지출액</div>
             <div className="text-xl font-semibold text-gray-900">
-              ₩{formatCurrency(
-                statistics.expenseCount > 0
-                  ? statistics.totalExpenses / statistics.expenseCount
-                  : 0
+              ₩
+              {formatCurrency(
+                statistics.expenseCount > 0 ? statistics.totalExpenses / statistics.expenseCount : 0
               )}
             </div>
           </div>
@@ -222,10 +197,7 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={statistics.dailyBreakdown}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={formatDate}
-                    />
+                    <XAxis dataKey="date" tickFormatter={formatDate} />
                     <YAxis />
                     <Tooltip
                       formatter={(value: number) => `₩${formatCurrency(value)}`}
@@ -246,13 +218,15 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={statistics.authorBreakdown as any}
+                        data={statistics.authorBreakdown}
                         dataKey="amount"
                         nameKey="authorName"
                         cx="50%"
                         cy="50%"
                         outerRadius={100}
-                        label={(entry: any) => `${entry.authorName}: ${((entry.amount / statistics.totalExpenses) * 100).toFixed(1)}%`}
+                        label={(entry: AuthorBreakdown) =>
+                          `${entry.authorName}: ${((entry.amount / statistics.totalExpenses) * 100).toFixed(1)}%`
+                        }
                       >
                         {statistics.authorBreakdown.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -263,7 +237,10 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
                   </ResponsiveContainer>
                   <div className="space-y-2">
                     {statistics.authorBreakdown.map((author, index) => (
-                      <div key={author.authorName} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <div
+                        key={author.authorName}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                      >
                         <div className="flex items-center gap-2">
                           <div
                             className="w-4 h-4 rounded"
@@ -297,11 +274,10 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
                           {index + 1}
                         </div>
                         <div>
-                          <div className="font-medium">
-                            {expense.storeName || '상호명 없음'}
-                          </div>
+                          <div className="font-medium">{expense.storeName || '상호명 없음'}</div>
                           <div className="text-sm text-gray-600">
-                            {expense.authorName} · {new Date(expense.expenseDate).toLocaleDateString('ko-KR')}
+                            {expense.authorName} ·{' '}
+                            {new Date(expense.expenseDate).toLocaleDateString('ko-KR')}
                           </div>
                         </div>
                       </div>

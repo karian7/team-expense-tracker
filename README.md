@@ -15,6 +15,7 @@
 ## 기술 스택
 
 ### 프론트엔드
+
 - React 18 + TypeScript
 - Vite
 - Tailwind CSS
@@ -22,6 +23,7 @@
 - React Hook Form
 
 ### 백엔드
+
 - Node.js + Express + TypeScript
 - Prisma ORM
 - SQLite
@@ -52,6 +54,7 @@ cd team-expense-tracker
 #### 2. 환경 변수 설정
 
 **백엔드:**
+
 ```bash
 cd backend
 cp .env.example .env
@@ -63,6 +66,7 @@ cp .env.example .env
 > **참고**: Google Vision API를 사용하려면 [OCR 설정 가이드](docs/OCR_CONFIGURATION.md)를 참고하세요.
 
 **프론트엔드:**
+
 ```bash
 cd frontend
 cp .env.example .env
@@ -80,6 +84,7 @@ docker-compose up
 **Option B: 로컬 실행**
 
 터미널 1 - 백엔드:
+
 ```bash
 cd backend
 npm install
@@ -89,6 +94,7 @@ npm run dev
 ```
 
 터미널 2 - 프론트엔드:
+
 ```bash
 cd frontend
 npm install
@@ -128,11 +134,13 @@ team-expense-tracker/
 ## API 엔드포인트
 
 ### 영수증
+
 - `GET /api/receipts/ocr-provider` - 현재 OCR 프로바이더 정보 조회
 - `POST /api/receipts/upload` - 영수증 업로드 및 OCR 분석
 - `POST /api/receipts/parse` - 재분석
 
 ### 사용 내역
+
 - `GET /api/expenses` - 사용 내역 목록 조회
 - `POST /api/expenses` - 사용 내역 생성
 - `GET /api/expenses/:id` - 특정 내역 조회
@@ -140,23 +148,27 @@ team-expense-tracker/
 - `DELETE /api/expenses/:id` - 내역 삭제
 
 ### 월별 예산
+
 - `GET /api/monthly-budgets/current` - 현재 월 예산 조회
 - `GET /api/monthly-budgets/:year/:month` - 특정 월 예산 조회
 - `PUT /api/monthly-budgets/:year/:month` - 예산 설정
 - `POST /api/monthly-budgets/rollover` - 월 이월
 
 ### 설정
+
 - `GET /api/settings` - 앱 설정 조회
 - `PUT /api/settings` - 기본 월별 예산 설정
 - `POST /api/settings/initial-budget` - 초기 예산 설정 (데이터 리셋)
 
 ### CSV 백업/복원
+
 - `GET /api/export/csv` - 전체 데이터 CSV 백업
 - `POST /api/export/import` - CSV 파일로 데이터 복원
 
 ## 사용 시나리오
 
 ### 회식 후 기록하기
+
 1. 메인 페이지 접속
 2. 본인 이름 입력
 3. 영수증 사진 촬영 또는 업로드
@@ -164,6 +176,7 @@ team-expense-tracker/
 5. 필요시 수정 후 저장
 
 ### 잔액 확인하기
+
 - 메인 대시보드에서 현재 월 잔액 즉시 확인
 - 사용 내역 목록에서 상세 내역 확인
 - 날짜 또는 작성자로 필터링

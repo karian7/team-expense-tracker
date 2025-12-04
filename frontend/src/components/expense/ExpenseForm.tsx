@@ -12,7 +12,12 @@ interface ExpenseFormProps {
   onCancel?: () => void;
 }
 
-export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }: ExpenseFormProps) {
+export default function ExpenseForm({
+  imageUrl,
+  ocrResult,
+  onSuccess,
+  onCancel,
+}: ExpenseFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedAuthorName, setSavedAuthorName] = useState<string>('');
   const createMutation = useCreateExpense();
@@ -53,7 +58,7 @@ export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }
     try {
       // 작성자 이름을 로컬 스토리지에 저장
       localStorage.setItem('lastAuthorName', data.authorName);
-      
+
       await createMutation.mutateAsync({
         ...data,
         receiptImageUrl: imageUrl,
@@ -74,8 +79,8 @@ export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }
     ocrResult.confidence > 0.7
       ? 'text-green-600'
       : ocrResult.confidence > 0.4
-      ? 'text-yellow-600'
-      : 'text-red-600';
+        ? 'text-yellow-600'
+        : 'text-red-600';
 
   return (
     <div className="space-y-6">
@@ -83,9 +88,7 @@ export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }
       {ocrResult.confidence > 0 && (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-blue-800">
-              AI 분석 완료
-            </span>
+            <span className="text-sm text-blue-800">AI 분석 완료</span>
             <span className={`text-sm font-semibold ${confidenceColor}`}>
               신뢰도: {(ocrResult.confidence * 100).toFixed(0)}%
             </span>
@@ -139,13 +142,9 @@ export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }
               className="input-field pr-12"
               placeholder="50000"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-              원
-            </span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">원</span>
           </div>
-          {errors.amount && (
-            <p className="text-sm text-red-600 mt-1">{errors.amount.message}</p>
-          )}
+          {errors.amount && <p className="text-sm text-red-600 mt-1">{errors.amount.message}</p>}
         </div>
 
         {/* 사용 날짜 */}
@@ -167,9 +166,7 @@ export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }
 
         {/* 상호명 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            상호명 (선택)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">상호명 (선택)</label>
           <input
             type="text"
             {...register('storeName')}
@@ -190,11 +187,7 @@ export default function ExpenseForm({ imageUrl, ocrResult, onSuccess, onCancel }
               취소
             </button>
           )}
-          <button
-            type="submit"
-            className="btn-primary flex-1"
-            disabled={isSubmitting}
-          >
+          <button type="submit" className="btn-primary flex-1" disabled={isSubmitting}>
             {isSubmitting ? '저장 중...' : '저장'}
           </button>
         </div>

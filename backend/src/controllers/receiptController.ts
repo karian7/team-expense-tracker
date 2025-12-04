@@ -3,11 +3,20 @@ import { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import sharp from 'sharp';
 import heicConvert from 'heic-convert';
-import { analyzeReceiptWithOpenAI, reanalyzeReceipt, getOcrProviderInfo } from '../services/ocrService';
+import {
+  analyzeReceiptWithOpenAI,
+  reanalyzeReceipt,
+  getOcrProviderInfo,
+} from '../services/ocrService';
 import { ApiResponse, ReceiptUploadResponse } from '../types';
 import { AppError } from '../middleware/errorHandler';
 
-const HEIC_MIME_TYPES = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence']);
+const HEIC_MIME_TYPES = new Set([
+  'image/heic',
+  'image/heif',
+  'image/heic-sequence',
+  'image/heif-sequence',
+]);
 const MAX_IMAGE_WIDTH = 800;
 
 async function normalizeReceiptImage(
@@ -17,7 +26,8 @@ async function normalizeReceiptImage(
   const uploadsDir = path.resolve(path.dirname(file.path));
   const parsed = path.parse(file.filename);
   const ext = parsed.ext.toLowerCase();
-  const isHeic = HEIC_MIME_TYPES.has(file.mimetype.toLowerCase()) || ext === '.heic' || ext === '.heif';
+  const isHeic =
+    HEIC_MIME_TYPES.has(file.mimetype.toLowerCase()) || ext === '.heic' || ext === '.heif';
   const targetExt = isHeic ? '.jpg' : ext || '.jpg';
   const filename = `${parsed.name}${targetExt}`;
   const outputPath = path.join(uploadsDir, filename);
@@ -118,7 +128,7 @@ export async function uploadReceipt(
  * 이미 업로드된 영수증 재분석
  */
 export async function parseReceipt(
-  req: Request<any, any, { imageUrl: string }>,
+  req: Request<Record<string, never>, ApiResponse, { imageUrl: string }>,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
@@ -157,11 +167,7 @@ export async function parseReceipt(
  * GET /api/receipts/ocr-provider
  * 현재 사용 중인 OCR 프로바이더 정보 조회
  */
-export async function getOcrProvider(
-  req: Request,
-  res: Response<ApiResponse>,
-  next: NextFunction
-) {
+export async function getOcrProvider(req: Request, res: Response<ApiResponse>, next: NextFunction) {
   try {
     const providerInfo = getOcrProviderInfo();
 

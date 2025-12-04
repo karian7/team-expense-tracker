@@ -129,7 +129,7 @@ export const settingsApi = {
   },
 
   update: async (settings: Partial<AppSettings>): Promise<AppSettings> => {
-    const { data} = await apiClient.put<ApiResponse<AppSettings>>('/settings', settings);
+    const { data } = await apiClient.put<ApiResponse<AppSettings>>('/settings', settings);
     return data.data!;
   },
 
@@ -161,15 +161,11 @@ export const exportApi = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const { data } = await apiClient.post<ApiResponse<ImportResult>>(
-      '/import/expenses',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
+    const { data } = await apiClient.post<ApiResponse<ImportResult>>('/import/expenses', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return data.data!;
   },
 };

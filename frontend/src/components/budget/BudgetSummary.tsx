@@ -41,9 +41,7 @@ export default function BudgetSummary() {
         </div>
         <div className="text-sm text-gray-600">
           {budget.carriedAmount > 0 && (
-            <span className="mr-3">
-              이월: {formatCurrency(budget.carriedAmount)}
-            </span>
+            <span className="mr-3">이월: {formatCurrency(budget.carriedAmount)}</span>
           )}
         </div>
       </div>
@@ -65,9 +63,7 @@ export default function BudgetSummary() {
 
         <div className="flex justify-between items-center text-sm">
           <span className="text-gray-600">사용액</span>
-          <span className="font-semibold text-gray-900">
-            {formatCurrency(budget.totalSpent)}
-          </span>
+          <span className="font-semibold text-gray-900">{formatCurrency(budget.totalSpent)}</span>
         </div>
 
         {progressPercentage > 90 && progressPercentage <= 100 && (
@@ -80,9 +76,7 @@ export default function BudgetSummary() {
 
         {progressPercentage > 100 && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800">
-              ❗ 예산을 초과했습니다
-            </p>
+            <p className="text-sm text-red-800">❗ 예산을 초과했습니다</p>
           </div>
         )}
       </div>

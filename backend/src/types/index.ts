@@ -1,7 +1,7 @@
 import { Decimal } from '@prisma/client/runtime/library';
 
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -41,7 +41,7 @@ export interface ExpenseResponse {
   expenseDate: Date;
   storeName: string | null;
   receiptImageUrl: string;
-  ocrRawData: any;
+  ocrRawData: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,7 +52,7 @@ export interface CreateExpenseRequest {
   expenseDate: string; // ISO date string
   storeName?: string;
   receiptImageUrl: string;
-  ocrRawData?: any;
+  ocrRawData?: Record<string, unknown>;
 }
 
 export interface UpdateExpenseRequest {

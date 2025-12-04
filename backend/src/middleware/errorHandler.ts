@@ -15,7 +15,7 @@ export function errorHandler(
   err: Error | AppError,
   req: Request,
   res: Response<ApiResponse>,
-  next: NextFunction
+  _next: NextFunction
 ) {
   console.error('Error:', err);
 

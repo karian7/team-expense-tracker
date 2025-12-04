@@ -1,10 +1,6 @@
 import { Router } from 'express';
 import { uploadCsv } from '../middleware/upload';
-import {
-  exportExpenses,
-  importExpenses,
-  downloadTemplate,
-} from '../controllers/exportController';
+import { exportExpenses, importExpenses, downloadTemplate } from '../controllers/exportController';
 
 const router: Router = Router();
 

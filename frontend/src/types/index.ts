@@ -1,5 +1,5 @@
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -29,7 +29,7 @@ export interface Expense {
   expenseDate: string;
   storeName: string | null;
   receiptImageUrl: string;
-  ocrRawData: any;
+  ocrRawData: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,7 +57,7 @@ export interface ExpenseFormData {
   expenseDate: string;
   storeName?: string;
   receiptImageUrl: string;
-  ocrRawData?: any;
+  ocrRawData?: Record<string, unknown>;
 }
 
 // Settings

@@ -2,11 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { expenseApi } from '../services/api';
 import type { ExpenseFormData } from '../types';
 
-export function useExpenses(params?: {
-  year?: number;
-  month?: number;
-  authorName?: string;
-}) {
+export function useExpenses(params?: { year?: number; month?: number; authorName?: string }) {
   return useQuery({
     queryKey: ['expenses', params],
     queryFn: () => expenseApi.list(params),

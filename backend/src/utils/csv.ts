@@ -7,13 +7,7 @@ import { format } from 'date-fns';
  */
 export function expensesToCsv(expenses: Expense[]): string {
   // CSV 헤더 (영수증 URL 제외)
-  const headers = [
-    'ID',
-    '작성자',
-    '금액',
-    '사용날짜',
-    '상호명',
-  ];
+  const headers = ['ID', '작성자', '금액', '사용날짜', '상호명'];
 
   // CSV 행
   const rows = expenses.map((expense) => [

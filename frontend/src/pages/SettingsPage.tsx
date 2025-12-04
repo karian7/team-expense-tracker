@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSettings, useUpdateSettings, useSetInitialBudget } from '../hooks/useSettings';
 import { useExportExpenses, useDownloadTemplate, useImportExpenses } from '../hooks/useExport';
 import { formatCurrency } from '../utils/format';
@@ -15,16 +15,9 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const templateMutation = useDownloadTemplate();
   const importMutation = useImportExpenses();
 
-  const [defaultBudget, setDefaultBudget] = useState<number>(0);
-  const [initialBudget, setInitialBudget] = useState<number>(0);
+  const [defaultBudget, setDefaultBudget] = useState<number>(settings?.defaultMonthlyBudget ?? 0);
+  const [initialBudget, setInitialBudget] = useState<number>(settings?.initialBudget ?? 0);
   const [importFile, setImportFile] = useState<File | null>(null);
-
-  useEffect(() => {
-    if (settings) {
-      setDefaultBudget(settings.defaultMonthlyBudget);
-      setInitialBudget(settings.initialBudget);
-    }
-  }, [settings]);
 
   const handleSaveSettings = async () => {
     try {
@@ -46,7 +39,11 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     }
 
     // 한번 더 확인
-    if (!window.confirm('정말로 모든 데이터를 삭제하고 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다!')) {
+    if (
+      !window.confirm(
+        '정말로 모든 데이터를 삭제하고 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다!'
+      )
+    ) {
       return;
     }
 
@@ -109,6 +106,10 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     );
   }
 
+  if (!settings) {
+    return null;
+  }
+
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -120,10 +121,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       >
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold">설정</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-6 w-6"
@@ -180,7 +178,9 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 className="btn-danger w-full"
                 disabled={setInitialBudgetMutation.isPending || initialBudget <= 0}
               >
-                {setInitialBudgetMutation.isPending ? '초기화 중...' : '🚨 모든 데이터 삭제 및 초기 예산 설정'}
+                {setInitialBudgetMutation.isPending
+                  ? '초기화 중...'
+                  : '🚨 모든 데이터 삭제 및 초기 예산 설정'}
               </button>
             </div>
           </section>
@@ -228,9 +228,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
           <section>
             <h3 className="text-lg font-semibold mb-4">데이터 백업 (Export)</h3>
             <div className="card">
-              <p className="text-sm text-gray-600 mb-4">
-                모든 사용 내역을 CSV 파일로 백업합니다.
-              </p>
+              <p className="text-sm text-gray-600 mb-4">모든 사용 내역을 CSV 파일로 백업합니다.</p>
 
               <button
                 onClick={handleExport}
@@ -275,9 +273,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   className="input-field"
                 />
                 {importFile && (
-                  <p className="text-xs text-gray-600 mt-1">
-                    선택된 파일: {importFile.name}
-                  </p>
+                  <p className="text-xs text-gray-600 mt-1">선택된 파일: {importFile.name}</p>
                 )}
               </div>
 
@@ -303,11 +299,9 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
           <section>
             <h3 className="text-lg font-semibold mb-4">CSV 파일 형식</h3>
             <div className="card bg-gray-50">
-              <p className="text-sm text-gray-700 mb-2 font-medium">
-                백업/복원 형식:
-              </p>
+              <p className="text-sm text-gray-700 mb-2 font-medium">백업/복원 형식:</p>
               <pre className="text-xs bg-white p-3 rounded border overflow-x-auto">
-{`ID,작성자,금액,사용날짜(YYYY-MM-DD),상호명
+                {`ID,작성자,금액,사용날짜(YYYY-MM-DD),상호명
 expense-id-123,홍길동,50000,2024-12-03,맛있는식당
 expense-id-456,김철수,35000,2024-12-02,카페`}
               </pre>

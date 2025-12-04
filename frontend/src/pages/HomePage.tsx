@@ -99,10 +99,7 @@ export default function HomePage() {
 
         {/* Add Expense Button */}
         {currentStep === 'list' && (
-          <button
-            onClick={startUpload}
-            className="btn-primary w-full py-4 text-lg shadow-lg"
-          >
+          <button onClick={startUpload} className="btn-primary w-full py-4 text-lg shadow-lg">
             + 영수증 추가하기
           </button>
         )}
@@ -168,9 +165,7 @@ export default function HomePage() {
             {uploadResult.ocrResult.error && (
               <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 OCR 분석 중 오류가 발생했습니다. 직접 내용을 확인해 입력해 주세요.
-                <div className="mt-1 text-xs text-red-600">
-                  {uploadResult.ocrResult.error}
-                </div>
+                <div className="mt-1 text-xs text-red-600">{uploadResult.ocrResult.error}</div>
               </div>
             )}
             <ExpenseForm

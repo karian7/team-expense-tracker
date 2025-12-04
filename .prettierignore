@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+coverage
+.next
+.idea
+*.log
+*.lock
+pnpm-lock.yaml
+package-lock.json
+.git
+.DS_Store

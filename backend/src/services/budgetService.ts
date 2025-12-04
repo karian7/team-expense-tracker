@@ -2,11 +2,19 @@ import prisma from '../utils/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
 import { getCurrentYearMonth, getPreviousYearMonth } from '../utils/date';
 import { convertDecimalsToNumbers } from '../utils/decimal';
-import { MonthlyBudgetResponse, MonthlyReportResponse, DailyBreakdown, AuthorBreakdown, ExpenseResponse } from '../types';
+import {
+  MonthlyBudgetResponse,
+  MonthlyReportResponse,
+  DailyBreakdown,
+  AuthorBreakdown,
+  ExpenseResponse,
+} from '../types';
 import { getDefaultMonthlyBudget } from './settingsService';
 
 const toMonthlyBudgetResponse = (budget: unknown): MonthlyBudgetResponse =>
-  convertDecimalsToNumbers(budget as unknown as Record<string, unknown>) as unknown as MonthlyBudgetResponse;
+  convertDecimalsToNumbers(
+    budget as unknown as Record<string, unknown>
+  ) as unknown as MonthlyBudgetResponse;
 
 /**
  * 월별 예산 조회 또는 생성
@@ -237,9 +245,7 @@ export async function getMonthlyReport(
     .sort((a, b) => b.amount - a.amount);
 
   // 상위 5개 지출 내역
-  const topExpenses = expenseResponses
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5);
+  const topExpenses = expenseResponses.sort((a, b) => b.amount - a.amount).slice(0, 5);
 
   return {
     budget,

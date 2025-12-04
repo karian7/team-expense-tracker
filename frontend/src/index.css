@@ -35,7 +35,7 @@
 
 /* iOS Safari specific fixes */
 @supports (-webkit-touch-callout: none) {
-  input[type="file"] {
+  input[type='file'] {
     /* Better file input on iOS */
     font-size: 16px;
   }
