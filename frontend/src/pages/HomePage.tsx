@@ -30,167 +30,160 @@ export default function HomePage() {
     setCurrentStep('list');
   };
 
-  const startUpload = () => {
-    setCurrentStep('upload');
+  // Placeholder for handleUploadError, as it's used in the new JSX but not defined in original
+  const handleUploadError = (error: Error) => {
+    console.error('Upload error:', error);
+    // Optionally, display an error message to the user
+    setCurrentStep('list'); // Go back to list on error
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">팀 회식비 관리</h1>
-          {currentStep === 'list' && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowReport(true)}
-                className="text-gray-600 hover:text-gray-900 p-2"
-                aria-label="월별 리포트"
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <span className="text-2xl">💸</span>
+            Team Expense Tracker
+          </h1>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowReport(true)}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="월별 리포트"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={() => setShowSettings(true)}
-                className="text-gray-600 hover:text-gray-900 p-2"
-                aria-label="설정"
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="설정"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              </button>
-            </div>
-          )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         {/* Budget Summary */}
-        <BudgetSummary />
+        <section>
+          <BudgetSummary />
+        </section>
 
-        {/* Add Expense Button */}
-        {currentStep === 'list' && (
-          <button onClick={startUpload} className="btn-primary w-full py-4 text-lg shadow-lg">
-            + 영수증 추가하기
-          </button>
-        )}
-
-        {/* Upload Step */}
-        {currentStep === 'upload' && (
-          <div className="card">
-            <div className="mb-4">
-              <button
-                onClick={handleCancel}
-                className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+        {/* Main Content Area */}
+        <section>
+          {currentStep === 'list' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-gray-900">최근 사용 내역</h2>
+                <button
+                  onClick={() => setCurrentStep('upload')}
+                  className="btn-primary flex items-center gap-2 shadow-sm"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-                뒤로
-              </button>
-            </div>
-
-            <h2 className="text-xl font-semibold mb-4">영수증 업로드</h2>
-            <ReceiptUploader onUploadSuccess={handleUploadSuccess} />
-          </div>
-        )}
-
-        {/* Form Step */}
-        {currentStep === 'form' && uploadResult && (
-          <div className="card">
-            <div className="mb-4">
-              <button
-                onClick={handleCancel}
-                className="text-gray-600 hover:text-gray-900 flex items-center gap-1"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-                취소
-              </button>
-            </div>
-
-            <h2 className="text-xl font-semibold mb-4">사용 내역 확인</h2>
-            {uploadResult.ocrResult.error && (
-              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                OCR 분석 중 오류가 발생했습니다. 직접 내용을 확인해 입력해 주세요.
-                <div className="mt-1 text-xs text-red-600">{uploadResult.ocrResult.error}</div>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  지출 등록
+                </button>
               </div>
-            )}
-            <ExpenseForm
-              imageUrl={uploadResult.imageUrl}
-              ocrResult={uploadResult.ocrResult}
-              onSuccess={handleFormSuccess}
-              onCancel={handleCancel}
-            />
-          </div>
-        )}
+              <ExpenseList />
+            </div>
+          )}
 
-        {/* Expense List */}
-        {currentStep === 'list' && <ExpenseList />}
+          {currentStep === 'upload' && (
+            <div className="card">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-gray-900">영수증 업로드</h2>
+                <button onClick={handleCancel} className="text-gray-400 hover:text-gray-600">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <ReceiptUploader
+                onUploadSuccess={handleUploadSuccess}
+                onUploadError={handleUploadError}
+              />
+            </div>
+          )}
+
+          {currentStep === 'form' && uploadResult && (
+            <div className="card">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-gray-900">지출 정보 입력</h2>
+              </div>
+              <ExpenseForm
+                imageUrl={uploadResult.imageUrl}
+                ocrResult={uploadResult.ocrResult}
+                onSuccess={handleFormSuccess}
+                onCancel={handleCancel}
+              />
+            </div>
+          )}
+        </section>
       </main>
 
       {/* Footer */}
-      <footer className="max-w-4xl mx-auto px-4 py-8 text-center text-sm text-gray-500">
-        <p>팀 회식비 관리 서비스</p>
+      <footer className="py-6 text-center text-sm text-gray-400">
+        <p>Team Expense Tracker Service © 2024</p>
       </footer>
 
-      {/* Settings Modal */}
-      {showSettings && <SettingsPage onClose={() => setShowSettings(false)} />}
-
-      {/* Monthly Report Modal */}
+      {/* Modals */}
       {showReport && <MonthlyReportPage onClose={() => setShowReport(false)} />}
+      {showSettings && <SettingsPage onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

@@ -57,7 +57,7 @@ export interface ExpenseFormData {
   expenseDate: string;
   storeName?: string;
   receiptImageUrl: string;
-  ocrRawData?: Record<string, unknown>;
+  ocrRawData?: OcrResult | Record<string, unknown>;
 }
 
 // Settings

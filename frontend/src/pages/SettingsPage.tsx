@@ -15,30 +15,29 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const templateMutation = useDownloadTemplate();
   const importMutation = useImportExpenses();
 
-  const [defaultBudget, setDefaultBudget] = useState<number>(settings?.defaultMonthlyBudget ?? 0);
-  const [initialBudget, setInitialBudget] = useState<number>(settings?.initialBudget ?? 0);
-  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [newBudget, setNewBudget] = useState(0);
 
-  const handleSaveSettings = async () => {
+  const handleUpdateBudget = async () => {
     try {
       await updateMutation.mutateAsync({
-        defaultMonthlyBudget: defaultBudget,
+        defaultMonthlyBudget: newBudget,
       });
-      alert('설정이 저장되었습니다.');
+      setIsBudgetModalOpen(false);
+      alert('예산이 변경되었습니다.');
     } catch (error) {
-      console.error('Save error:', error);
-      alert('설정 저장에 실패했습니다.');
+      console.error('Budget update error:', error);
+      alert('예산 변경에 실패했습니다.');
     }
   };
 
-  const handleSetInitialBudget = async () => {
-    const confirmMessage = `⚠️ 경고: 초기 예산을 설정하면 모든 데이터가 삭제됩니다!\n\n- 모든 사용 내역 삭제\n- 모든 월별 예산 삭제\n- 초기 예산: ${formatCurrency(initialBudget)}\n\n정말로 초기화하시겠습니까?`;
+  const handleReset = async () => {
+    const confirmMessage = '⚠️ 경고: 모든 데이터가 삭제됩니다!\n\n정말로 초기화하시겠습니까?';
 
     if (!window.confirm(confirmMessage)) {
       return;
     }
 
-    // 한번 더 확인
     if (
       !window.confirm(
         '정말로 모든 데이터를 삭제하고 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다!'
@@ -48,11 +47,11 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     }
 
     try {
-      await setInitialBudgetMutation.mutateAsync(initialBudget);
-      alert('초기 예산이 설정되었습니다.\n모든 데이터가 초기화되었습니다.');
+      await setInitialBudgetMutation.mutateAsync(0);
+      alert('모든 데이터가 초기화되었습니다.');
     } catch (error) {
-      console.error('Initial budget error:', error);
-      alert('초기 예산 설정에 실패했습니다.');
+      console.error('Reset error:', error);
+      alert('초기화에 실패했습니다.');
     }
   };
 
@@ -64,16 +63,16 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     templateMutation.mutate();
   };
 
-  const handleImport = async () => {
-    if (!importFile) {
-      alert('CSV 파일을 선택해주세요.');
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
       return;
     }
 
     try {
-      const result = await importMutation.mutateAsync(importFile);
+      const result = await importMutation.mutateAsync(file);
 
-      let message = `복원 완료\n`;
+      let message = '복원 완료\n';
       message += `생성: ${result.created}건\n`;
       message += `업데이트: ${result.updated}건\n`;
       message += `실패: ${result.failed}건`;
@@ -86,7 +85,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       }
 
       alert(message);
-      setImportFile(null);
+      e.target.value = '';
     } catch (error) {
       console.error('Import error:', error);
       alert('복원에 실패했습니다.');
@@ -95,13 +94,8 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg max-w-2xl w-full mx-4 p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -111,208 +105,235 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold">설정</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-50 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-10 rounded-t-xl">
+          <div className="px-6 h-14 flex items-center justify-between">
+            <h1 className="text-lg font-bold text-gray-900">설정</h1>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-900">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </header>
 
-        <div className="p-6 space-y-8">
-          {/* 초기 예산 설정 */}
-          <section>
-            <h3 className="text-lg font-semibold mb-4 text-red-600">⚠️ 초기 예산 설정 (위험)</h3>
-            <div className="card border-2 border-red-200 bg-red-50">
-              <div className="p-4 bg-red-100 rounded-lg mb-4">
-                <p className="text-sm text-red-800 font-semibold mb-2">
-                  ⚠️ 경고: 이 작업은 모든 데이터를 삭제합니다!
-                </p>
-                <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
-                  <li>모든 사용 내역이 삭제됩니다</li>
-                  <li>모든 월별 예산이 삭제됩니다</li>
-                  <li>이 작업은 되돌릴 수 없습니다</li>
-                </ul>
-              </div>
+        <main className="px-6 py-6 space-y-6">
+          {/* Budget Settings */}
+          <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-xl">💰</span> 예산 설정
+            </h2>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  초기 예산 금액
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={initialBudget}
-                    onChange={(e) => setInitialBudget(parseFloat(e.target.value) || 0)}
-                    className="input-field pr-12"
-                    placeholder="1000000"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    원
-                  </span>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="text-sm text-gray-500">현재 월 예산</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {formatCurrency(settings.defaultMonthlyBudget)}원
+                  </p>
                 </div>
-              </div>
-
-              <button
-                onClick={handleSetInitialBudget}
-                className="btn-danger w-full"
-                disabled={setInitialBudgetMutation.isPending || initialBudget <= 0}
-              >
-                {setInitialBudgetMutation.isPending
-                  ? '초기화 중...'
-                  : '🚨 모든 데이터 삭제 및 초기 예산 설정'}
-              </button>
-            </div>
-          </section>
-
-          {/* 기본 예산 설정 */}
-          <section>
-            <h3 className="text-lg font-semibold mb-4">월별 기본 회식비 설정</h3>
-            <div className="card">
-              <p className="text-sm text-gray-600 mb-4">
-                매월 자동으로 생성되는 기본 회식비 금액을 설정합니다.
-              </p>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  월별 기본 예산
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={defaultBudget}
-                    onChange={(e) => setDefaultBudget(parseFloat(e.target.value) || 0)}
-                    className="input-field pr-12"
-                    placeholder="500000"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                    원
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  현재: {formatCurrency(settings?.defaultMonthlyBudget || 0)}
-                </p>
-              </div>
-
-              <button
-                onClick={handleSaveSettings}
-                className="btn-primary w-full"
-                disabled={updateMutation.isPending}
-              >
-                {updateMutation.isPending ? '저장 중...' : '설정 저장'}
-              </button>
-            </div>
-          </section>
-
-          {/* CSV Backup (Export) */}
-          <section>
-            <h3 className="text-lg font-semibold mb-4">데이터 백업 (Export)</h3>
-            <div className="card">
-              <p className="text-sm text-gray-600 mb-4">모든 사용 내역을 CSV 파일로 백업합니다.</p>
-
-              <button
-                onClick={handleExport}
-                className="btn-secondary w-full"
-                disabled={exportMutation.isPending}
-              >
-                {exportMutation.isPending ? '다운로드 중...' : '💾 백업 다운로드 (CSV)'}
-              </button>
-            </div>
-          </section>
-
-          {/* CSV Restore (Import) */}
-          <section>
-            <h3 className="text-lg font-semibold mb-4">데이터 복원 (Import)</h3>
-            <div className="card">
-              <p className="text-sm text-gray-600 mb-4">
-                백업한 CSV 파일을 업로드하여 데이터를 복원합니다.
-                <br />
-                <span className="text-xs text-blue-600">
-                  💡 ID가 일치하는 데이터는 업데이트되고, 새로운 데이터는 추가됩니다.
-                </span>
-              </p>
-
-              <div className="mb-4">
                 <button
-                  onClick={handleDownloadTemplate}
-                  className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-                  disabled={templateMutation.isPending}
+                  onClick={() => {
+                    setNewBudget(settings.defaultMonthlyBudget);
+                    setIsBudgetModalOpen(true);
+                  }}
+                  className="btn-secondary text-sm py-1.5 px-3"
                 >
-                  📄 템플릿 다운로드
+                  변경
                 </button>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CSV 파일 선택
-                </label>
+              <div className="flex items-center gap-2 text-sm bg-blue-50 p-3 rounded-lg text-blue-700">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                예산 변경 시 다음 달부터 적용됩니다.
+              </div>
+            </div>
+          </section>
+
+          {/* Data Management */}
+          <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-xl">💾</span> 데이터 관리
+            </h2>
+
+            <div className="space-y-3">
+              <button
+                onClick={handleExport}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left group"
+                disabled={exportMutation.isPending}
+              >
+                <div>
+                  <p className="font-medium text-gray-900">데이터 내보내기</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    모든 지출 내역을 CSV로 다운로드합니다.
+                  </p>
+                </div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-gray-400 group-hover:text-gray-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+              </button>
+
+              <button
+                onClick={handleDownloadTemplate}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left group"
+                disabled={templateMutation.isPending}
+              >
+                <div>
+                  <p className="font-medium text-gray-900">CSV 템플릿 다운로드</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    데이터 가져오기를 위한 양식을 받습니다.
+                  </p>
+                </div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-gray-400 group-hover:text-gray-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </button>
+
+              <div className="relative">
                 <input
                   type="file"
                   accept=".csv"
-                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                  className="input-field"
+                  onChange={handleImport}
+                  className="hidden"
+                  id="import-csv"
                 />
-                {importFile && (
-                  <p className="text-xs text-gray-600 mt-1">선택된 파일: {importFile.name}</p>
-                )}
+                <label
+                  htmlFor="import-csv"
+                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left cursor-pointer group"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">데이터 가져오기</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      CSV 파일로 지출 내역을 일괄 등록합니다.
+                    </p>
+                  </div>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-gray-400 group-hover:text-gray-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                </label>
               </div>
+            </div>
+          </section>
 
+          {/* Reset Data */}
+          <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
+              <span className="text-xl">⚠️</span> 위험 구역
+            </h2>
+
+            <div className="p-4 bg-red-50 rounded-lg border border-red-100">
+              <h3 className="font-bold text-red-800 mb-1">데이터 초기화</h3>
+              <p className="text-sm text-red-600 mb-4">
+                모든 지출 내역과 설정이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+              </p>
               <button
-                onClick={handleImport}
-                className="btn-primary w-full"
-                disabled={!importFile || importMutation.isPending}
+                onClick={handleReset}
+                className="w-full py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors"
+                disabled={setInitialBudgetMutation.isPending}
               >
-                {importMutation.isPending ? '복원 중...' : '📂 데이터 복원 (CSV)'}
+                {setInitialBudgetMutation.isPending ? '초기화 중...' : '초기화하기'}
               </button>
+            </div>
+          </section>
+        </main>
 
-              {importMutation.isError && (
-                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">
-                    복원 실패: {importMutation.error?.message || '알 수 없는 오류'}
-                  </p>
+        {/* Budget Edit Modal */}
+        {isBudgetModalOpen && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 rounded-xl">
+            <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">예산 변경</h3>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">월 예산 금액</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={newBudget}
+                    onChange={(e) => setNewBudget(Number(e.target.value))}
+                    className="input-field pr-8 font-bold text-lg"
+                    placeholder="0"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                    원
+                  </span>
                 </div>
-              )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsBudgetModalOpen(false)}
+                  className="btn-secondary flex-1"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleUpdateBudget}
+                  className="btn-primary flex-1"
+                  disabled={updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? '저장 중...' : '저장'}
+                </button>
+              </div>
             </div>
-          </section>
-
-          {/* CSV 형식 안내 */}
-          <section>
-            <h3 className="text-lg font-semibold mb-4">CSV 파일 형식</h3>
-            <div className="card bg-gray-50">
-              <p className="text-sm text-gray-700 mb-2 font-medium">백업/복원 형식:</p>
-              <pre className="text-xs bg-white p-3 rounded border overflow-x-auto">
-                {`ID,작성자,금액,사용날짜(YYYY-MM-DD),상호명
-expense-id-123,홍길동,50000,2024-12-03,맛있는식당
-expense-id-456,김철수,35000,2024-12-02,카페`}
-              </pre>
-              <ul className="text-xs text-gray-600 mt-2 space-y-1">
-                <li>• ID가 있으면 해당 데이터를 업데이트 (복원)</li>
-                <li>• ID가 없으면 새로운 데이터로 추가</li>
-                <li>• 영수증 이미지는 백업/복원되지 않습니다</li>
-              </ul>
-            </div>
-          </section>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
