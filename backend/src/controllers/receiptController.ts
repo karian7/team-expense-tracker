@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import path from 'path';
-import { analyzeReceiptWithOpenAI, reanalyzeReceipt } from '../services/ocrService';
+import { analyzeReceiptWithOpenAI, reanalyzeReceipt, getOcrProviderInfo } from '../services/ocrService';
 import { ApiResponse, ReceiptUploadResponse } from '../types';
 import { AppError } from '../middleware/errorHandler';
 
@@ -79,6 +79,28 @@ export async function parseReceipt(
         ocrResult,
       },
       message: 'Receipt re-analyzed successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/receipts/ocr-provider
+ * 현재 사용 중인 OCR 프로바이더 정보 조회
+ */
+export async function getOcrProvider(
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction
+) {
+  try {
+    const providerInfo = getOcrProviderInfo();
+
+    res.json({
+      success: true,
+      data: providerInfo,
+      message: 'OCR provider info retrieved successfully',
     });
   } catch (error) {
     next(error);

@@ -4,10 +4,12 @@
 
 ## 주요 기능
 
-- 영수증 사진 업로드 및 자동 OCR (OpenAI Vision API)
+- 영수증 사진 업로드 및 자동 OCR (OpenAI / Google Vision API 지원)
 - 월별 회식비 예산 관리
 - 사용 내역 자동 집계 및 잔액 계산
 - 월별 자동 이월
+- CSV 백업/복원 기능
+- 초기 예산 설정 및 데이터 리셋
 - 모바일 최적화 (iOS 카메라 지원)
 
 ## 기술 스택
@@ -23,7 +25,7 @@
 - Node.js + Express + TypeScript
 - Prisma ORM
 - SQLite
-- OpenAI Vision API
+- OCR: OpenAI Vision API / Google Cloud Vision API (선택 가능)
 - Multer (파일 업로드)
 
 ## 시작하기
@@ -32,7 +34,11 @@
 
 - Node.js 20+
 - npm 또는 yarn
-- OpenAI API Key
+- OCR API 키 (둘 중 하나):
+  - OpenAI API Key (권장) 또는
+  - Google Cloud Vision API 인증 정보
+
+> **OCR 설정 방법**: 자세한 내용은 [OCR 설정 가이드](docs/OCR_CONFIGURATION.md)를 참고하세요.
 
 ### 설치 및 실행
 
@@ -49,8 +55,12 @@ cd team-expense-tracker
 ```bash
 cd backend
 cp .env.example .env
-# .env 파일을 열어 OPENAI_API_KEY를 설정하세요
+# .env 파일을 열어 OCR 프로바이더와 API 키를 설정하세요
+# OCR_PROVIDER=openai (기본값)
+# OPENAI_API_KEY=your_api_key_here
 ```
+
+> **참고**: Google Vision API를 사용하려면 [OCR 설정 가이드](docs/OCR_CONFIGURATION.md)를 참고하세요.
 
 **프론트엔드:**
 ```bash
@@ -118,6 +128,7 @@ team-expense-tracker/
 ## API 엔드포인트
 
 ### 영수증
+- `GET /api/receipts/ocr-provider` - 현재 OCR 프로바이더 정보 조회
 - `POST /api/receipts/upload` - 영수증 업로드 및 OCR 분석
 - `POST /api/receipts/parse` - 재분석
 
@@ -133,6 +144,15 @@ team-expense-tracker/
 - `GET /api/monthly-budgets/:year/:month` - 특정 월 예산 조회
 - `PUT /api/monthly-budgets/:year/:month` - 예산 설정
 - `POST /api/monthly-budgets/rollover` - 월 이월
+
+### 설정
+- `GET /api/settings` - 앱 설정 조회
+- `PUT /api/settings` - 기본 월별 예산 설정
+- `POST /api/settings/initial-budget` - 초기 예산 설정 (데이터 리셋)
+
+### CSV 백업/복원
+- `GET /api/export/csv` - 전체 데이터 CSV 백업
+- `POST /api/export/import` - CSV 파일로 데이터 복원
 
 ## 사용 시나리오
 

@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { upload } from '../middleware/upload';
-import { uploadReceipt, parseReceipt } from '../controllers/receiptController';
+import { uploadReceipt, parseReceipt, getOcrProvider } from '../controllers/receiptController';
 
 const router = Router();
+
+// GET /api/receipts/ocr-provider
+router.get('/ocr-provider', getOcrProvider);
 
 // POST /api/receipts/upload
 router.post('/upload', upload.single('receipt'), uploadReceipt);
