@@ -35,7 +35,8 @@ model Expense {
   amount          Decimal // 사용 금액 (예산 조정의 경우 음수)
   expenseDate     DateTime // 사용 날짜
   storeName       String? // 상호명
-  receiptImageUrl String? // 영수증 이미지 경로 (예산 조정의 경우 null)
+  receiptImageUrl String? // 영수증 이미지 경로 (deprecated, 마이그레이션 용도)
+  receiptImage    Bytes? // 영수증 이미지 blob (480px width)
   description     String? // 예산 조정 설명
   ocrRawData      String? // OCR 원본 데이터 (JSON string)
   createdAt       DateTime      @default(now())

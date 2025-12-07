@@ -21,8 +21,7 @@ export interface CreateExpenseData {
   amount: number;
   expenseDate: string; // YYYY-MM-DD
   storeName?: string;
-  receiptImageUrl: string;
-  receiptImageBlob?: Blob;
+  receiptImage: string; // base64 encoded
   ocrRawData?: unknown;
 }
 
@@ -66,8 +65,7 @@ export async function createExpense(data: CreateExpenseData): Promise<Expense> {
     amount: data.amount,
     expenseDate: data.expenseDate,
     storeName: data.storeName,
-    receiptImageUrl: data.receiptImageUrl,
-    receiptImageBlob: data.receiptImageBlob,
+    receiptImage: data.receiptImage,
     ocrRawData: data.ocrRawData ? JSON.stringify(data.ocrRawData) : undefined,
     createdAt: timestamp,
     updatedAt: timestamp,

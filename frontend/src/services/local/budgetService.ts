@@ -263,10 +263,10 @@ export async function adjustCurrentBudget(
     authorName: 'SYSTEM',
     amount: -adjustmentAmount, // 음수로 저장하여 지출이 줄어드는 효과
     expenseDate: new Date().toISOString(),
-    storeName: null,
-    receiptImageUrl: null,
+    storeName: undefined,
+    receiptImageUrl: undefined,
     description: description || '예산 조정',
-    ocrRawData: null,
+    ocrRawData: undefined,
     createdAt: timestamp,
     updatedAt: timestamp,
     version: 1,

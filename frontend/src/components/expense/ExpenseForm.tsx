@@ -1,20 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useCreateExpense } from '../../hooks/useExpenses';
-import { getCurrentDate } from '../../utils/format';
-import { API_ORIGIN } from '../../services/api';
+import { getCurrentDateTime, formatDateTimeLocal } from '../../utils/format';
 import type { OcrResult } from '../../types';
 import type { CreateExpenseData } from '../../services/local/expenseService';
 
 interface ExpenseFormProps {
-  imageUrl: string;
+  imageBuffer: string; // base64 encoded
   ocrResult: OcrResult;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
 export default function ExpenseForm({
-  imageUrl,
+  imageBuffer,
   ocrResult,
   onSuccess,
   onCancel,
@@ -31,11 +30,11 @@ export default function ExpenseForm({
     handleSubmit,
     formState: { errors },
     setValue,
-  } = useForm<Omit<CreateExpenseData, 'receiptImageUrl' | 'ocrRawData'>>({
+  } = useForm<Omit<CreateExpenseData, 'receiptImage' | 'ocrRawData'>>({
     defaultValues: {
       authorName: savedAuthorName,
       amount: ocrResult.amount || 0,
-      expenseDate: ocrResult.date || getCurrentDate(),
+      expenseDate: ocrResult.date ? formatDateTimeLocal(ocrResult.date) : getCurrentDateTime(),
       storeName: ocrResult.storeName || '',
     },
   });
@@ -43,11 +42,11 @@ export default function ExpenseForm({
   useEffect(() => {
     if (savedAuthorName) setValue('authorName', savedAuthorName);
     if (ocrResult.amount) setValue('amount', ocrResult.amount);
-    if (ocrResult.date) setValue('expenseDate', ocrResult.date);
+    if (ocrResult.date) setValue('expenseDate', formatDateTimeLocal(ocrResult.date));
     if (ocrResult.storeName) setValue('storeName', ocrResult.storeName);
   }, [ocrResult, savedAuthorName, setValue]);
 
-  const onSubmit = async (data: Omit<CreateExpenseData, 'receiptImageUrl' | 'ocrRawData'>) => {
+  const onSubmit = async (data: Omit<CreateExpenseData, 'receiptImage' | 'ocrRawData'>) => {
     try {
       setIsPending(true);
       setError(null);
@@ -55,9 +54,13 @@ export default function ExpenseForm({
       // 작성자 이름을 로컬 스토리지에 저장
       localStorage.setItem('lastAuthorName', data.authorName);
 
+      // datetime-local 형식을 ISO 형식으로 변환
+      const expenseDate = new Date(data.expenseDate).toISOString();
+
       await createMutation.mutateAsync({
         ...data,
-        receiptImageUrl: imageUrl,
+        expenseDate,
+        receiptImage: imageBuffer,
         ocrRawData: ocrResult,
       });
 
@@ -98,7 +101,7 @@ export default function ExpenseForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">영수증 이미지</label>
           <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-50 h-64 md:h-auto md:aspect-[3/4]">
             <img
-              src={`${API_ORIGIN}${imageUrl}`}
+              src={`data:image/jpeg;base64,${imageBuffer}`}
               alt="Receipt"
               className="w-full h-full object-contain"
             />
@@ -163,8 +166,8 @@ export default function ExpenseForm({
               사용 날짜 <span className="text-red-500">*</span>
             </label>
             <input
-              type="date"
-              {...register('expenseDate', { required: '날짜를 선택해주세요' })}
+              type="datetime-local"
+              {...register('expenseDate', { required: '날짜와 시간을 선택해주세요' })}
               className={`input-field ${errors.expenseDate ? 'border-red-300 focus:ring-red-500' : ''}`}
             />
             {errors.expenseDate && (

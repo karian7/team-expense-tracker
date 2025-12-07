@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
 import { useCurrentBudget } from '../../hooks/useBudget';
-import { formatCurrency, formatDateKorean } from '../../utils/format';
+import { formatCurrency, formatDateTimeKorean } from '../../utils/format';
 import { API_ORIGIN } from '../../services/api';
 import type { Expense } from '../../services/db/database';
 import type { OcrResult } from '../../types';
@@ -90,7 +90,7 @@ export default function ExpenseList() {
                       {expense.storeName || '상호명 없음'}
                     </h3>
                     <div className="text-sm text-gray-500 mt-0.5">
-                      {expense.authorName} · {formatDateKorean(expense.expenseDate)}
+                      {expense.authorName} · {formatDateTimeKorean(expense.expenseDate)}
                     </div>
                   </div>
                 </div>
@@ -123,12 +123,64 @@ export default function ExpenseList() {
             className="bg-white rounded-xl max-w-md w-full overflow-hidden shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative h-48 bg-gray-100">
-              <img
-                src={`${API_ORIGIN}${selectedExpense.receiptImageUrl}`}
-                alt="Receipt"
-                className="w-full h-full object-cover"
-              />
+            <div className="relative h-48 bg-gray-100 flex items-center justify-center">
+              {selectedExpense.receiptImage || selectedExpense.receiptImageUrl ? (
+                <img
+                  src={
+                    selectedExpense.receiptImage
+                      ? `data:image/jpeg;base64,${selectedExpense.receiptImage}`
+                      : `${API_ORIGIN}${selectedExpense.receiptImageUrl}`
+                  }
+                  alt="Receipt"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = `
+                        <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="10" y="10" width="100" height="100" rx="8" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="8 4" fill="#F3F4F6"/>
+                          <circle cx="60" cy="45" r="15" fill="#D1D5DB"/>
+                          <path d="M30 85 L45 65 L60 75 L75 55 L90 70 L90 95 L30 95 Z" fill="#E5E7EB"/>
+                          <text x="60" y="108" text-anchor="middle" fill="#6B7280" font-size="12" font-family="system-ui, -apple-system, sans-serif">영수증 없음</text>
+                        </svg>
+                      `;
+                    }
+                  }}
+                />
+              ) : (
+                <svg
+                  width="120"
+                  height="120"
+                  viewBox="0 0 120 120"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect
+                    x="10"
+                    y="10"
+                    width="100"
+                    height="100"
+                    rx="8"
+                    stroke="#9CA3AF"
+                    strokeWidth="2"
+                    strokeDasharray="8 4"
+                    fill="#F3F4F6"
+                  />
+                  <circle cx="60" cy="45" r="15" fill="#D1D5DB" />
+                  <path d="M30 85 L45 65 L60 75 L75 55 L90 70 L90 95 L30 95 Z" fill="#E5E7EB" />
+                  <text
+                    x="60"
+                    y="108"
+                    textAnchor="middle"
+                    fill="#6B7280"
+                    fontSize="12"
+                    fontFamily="system-ui, -apple-system, sans-serif"
+                  >
+                    영수증 없음
+                  </text>
+                </svg>
+              )}
               <button
                 onClick={() => setSelectedExpense(null)}
                 className="absolute top-4 right-4 p-1 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-colors"
@@ -157,7 +209,7 @@ export default function ExpenseList() {
                     {selectedExpense.storeName || '상호명 없음'}
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
-                    {formatDateKorean(selectedExpense.expenseDate)}
+                    {formatDateTimeKorean(selectedExpense.expenseDate)}
                   </p>
                 </div>
                 <div className="text-xl font-bold text-primary-600">

@@ -28,8 +28,8 @@ export interface Expense extends SyncableEntity {
   amount: number;
   expenseDate: string; // YYYY-MM-DD 형식
   storeName?: string;
-  receiptImageUrl: string;
-  receiptImageBlob?: Blob; // 로컬 저장용
+  receiptImageUrl?: string; // deprecated
+  receiptImage?: string; // base64 encoded image
   ocrRawData?: string; // JSON 문자열
   createdAt: string;
 }

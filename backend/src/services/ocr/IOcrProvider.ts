@@ -6,11 +6,11 @@ import { OcrResult } from '../../types';
  */
 export interface IOcrProvider {
   /**
-   * 영수증 이미지 분석
-   * @param imagePath 분석할 이미지 파일 경로
+   * 영수증 이미지 분석 (Buffer 기반)
+   * @param imageBuffer 분석할 이미지 버퍼
    * @returns OCR 분석 결과
    */
-  analyzeReceipt(imagePath: string): Promise<OcrResult>;
+  analyzeReceiptFromBuffer(imageBuffer: Buffer): Promise<OcrResult>;
 
   /**
    * OCR 프로바이더 이름

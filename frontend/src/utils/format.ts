@@ -42,6 +42,18 @@ export function formatDateKorean(dateString: string): string {
 }
 
 /**
+ * 날짜와 시간을 "M월 d일 HH:mm" 형식으로 포맷
+ */
+export function formatDateTimeKorean(dateString: string): string {
+  try {
+    const date = parseISO(dateString);
+    return format(date, 'M월 d일 HH:mm');
+  } catch {
+    return dateString;
+  }
+}
+
+/**
  * 날짜와 시간을 포함한 포맷
  */
 export function formatDateTime(dateString: string): string {
@@ -58,6 +70,25 @@ export function formatDateTime(dateString: string): string {
  */
 export function getCurrentDate(): string {
   return format(new Date(), 'yyyy-MM-dd');
+}
+
+/**
+ * 현재 날짜와 시간을 datetime-local 형식으로 반환 (YYYY-MM-DDTHH:mm)
+ */
+export function getCurrentDateTime(): string {
+  return format(new Date(), "yyyy-MM-dd'T'HH:mm");
+}
+
+/**
+ * ISO 날짜 문자열을 datetime-local 형식으로 변환 (YYYY-MM-DDTHH:mm)
+ */
+export function formatDateTimeLocal(dateString: string): string {
+  try {
+    const date = parseISO(dateString);
+    return format(date, "yyyy-MM-dd'T'HH:mm");
+  } catch {
+    return getCurrentDateTime();
+  }
 }
 
 /**

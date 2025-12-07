@@ -1,11 +1,9 @@
-import fs from 'fs/promises';
 import { Request, Response, NextFunction } from 'express';
-import path from 'path';
 import sharp from 'sharp';
 import heicConvert from 'heic-convert';
 import {
-  analyzeReceiptWithOpenAI,
-  reanalyzeReceipt,
+  analyzeReceiptWithBuffer,
+  reanalyzeReceiptFromBlob,
   getOcrProviderInfo,
 } from '../services/ocrService';
 import { ApiResponse, ReceiptUploadResponse } from '../types';
@@ -17,108 +15,144 @@ const HEIC_MIME_TYPES = new Set([
   'image/heic-sequence',
   'image/heif-sequence',
 ]);
-const MAX_IMAGE_WIDTH = 800;
 
-async function normalizeReceiptImage(
-  file: Express.Multer.File
-): Promise<{ filename: string; path: string }> {
-  const originalPath = path.resolve(file.path);
-  const uploadsDir = path.resolve(path.dirname(file.path));
-  const parsed = path.parse(file.filename);
-  const ext = parsed.ext.toLowerCase();
+// 이미지 처리 설정
+const IMAGE_CONFIG = {
+  storage: {
+    maxWidth: 480, // 저장용: 적당한 크기로 압축
+    quality: 85,
+  },
+  ocr: {
+    sharpenAmount: 1.2, // 선명도 향상 (텍스트 가독성)
+    contrastAmount: 1.15, // 대비 증가 (배경/텍스트 구분)
+    brightnessAmount: 1.05, // 약간의 밝기 증가
+  },
+};
+
+/**
+ * HEIC를 JPEG로 변환하고 기본 회전 처리
+ */
+async function convertAndRotate(file: Express.Multer.File): Promise<Buffer> {
   const isHeic =
-    HEIC_MIME_TYPES.has(file.mimetype.toLowerCase()) || ext === '.heic' || ext === '.heif';
-  const targetExt = isHeic ? '.jpg' : ext || '.jpg';
-  const filename = `${parsed.name}${targetExt}`;
-  const outputPath = path.join(uploadsDir, filename);
-  const tempOutputPath = path.join(uploadsDir, `tmp-${Date.now()}-${parsed.name}${targetExt}`);
+    HEIC_MIME_TYPES.has(file.mimetype.toLowerCase()) ||
+    file.originalname.toLowerCase().endsWith('.heic') ||
+    file.originalname.toLowerCase().endsWith('.heif');
 
-  const sourceBuffer = await fs.readFile(originalPath);
-
-  const inputBuffer = isHeic
+  const buffer = isHeic
     ? await heicConvert({
-        buffer: sourceBuffer,
+        buffer: file.buffer,
         format: 'JPEG',
         quality: 90,
       })
-    : sourceBuffer;
+    : file.buffer;
 
-  const metadata = await sharp(inputBuffer, { failOnError: false }).metadata();
-  const shouldResize = (metadata.width ?? MAX_IMAGE_WIDTH) > MAX_IMAGE_WIDTH;
+  // EXIF Orientation 자동 회전
+  return await sharp(buffer, { failOnError: false }).rotate().toBuffer();
+}
 
-  const transformer = sharp(inputBuffer, { failOnError: false }).rotate();
+/**
+ * 저장용 이미지 생성 (압축만, OCR 처리 없음)
+ */
+async function createStorageImage(rotatedBuffer: Buffer): Promise<Buffer> {
+  const metadata = await sharp(rotatedBuffer, { failOnError: false }).metadata();
+  const shouldResize = (metadata.width ?? IMAGE_CONFIG.storage.maxWidth) > IMAGE_CONFIG.storage.maxWidth;
+
+  let transformer = sharp(rotatedBuffer, { failOnError: false });
 
   if (shouldResize) {
-    transformer.resize({ width: MAX_IMAGE_WIDTH, withoutEnlargement: true });
+    transformer = transformer.resize({
+      width: IMAGE_CONFIG.storage.maxWidth,
+      withoutEnlargement: true,
+    });
   }
 
-  switch (targetExt) {
-    case '.png':
-      transformer.png();
-      break;
-    case '.webp':
-      transformer.webp();
-      break;
-    case '.gif':
-      transformer.gif();
-      break;
-    default:
-      transformer.jpeg({ quality: 90 });
-      break;
-  }
+  return await transformer
+    .jpeg({ quality: IMAGE_CONFIG.storage.quality })
+    .toBuffer();
+}
 
-  await transformer.toFile(tempOutputPath);
-
-  // 파일 이름 충돌을 피하기 위해 tempOutputPath로 쓴 뒤 최종 위치로 rename
-  await fs.rename(tempOutputPath, outputPath);
-
-  // 원본 파일 정리 (확장자 변환 등으로 이름이 달라진 경우에만 삭제)
-  if (originalPath !== outputPath) {
-    await fs.unlink(originalPath).catch(() => undefined);
-  }
-
-  return { filename, path: outputPath };
+/**
+ * OCR 처리용 이미지 생성 (선명도/대비/밝기 최적화)
+ *
+ * 주요 최적화:
+ * 1. 선명도(Sharpen) 향상: 텍스트 가독성 증가
+ * 2. 대비(Contrast) 조정: 배경과 텍스트 구분 개선
+ * 3. 밝기(Brightness) 조정: 어두운 영수증 보정
+ * 4. 노이즈 제거: 미디안 필터로 잡티 제거
+ *
+ * 주의: 해상도는 변경하지 않음 (OCR 비용 절감)
+ */
+async function createOcrImage(rotatedBuffer: Buffer): Promise<Buffer> {
+  return await sharp(rotatedBuffer, { failOnError: false })
+    // 1. 노이즈 제거
+    .median(3)
+    // 2. 선명도 향상 (텍스트 경계 강조)
+    .sharpen({
+      sigma: IMAGE_CONFIG.ocr.sharpenAmount,
+      m1: 0.5,
+      m2: 0.5,
+    })
+    // 3. 히스토그램 정규화 (명암 분포 최적화)
+    .normalize()
+    // 4. 대비 증가 (텍스트/배경 구분)
+    .linear(
+      IMAGE_CONFIG.ocr.contrastAmount,
+      -(128 * IMAGE_CONFIG.ocr.contrastAmount) + 128
+    )
+    // 5. 밝기 조정 (어두운 영수증 보정)
+    .modulate({
+      brightness: IMAGE_CONFIG.ocr.brightnessAmount,
+    })
+    .jpeg({ quality: 90 })
+    .toBuffer();
 }
 
 /**
  * POST /api/receipts/upload
  * 영수증 업로드 및 OCR 분석
+ *
+ * 처리 흐름:
+ * 1. HEIC → JPEG 변환 및 회전
+ * 2. 저장용 이미지 생성 (압축)
+ * 3. OCR용 이미지 생성 (최적화)
+ * 4. OCR 분석 실행
+ * 5. 저장용 이미지만 클라이언트에 반환
  */
 export async function uploadReceipt(
   req: Request,
   res: Response<ApiResponse<ReceiptUploadResponse>>,
   next: NextFunction
 ) {
-  let processedFilePath: string | undefined;
-
   try {
     if (!req.file) {
       throw new AppError('No file uploaded', 400);
     }
 
-    const { filename, path: imagePath } = await normalizeReceiptImage(req.file);
-    processedFilePath = imagePath;
+    // 1. 기본 변환 및 회전
+    const rotatedBuffer = await convertAndRotate(req.file);
 
-    const imageUrl = `/uploads/${filename}`;
+    // 2. 저장용 이미지 생성 (압축만)
+    const storageBuffer = await createStorageImage(rotatedBuffer);
 
-    // OpenAI Vision API로 OCR 수행
-    const ocrResult = await analyzeReceiptWithOpenAI(imagePath);
+    // 3. OCR용 이미지 생성 (최적화 처리)
+    const ocrBuffer = await createOcrImage(rotatedBuffer);
+
+    // 4. OCR 분석 (최적화된 이미지 사용)
+    const ocrResult = await analyzeReceiptWithBuffer(ocrBuffer);
+
+    // 5. 저장용 이미지만 반환
+    const imageId = `receipt-${Date.now()}`;
 
     res.json({
       success: true,
       data: {
-        imageUrl,
+        imageId,
+        imageBuffer: storageBuffer.toString('base64'),
         ocrResult,
       },
       message: 'Receipt uploaded and analyzed successfully',
     });
   } catch (error) {
-    const targetPath = processedFilePath ?? req.file?.path;
-
-    if (targetPath) {
-      await fs.unlink(targetPath).catch(() => undefined);
-    }
-
     next(error);
   }
 }
@@ -126,34 +160,31 @@ export async function uploadReceipt(
 /**
  * POST /api/receipts/parse
  * 이미 업로드된 영수증 재분석
+ *
+ * 저장된 이미지를 OCR 최적화하여 재분석
  */
 export async function parseReceipt(
-  req: Request<Record<string, never>, ApiResponse, { imageUrl: string }>,
+  req: Request<Record<string, never>, ApiResponse, { imageBlob: string }>,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
   try {
-    const { imageUrl } = req.body;
+    const { imageBlob } = req.body;
 
-    if (!imageUrl) {
-      throw new AppError('Image URL is required', 400);
+    if (!imageBlob) {
+      throw new AppError('Image blob is required', 400);
     }
 
-    // URL에서 파일 경로 추출
-    const filename = path.basename(imageUrl);
-    const imagePath = path.join('uploads', filename);
+    // 저장된 이미지를 OCR용으로 최적화
+    const storageBuffer = Buffer.from(imageBlob, 'base64');
+    const ocrBuffer = await createOcrImage(storageBuffer);
 
-    await fs.access(imagePath).catch(() => {
-      throw new AppError('Image file not found', 404);
-    });
-
-    // OCR 재실행
-    const ocrResult = await reanalyzeReceipt(imagePath);
+    // OCR 분석 (최적화된 이미지 사용)
+    const ocrResult = await reanalyzeReceiptFromBlob(ocrBuffer);
 
     res.json({
       success: true,
       data: {
-        imageUrl,
         ocrResult,
       },
       message: 'Receipt re-analyzed successfully',

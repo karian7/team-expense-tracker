@@ -166,7 +166,7 @@ export default function HomePage() {
                 <h2 className="text-lg font-semibold text-gray-900">지출 정보 입력</h2>
               </div>
               <ExpenseForm
-                imageUrl={uploadResult.imageUrl}
+                imageBuffer={uploadResult.imageBuffer}
                 ocrResult={uploadResult.ocrResult}
                 onSuccess={handleFormSuccess}
                 onCancel={handleCancel}

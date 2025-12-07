@@ -41,6 +41,7 @@ export interface ExpenseResponse {
   expenseDate: Date;
   storeName: string | null;
   receiptImageUrl: string | null;
+  receiptImage: string | null; // base64 encoded image
   description: string | null;
   ocrRawData: string | null;
   createdAt: Date;
@@ -52,7 +53,8 @@ export interface CreateExpenseRequest {
   amount: number;
   expenseDate: string; // ISO date string
   storeName?: string;
-  receiptImageUrl: string;
+  receiptImageUrl?: string; // deprecated
+  receiptImage?: string; // base64 encoded image
   ocrRawData?: Record<string, unknown>;
 }
 
@@ -66,7 +68,7 @@ export interface UpdateExpenseRequest {
 // OCR Types
 export interface OcrResult {
   amount: number | null;
-  date: string | null;
+  date: string | null; // ISO datetime string (YYYY-MM-DDTHH:mm:ss.sssZ)
   storeName: string | null;
   confidence: number;
   rawText?: string;
@@ -74,7 +76,8 @@ export interface OcrResult {
 }
 
 export interface ReceiptUploadResponse {
-  imageUrl: string;
+  imageId: string;
+  imageBuffer: string; // base64 encoded
   ocrResult: OcrResult;
 }
 

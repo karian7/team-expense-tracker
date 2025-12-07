@@ -84,7 +84,7 @@ export const expenseApi = {
 
   update: async (
     id: string,
-    updates: Partial<Omit<ExpenseFormData, 'receiptImageUrl' | 'ocrRawData'>>
+    updates: Partial<Omit<ExpenseFormData, 'receiptImage' | 'ocrRawData'>>
   ): Promise<Expense> => {
     const { data } = await apiClient.put<ApiResponse<Expense>>(`/expenses/${id}`, updates);
     return data.data!;
@@ -113,9 +113,9 @@ export const receiptApi = {
     return data.data!;
   },
 
-  parse: async (imageUrl: string): Promise<ReceiptUploadResponse> => {
+  parse: async (imageBlob: string): Promise<ReceiptUploadResponse> => {
     const { data } = await apiClient.post<ApiResponse<ReceiptUploadResponse>>('/receipts/parse', {
-      imageUrl,
+      imageBlob,
     });
     return data.data!;
   },

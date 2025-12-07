@@ -91,7 +91,7 @@ export async function createNewExpense(
   next: NextFunction
 ) {
   try {
-    const { authorName, amount, expenseDate, storeName, receiptImageUrl, ocrRawData } = req.body;
+    const { authorName, amount, expenseDate, storeName, receiptImage, ocrRawData } = req.body;
 
     // Validation
     if (!authorName || !authorName.trim()) {
@@ -106,8 +106,8 @@ export async function createNewExpense(
       throw new AppError('Expense date is required', 400);
     }
 
-    if (!receiptImageUrl || !receiptImageUrl.trim()) {
-      throw new AppError('Receipt image URL is required', 400);
+    if (!receiptImage || !receiptImage.trim()) {
+      throw new AppError('Receipt image is required', 400);
     }
 
     const expense = await createExpense({
@@ -115,7 +115,7 @@ export async function createNewExpense(
       amount,
       expenseDate,
       storeName: storeName?.trim(),
-      receiptImageUrl,
+      receiptImage,
       ocrRawData,
     });
 

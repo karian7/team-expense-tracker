@@ -7,10 +7,18 @@ import { ExpenseResponse, CreateExpenseRequest, UpdateExpenseRequest } from '../
 import { getOrCreateMonthlyBudget, recalculateMonthlyBudget } from './budgetService';
 import { AppError } from '../middleware/errorHandler';
 
-const toExpenseResponse = (expense: unknown): ExpenseResponse =>
-  convertDecimalsToNumbers(
-    expense as unknown as Record<string, unknown>
-  ) as unknown as ExpenseResponse;
+const toExpenseResponse = (expense: unknown): ExpenseResponse => {
+  const rawExpense = expense as Record<string, unknown>;
+
+  // Buffer를 먼저 base64로 변환
+  if (rawExpense.receiptImage && Buffer.isBuffer(rawExpense.receiptImage)) {
+    rawExpense.receiptImage = rawExpense.receiptImage.toString('base64');
+  }
+
+  const converted = convertDecimalsToNumbers(rawExpense) as unknown as ExpenseResponse;
+
+  return converted;
+};
 
 /**
  * 사용 내역 생성
@@ -30,7 +38,8 @@ export async function createExpense(data: CreateExpenseRequest): Promise<Expense
       amount: new Decimal(data.amount),
       expenseDate,
       storeName: data.storeName || null,
-      receiptImageUrl: data.receiptImageUrl,
+      receiptImageUrl: data.receiptImageUrl || null,
+      receiptImage: data.receiptImage ? Buffer.from(data.receiptImage, 'base64') : null,
       ocrRawData: data.ocrRawData ? JSON.stringify(data.ocrRawData) : null,
     },
   });

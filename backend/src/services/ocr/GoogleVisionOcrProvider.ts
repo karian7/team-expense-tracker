@@ -1,5 +1,4 @@
-import vision, { ImageAnnotatorClient } from '@google-cloud/vision';
-import fs from 'fs';
+import { ImageAnnotatorClient } from '@google-cloud/vision';
 import { OcrResult } from '../../types';
 import { IOcrProvider } from './IOcrProvider';
 
@@ -18,11 +17,8 @@ export class GoogleVisionOcrProvider implements IOcrProvider {
   /**
    * Google Vision API를 사용하여 영수증 이미지 분석
    */
-  async analyzeReceipt(imagePath: string): Promise<OcrResult> {
+  async analyzeReceiptFromBuffer(imageBuffer: Buffer): Promise<OcrResult> {
     try {
-      // 이미지 파일 읽기
-      const imageBuffer = fs.readFileSync(imagePath);
-
       // Text Detection (OCR) 수행
       const [result] = await this.client.textDetection({
         image: { content: imageBuffer },
@@ -93,21 +89,42 @@ export class GoogleVisionOcrProvider implements IOcrProvider {
       }
     }
 
-    // 날짜 추출 패턴
-    // 예: "2024-01-15", "2024.01.15", "2024/01/15", "24-01-15"
-    const datePatterns = [
-      /(\d{4}[-/.]\d{2}[-/.]\d{2})/,
-      /(\d{2}[-/.]\d{2}[-/.]\d{2})/,
-      /(\d{4}년\s*\d{1,2}월\s*\d{1,2}일)/,
+    // 날짜 및 시간 추출 패턴
+    // 예: "2024-01-15 14:30", "2024.01.15 14:30:25", "2024/01/15 14:30"
+    const dateTimePatterns = [
+      /(\d{4}[-/.]\d{2}[-/.]\d{2}\s+\d{2}:\d{2}(?::\d{2})?)/,
+      /(\d{2}[-/.]\d{2}[-/.]\d{2}\s+\d{2}:\d{2}(?::\d{2})?)/,
+      /(\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s+\d{2}:\d{2}(?::\d{2})?)/,
     ];
 
-    for (const pattern of datePatterns) {
+    // 시간 포함 날짜 먼저 시도
+    for (const pattern of dateTimePatterns) {
       const match = text.match(pattern);
       if (match) {
-        date = this.normalizeDate(match[1]);
+        date = this.normalizeDateTime(match[1]);
         if (date) {
-          confidence += 0.3;
+          confidence += 0.4;
           break;
+        }
+      }
+    }
+
+    // 시간 없는 날짜만 추출 (시간을 찾지 못한 경우)
+    if (!date) {
+      const datePatterns = [
+        /(\d{4}[-/.]\d{2}[-/.]\d{2})/,
+        /(\d{2}[-/.]\d{2}[-/.]\d{2})/,
+        /(\d{4}년\s*\d{1,2}월\s*\d{1,2}일)/,
+      ];
+
+      for (const pattern of datePatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          date = this.normalizeDate(match[1]);
+          if (date) {
+            confidence += 0.3;
+            break;
+          }
         }
       }
     }
@@ -135,6 +152,70 @@ export class GoogleVisionOcrProvider implements IOcrProvider {
       storeName,
       confidence,
     };
+  }
+
+  /**
+   * 날짜+시간 문자열을 ISO 8601 형식으로 정규화
+   */
+  private normalizeDateTime(dateTimeStr: string): string | null {
+    try {
+      // "2024년 1월 15일 14:30:25" 형식 처리
+      const koreanMatch = dateTimeStr.match(
+        /(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s+(\d{2}):(\d{2})(?::(\d{2}))?/
+      );
+      if (koreanMatch) {
+        const [, year, month, day, hour, minute, second = '00'] = koreanMatch;
+        const date = new Date(
+          parseInt(year),
+          parseInt(month) - 1,
+          parseInt(day),
+          parseInt(hour),
+          parseInt(minute),
+          parseInt(second)
+        );
+        return date.toISOString();
+      }
+
+      // "2024-01-15 14:30:25", "2024.01.15 14:30" 형식 처리
+      const fullDateTimeMatch = dateTimeStr.match(
+        /(\d{4})[-/.](\d{2})[-/.](\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?/
+      );
+      if (fullDateTimeMatch) {
+        const [, year, month, day, hour, minute, second = '00'] = fullDateTimeMatch;
+        const date = new Date(
+          parseInt(year),
+          parseInt(month) - 1,
+          parseInt(day),
+          parseInt(hour),
+          parseInt(minute),
+          parseInt(second)
+        );
+        return date.toISOString();
+      }
+
+      // "24-01-15 14:30" 형식 처리 (20XX년대 가정)
+      const shortDateTimeMatch = dateTimeStr.match(
+        /(\d{2})[-/.](\d{2})[-/.](\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?/
+      );
+      if (shortDateTimeMatch) {
+        const [, year, month, day, hour, minute, second = '00'] = shortDateTimeMatch;
+        const fullYear = `20${year}`;
+        const date = new Date(
+          parseInt(fullYear),
+          parseInt(month) - 1,
+          parseInt(day),
+          parseInt(hour),
+          parseInt(minute),
+          parseInt(second)
+        );
+        return date.toISOString();
+      }
+
+      return null;
+    } catch (error) {
+      console.error('DateTime normalization error:', error);
+      return null;
+    }
   }
 
   /**

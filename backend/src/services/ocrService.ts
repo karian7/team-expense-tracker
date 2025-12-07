@@ -19,20 +19,19 @@ function getOcrProvider(): IOcrProvider {
 }
 
 /**
- * 영수증 이미지 분석 (메인 엔트리 포인트)
- * 설정된 OCR 프로바이더를 사용하여 영수증 분석
+ * 영수증 이미지 분석 (Buffer 기반)
  */
-export async function analyzeReceiptWithOpenAI(imagePath: string): Promise<OcrResult> {
+export async function analyzeReceiptWithBuffer(imageBuffer: Buffer): Promise<OcrResult> {
   const provider = getOcrProvider();
-  return provider.analyzeReceipt(imagePath);
+  return provider.analyzeReceiptFromBuffer(imageBuffer);
 }
 
 /**
- * 영수증 재분석
+ * 영수증 재분석 (Blob 기반)
  */
-export async function reanalyzeReceipt(imagePath: string): Promise<OcrResult> {
+export async function reanalyzeReceiptFromBlob(imageBuffer: Buffer): Promise<OcrResult> {
   const provider = getOcrProvider();
-  return provider.analyzeReceipt(imagePath);
+  return provider.analyzeReceiptFromBuffer(imageBuffer);
 }
 
 /**

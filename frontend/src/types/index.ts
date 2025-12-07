@@ -28,7 +28,8 @@ export interface Expense {
   amount: number;
   expenseDate: string;
   storeName: string | null;
-  receiptImageUrl: string;
+  receiptImageUrl?: string; // deprecated
+  receiptImage: string | null; // base64 encoded
   ocrRawData: string | null;
   createdAt: string;
   updatedAt: string;
@@ -46,7 +47,8 @@ export interface OcrResult {
 
 // Receipt Upload Response
 export interface ReceiptUploadResponse {
-  imageUrl: string;
+  imageId: string;
+  imageBuffer: string; // base64 encoded
   ocrResult: OcrResult;
 }
 
@@ -56,7 +58,7 @@ export interface ExpenseFormData {
   amount: number;
   expenseDate: string;
   storeName?: string;
-  receiptImageUrl: string;
+  receiptImage: string; // base64 encoded
   ocrRawData?: OcrResult | Record<string, unknown>;
 }
 

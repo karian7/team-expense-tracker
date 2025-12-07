@@ -272,6 +272,7 @@ function convertDecimalsInExpense(expense: any) {
   return {
     ...expense,
     amount: expense.amount.toNumber(),
+    receiptImage: expense.receiptImage ? expense.receiptImage.toString('base64') : null,
     expenseDate: expense.expenseDate.toISOString().split('T')[0],
     createdAt: expense.createdAt.toISOString(),
     updatedAt: expense.updatedAt.toISOString(),
