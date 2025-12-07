@@ -8,7 +8,6 @@ import {
 import { ApiResponse, AdjustCurrentBudgetRequest } from '../types';
 import { AppError } from '../middleware/errorHandler';
 import { getEventsByMonth } from '../services/budgetEventService';
-import { ensureCurrentMonthBudget } from '../services/settingsService';
 
 /**
  * GET /api/monthly-budgets/current
@@ -208,27 +207,6 @@ export async function adjustCurrentBudget(
       success: true,
       data: budget,
       message: 'Budget adjusted successfully',
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-/**
- * POST /api/monthly-budgets/ensure-current
- * 현재 월에 기본 예산 반영 보장 (중복 방지)
- */
-export async function ensureCurrentMonthBudgetController(
-  req: Request,
-  res: Response<ApiResponse>,
-  next: NextFunction
-) {
-  try {
-    const result = await ensureCurrentMonthBudget();
-
-    res.json({
-      success: true,
-      data: result,
     });
   } catch (error) {
     next(error);

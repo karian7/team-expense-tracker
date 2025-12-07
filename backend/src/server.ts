@@ -6,7 +6,6 @@ import budgetRoutes from './routes/budgetRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import receiptRoutes from './routes/receiptRoutes';
 import settingsRoutes from './routes/settingsRoutes';
-import exportRoutes from './routes/exportRoutes';
 import syncRoutes from './routes/syncRoutes';
 import eventRoutes from './routes/eventRoutes';
 import { errorHandler } from './middleware/errorHandler';
@@ -86,8 +85,6 @@ app.use('/api/monthly-budgets', budgetRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/export', exportRoutes);
-app.use('/api/import', exportRoutes);
 app.use('/api/sync', syncRoutes);
 
 // 404 handler

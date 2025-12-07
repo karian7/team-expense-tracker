@@ -33,7 +33,7 @@
 1. **BUDGET_IN**: 예산 유입 (기본 예산, 추가 예산)
 2. **EXPENSE**: 지출 (영수증 기반)
 3. **EXPENSE_REVERSAL**: 지출 삭제/환불 (대상 sequence 참조)
-4. **BUDGET_ADJUSTMENT_INCREASE / _DECREASE**: 시스템/관리자 잔액 조정 이벤트
+4. **BUDGET_ADJUSTMENT_INCREASE / \_DECREASE**: 시스템/관리자 잔액 조정 이벤트
 
 ---
 
@@ -86,7 +86,12 @@ npx prisma migrate dev --name event_sourcing_migration
 // Event
 export interface BudgetEventResponse {
   sequence: number;
-  eventType: 'BUDGET_IN' | 'EXPENSE' | 'EXPENSE_REVERSAL' | 'BUDGET_ADJUSTMENT_INCREASE' | 'BUDGET_ADJUSTMENT_DECREASE';
+  eventType:
+    | 'BUDGET_IN'
+    | 'EXPENSE'
+    | 'EXPENSE_REVERSAL'
+    | 'BUDGET_ADJUSTMENT_INCREASE'
+    | 'BUDGET_ADJUSTMENT_DECREASE';
   eventDate: string;
   year: number;
   month: number;

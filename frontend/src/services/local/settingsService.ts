@@ -1,7 +1,6 @@
 import { db } from '../db/database';
 
 const SETTINGS_KEYS = {
-  DEFAULT_MONTHLY_BUDGET: 'default_monthly_budget',
   INITIAL_BUDGET: 'initial_budget',
 } as const;
 
@@ -13,15 +12,6 @@ export const settingsService = {
 
   async setSetting(key: string, value: string): Promise<void> {
     await db.settings.put({ key, value });
-  },
-
-  async getDefaultMonthlyBudget(): Promise<number> {
-    const value = await this.getSetting(SETTINGS_KEYS.DEFAULT_MONTHLY_BUDGET);
-    return value ? parseInt(value, 10) : 0;
-  },
-
-  async setDefaultMonthlyBudget(amount: number): Promise<void> {
-    await this.setSetting(SETTINGS_KEYS.DEFAULT_MONTHLY_BUDGET, amount.toString());
   },
 
   async getInitialBudget(): Promise<number> {

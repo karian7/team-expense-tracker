@@ -5,7 +5,8 @@ export type BudgetEventType =
   | 'EXPENSE'
   | 'EXPENSE_REVERSAL'
   | 'BUDGET_ADJUSTMENT_INCREASE'
-  | 'BUDGET_ADJUSTMENT_DECREASE';
+  | 'BUDGET_ADJUSTMENT_DECREASE'
+  | 'BUDGET_RESET';
 
 // API Response Types
 export interface ApiResponse<T = unknown> {
@@ -108,15 +109,6 @@ export interface UpdateSettingsRequest {
 export interface AdjustCurrentBudgetRequest {
   targetBalance: number;
   description: string;
-}
-
-// Export/Import Types
-export interface ImportResult {
-  success: number;
-  failed: number;
-  created: number;
-  updated: number;
-  errors: string[];
 }
 
 // Utility type to convert Decimal to number

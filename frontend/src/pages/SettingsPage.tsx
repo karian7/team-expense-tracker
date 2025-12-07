@@ -4,7 +4,6 @@ import {
   useUpdateDefaultMonthlyBudget,
   useResetAllData,
 } from '../hooks/useSettings';
-import { useExportExpenses, useDownloadTemplate, useImportExpenses } from '../hooks/useExport';
 import { useCurrentBudget, useAdjustCurrentBudget } from '../hooks/useBudget';
 import { formatCurrency } from '../utils/format';
 
@@ -18,9 +17,6 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const updateMutation = useUpdateDefaultMonthlyBudget();
   const resetMutation = useResetAllData();
   const adjustBudgetMutation = useAdjustCurrentBudget();
-  const exportMutation = useExportExpenses();
-  const templateMutation = useDownloadTemplate();
-  const importMutation = useImportExpenses();
 
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
@@ -34,9 +30,6 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [isExporting] = useState(false);
-  const [isDownloadingTemplate] = useState(false);
-  // const [isImporting, setIsImporting] = useState(false);
 
   const handleUpdateBudget = async () => {
     try {
@@ -112,52 +105,19 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     }
   };
 
-  const handleExport = () => {
-    exportMutation.mutate();
-  };
-
-  const handleDownloadTemplate = () => {
-    templateMutation.mutate();
-  };
-
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    try {
-      // setIsImporting(true);
-      const result = await importMutation.mutateAsync(file);
-
-      let message = '복원 완료\n';
-      message += `생성: ${result.created}건\n`;
-      message += `업데이트: ${result.updated}건\n`;
-      message += `실패: ${result.failed}건`;
-
-      if (result.failed > 0) {
-        message += `\n\n실패 내역:\n${result.errors.slice(0, 5).join('\n')}`;
-        if (result.errors.length > 5) {
-          message += `\n... 외 ${result.errors.length - 5}건`;
-        }
-      }
-
-      alert(message);
-      e.target.value = '';
-    } catch (error) {
-      console.error('Import error:', error);
-      alert('복원에 실패했습니다.');
-    }
-    // finally {
-    //   setIsImporting(false);
-    // }
-  };
-
-  // useLiveQuery returns undefined while loading
-  if (!settings || !currentBudget) {
+  // useQuery returns { data, isLoading, error }
+  if (settings.isLoading || currentBudget.isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (!settings.data || !currentBudget.data) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-red-600">설정을 불러올 수 없습니다.</div>
       </div>
     );
   }
@@ -204,12 +164,12 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 <div>
                   <p className="text-sm text-gray-500">현재 월 예산</p>
                   <p className="text-xl font-bold text-gray-900">
-                    {formatCurrency(settings.defaultMonthlyBudget)}원
+                    {formatCurrency(settings.data.defaultMonthlyBudget)}원
                   </p>
                 </div>
                 <button
                   onClick={() => {
-                    setNewBudget(settings.defaultMonthlyBudget);
+                    setNewBudget(settings.data.defaultMonthlyBudget);
                     setIsBudgetModalOpen(true);
                   }}
                   className="btn-secondary text-sm py-1.5 px-3"
@@ -223,12 +183,12 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 <div>
                   <p className="text-sm text-blue-600 font-medium">이번달 남은 예산</p>
                   <p className="text-xl font-bold text-blue-900">
-                    {formatCurrency(currentBudget.balance)}원
+                    {formatCurrency(currentBudget.data.balance)}원
                   </p>
                 </div>
                 <button
                   onClick={() => {
-                    setTargetBalance(currentBudget.balance);
+                    setTargetBalance(currentBudget.data.balance);
                     setIsAdjustModalOpen(true);
                   }}
                   className="btn-primary text-sm py-1.5 px-3"
@@ -254,107 +214,6 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   />
                 </svg>
                 예산 변경 시 다음 달부터 적용됩니다.
-              </div>
-            </div>
-          </section>
-
-          {/* Data Management */}
-          <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-xl">💾</span> 데이터 관리
-            </h2>
-
-            <div className="space-y-3">
-              <button
-                onClick={handleExport}
-                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left group"
-                disabled={isExporting}
-                data-testid="export-csv-button"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">데이터 내보내기</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    모든 지출 내역을 CSV로 다운로드합니다.
-                  </p>
-                </div>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-gray-400 group-hover:text-gray-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-              </button>
-
-              <button
-                onClick={handleDownloadTemplate}
-                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left group"
-                disabled={isDownloadingTemplate}
-                data-testid="download-template-button"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">CSV 템플릿 다운로드</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    데이터 가져오기를 위한 양식을 받습니다.
-                  </p>
-                </div>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-gray-400 group-hover:text-gray-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </button>
-
-              <div className="relative">
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleImport}
-                  className="hidden"
-                  id="import-csv"
-                  data-testid="import-csv-input"
-                />
-                <label
-                  htmlFor="import-csv"
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left cursor-pointer group"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900">데이터 가져오기</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      CSV 파일로 지출 내역을 일괄 등록합니다.
-                    </p>
-                  </div>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-gray-400 group-hover:text-gray-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
-                </label>
               </div>
             </div>
           </section>
@@ -437,7 +296,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
               <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-500 mb-1">현재 남은 예산</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {formatCurrency(currentBudget.balance)}원
+                  {formatCurrency(currentBudget.data.balance)}원
                 </p>
               </div>
 
@@ -470,14 +329,14 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 />
               </div>
 
-              {targetBalance !== currentBudget.balance && (
+              {targetBalance !== currentBudget.data.balance && (
                 <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
                   <p className="text-xs text-blue-600 mb-1">조정 금액</p>
                   <p
-                    className={`text-lg font-bold ${targetBalance > currentBudget.balance ? 'text-blue-600' : 'text-red-600'}`}
+                    className={`text-lg font-bold ${targetBalance > currentBudget.data.balance ? 'text-blue-600' : 'text-red-600'}`}
                   >
-                    {targetBalance > currentBudget.balance ? '+' : ''}
-                    {formatCurrency(targetBalance - currentBudget.balance)}원
+                    {targetBalance > currentBudget.data.balance ? '+' : ''}
+                    {formatCurrency(targetBalance - currentBudget.data.balance)}원
                   </p>
                 </div>
               )}

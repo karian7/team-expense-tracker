@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma';
+import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { convertDecimalsToNumbers } from '../utils/decimal';
 import {
@@ -7,10 +8,47 @@ import {
   SyncEventsResponse,
   MonthlyBudgetResponse,
 } from '../types';
+import { BUDGET_EVENT_CONSTANTS } from '../constants/budgetEvents';
 
 const INCOMING_EVENT_TYPES = new Set(['BUDGET_IN', 'BUDGET_ADJUSTMENT_INCREASE']);
 
 const OUTGOING_EVENT_TYPES = new Set(['EXPENSE', 'BUDGET_ADJUSTMENT_DECREASE']);
+
+const isDefaultMonthlyBudgetPayload = (data: CreateBudgetEventRequest) =>
+  data.eventType === 'BUDGET_IN' &&
+  data.authorName === BUDGET_EVENT_CONSTANTS.SYSTEM_AUTHOR &&
+  (data.description ?? '') === BUDGET_EVENT_CONSTANTS.MONTHLY_BUDGET_DESCRIPTION;
+
+async function findExistingDefaultMonthlyBudgetEvent(data: CreateBudgetEventRequest) {
+  return prisma.budgetEvent.findFirst({
+    where: {
+      year: data.year,
+      month: data.month,
+      eventType: data.eventType,
+      authorName: data.authorName,
+      description: data.description ?? null,
+    },
+    orderBy: {
+      sequence: 'asc',
+    },
+  });
+}
+
+async function getLastResetSequence(): Promise<number> {
+  const resetEvent = await prisma.budgetEvent.findFirst({
+    where: {
+      eventType: 'BUDGET_RESET',
+    },
+    orderBy: {
+      sequence: 'desc',
+    },
+    select: {
+      sequence: true,
+    },
+  });
+
+  return resetEvent?.sequence ?? 0;
+}
 
 const toBudgetEventResponse = (event: unknown): BudgetEventResponse => {
   const rawEvent = event as Record<string, unknown>;
@@ -31,23 +69,41 @@ export async function createBudgetEvent(
 ): Promise<BudgetEventResponse> {
   const eventDate = new Date(data.eventDate);
 
-  const event = await prisma.budgetEvent.create({
-    data: {
-      eventType: data.eventType,
-      eventDate,
-      year: data.year,
-      month: data.month,
-      authorName: data.authorName,
-      amount: new Decimal(data.amount),
-      storeName: data.storeName || null,
-      description: data.description || null,
-      receiptImage: data.receiptImage ? Buffer.from(data.receiptImage, 'base64') : null,
-      ocrRawData: data.ocrRawData ? JSON.stringify(data.ocrRawData) : null,
-      referenceSequence: data.referenceSequence ?? null,
-    },
-  });
+  try {
+    const event = await prisma.budgetEvent.create({
+      data: {
+        eventType: data.eventType,
+        eventDate,
+        year: data.year,
+        month: data.month,
+        authorName: data.authorName,
+        amount: new Decimal(data.amount),
+        storeName: data.storeName || null,
+        description: data.description || null,
+        receiptImage: data.receiptImage ? Buffer.from(data.receiptImage, 'base64') : null,
+        ocrRawData: data.ocrRawData ? JSON.stringify(data.ocrRawData) : null,
+        referenceSequence: data.referenceSequence ?? null,
+      },
+    });
 
-  return toBudgetEventResponse(event);
+    return toBudgetEventResponse(event);
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002' &&
+      isDefaultMonthlyBudgetPayload(data)
+    ) {
+      console.info(
+        `[BudgetEvent] Default monthly budget already exists for ${data.year}-${data.month}. Skipping duplicate.`
+      );
+      const existingEvent = await findExistingDefaultMonthlyBudgetEvent(data);
+      if (existingEvent) {
+        return toBudgetEventResponse(existingEvent);
+      }
+    }
+
+    throw error;
+  }
 }
 
 /**
@@ -57,10 +113,18 @@ export async function getEventsByMonth(
   year: number,
   month: number
 ): Promise<BudgetEventResponse[]> {
+  const lastResetSequence = await getLastResetSequence();
   const events = await prisma.budgetEvent.findMany({
     where: {
       year,
       month,
+      ...(lastResetSequence > 0
+        ? {
+            sequence: {
+              gte: lastResetSequence,
+            },
+          }
+        : {}),
     },
     orderBy: {
       sequence: 'asc',
@@ -74,10 +138,16 @@ export async function getEventsByMonth(
  * 동기화 API: 특정 sequence 이후의 이벤트 조회
  */
 export async function syncEvents(sinceSequence: number = 0): Promise<SyncEventsResponse> {
+  const lastResetSequence = await getLastResetSequence();
+  const effectiveSince =
+    lastResetSequence > 0 && sinceSequence < lastResetSequence
+      ? lastResetSequence - 1
+      : sinceSequence;
+
   const events = await prisma.budgetEvent.findMany({
     where: {
       sequence: {
-        gt: sinceSequence,
+        gt: effectiveSince,
       },
     },
     orderBy: {
@@ -85,7 +155,10 @@ export async function syncEvents(sinceSequence: number = 0): Promise<SyncEventsR
     },
   });
 
-  const lastSequence = events.length > 0 ? events[events.length - 1].sequence : sinceSequence;
+  const lastSequence =
+    events.length > 0
+      ? events[events.length - 1].sequence
+      : Math.max(effectiveSince, lastResetSequence);
 
   return {
     lastSequence,
@@ -156,14 +229,33 @@ export async function calculateMonthlyBudget(
  * 전체 이벤트 수 조회
  */
 export async function getEventCount(): Promise<number> {
-  return prisma.budgetEvent.count();
+  const lastResetSequence = await getLastResetSequence();
+  return prisma.budgetEvent.count({
+    where:
+      lastResetSequence > 0
+        ? {
+            sequence: {
+              gte: lastResetSequence,
+            },
+          }
+        : undefined,
+  });
 }
 
 /**
  * 최신 sequence 조회
  */
 export async function getLatestSequence(): Promise<number> {
+  const lastResetSequence = await getLastResetSequence();
   const latest = await prisma.budgetEvent.findFirst({
+    where:
+      lastResetSequence > 0
+        ? {
+            sequence: {
+              gte: lastResetSequence,
+            },
+          }
+        : undefined,
     orderBy: {
       sequence: 'desc',
     },
@@ -172,7 +264,7 @@ export async function getLatestSequence(): Promise<number> {
     },
   });
 
-  return latest?.sequence || 0;
+  return latest?.sequence || lastResetSequence;
 }
 
 /**
@@ -182,12 +274,20 @@ export async function getEventsByDateRange(
   startDate: Date,
   endDate: Date
 ): Promise<BudgetEventResponse[]> {
+  const lastResetSequence = await getLastResetSequence();
   const events = await prisma.budgetEvent.findMany({
     where: {
       eventDate: {
         gte: startDate,
         lte: endDate,
       },
+      ...(lastResetSequence > 0
+        ? {
+            sequence: {
+              gte: lastResetSequence,
+            },
+          }
+        : {}),
     },
     orderBy: {
       eventDate: 'desc',
@@ -201,26 +301,41 @@ export async function getEventsByDateRange(
  * 특정 이벤트 조회
  */
 export async function getEventBySequence(sequence: number): Promise<BudgetEventResponse | null> {
+  const lastResetSequence = await getLastResetSequence();
+  if (lastResetSequence > 0 && sequence < lastResetSequence) {
+    return null;
+  }
+
   const event = await prisma.budgetEvent.findUnique({
     where: {
       sequence,
     },
   });
+  if (!event || (lastResetSequence > 0 && event.sequence < lastResetSequence)) {
+    return null;
+  }
 
-  return event ? toBudgetEventResponse(event) : null;
+  return toBudgetEventResponse(event);
 }
 
 export async function getEventByReferenceSequence(
   referenceSequence: number
 ): Promise<BudgetEventResponse | null> {
+  const lastResetSequence = await getLastResetSequence();
   const event = await prisma.budgetEvent.findFirst({
     where: {
       referenceSequence,
+      ...(lastResetSequence > 0
+        ? {
+            sequence: {
+              gte: lastResetSequence,
+            },
+          }
+        : {}),
     },
     orderBy: {
       sequence: 'desc',
     },
   });
-
   return event ? toBudgetEventResponse(event) : null;
 }

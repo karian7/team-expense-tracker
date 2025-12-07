@@ -6,7 +6,6 @@ import type {
   ReceiptUploadResponse,
   ExpenseFormData,
   AppSettings,
-  ImportResult,
   MonthlyReport,
   BudgetEvent,
   CreateBudgetEventPayload,
@@ -97,13 +96,6 @@ export const budgetApi = {
     );
     return data.data!;
   },
-
-  ensureCurrent: async (): Promise<{ created: boolean; message: string }> => {
-    const { data } = await apiClient.post<ApiResponse<{ created: boolean; message: string }>>(
-      '/monthly-budgets/ensure-current'
-    );
-    return data.data!;
-  },
 };
 
 // Expense API
@@ -175,6 +167,11 @@ export const settingsApi = {
     return data.data!;
   },
 
+  getDefaultMonthlyBudget: async (): Promise<number> => {
+    const { data } = await apiClient.get<ApiResponse<AppSettings>>('/settings');
+    return data.data?.defaultMonthlyBudget ?? 0;
+  },
+
   update: async (settings: Partial<AppSettings>): Promise<AppSettings> => {
     const { data } = await apiClient.put<ApiResponse<AppSettings>>('/settings', settings);
     return data.data!;
@@ -183,35 +180,6 @@ export const settingsApi = {
   setInitialBudget: async (initialBudget: number): Promise<AppSettings> => {
     const { data } = await apiClient.post<ApiResponse<AppSettings>>('/settings/initial-budget', {
       initialBudget,
-    });
-    return data.data!;
-  },
-};
-
-// Export/Import API
-export const exportApi = {
-  exportExpenses: async (): Promise<Blob> => {
-    const { data } = await apiClient.get('/export/expenses', {
-      responseType: 'blob',
-    });
-    return data;
-  },
-
-  downloadTemplate: async (): Promise<Blob> => {
-    const { data } = await apiClient.get('/export/template', {
-      responseType: 'blob',
-    });
-    return data;
-  },
-
-  importExpenses: async (file: File): Promise<ImportResult> => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const { data } = await apiClient.post<ApiResponse<ImportResult>>('/import/expenses', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
     });
     return data.data!;
   },

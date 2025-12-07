@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { budgetService } from '../services/local/budgetService';
 import { eventService } from '../services/local/eventService';
@@ -8,13 +9,26 @@ export function useCurrentBudget() {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
+  useEffect(() => {
+    budgetService.ensureMonthlyBudget(year, month).catch((error) => {
+      console.error('Failed to ensure monthly budget', error);
+    });
+  }, [year, month]);
+
   return useLiveQuery(() => budgetService.getMonthlyBudget(year, month), [year, month]);
 }
 
 export function useBudgetByMonth(year: number, month: number) {
+  useEffect(() => {
+    if (!year || !month) return;
+    budgetService.ensureMonthlyBudget(year, month).catch((error) => {
+      console.error('Failed to ensure monthly budget for period', error);
+    });
+  }, [year, month]);
+
   return useLiveQuery(() => {
     if (!year || !month) return undefined;
-    return budgetService.getOrCreateMonthlyBudget(year, month);
+    return budgetService.getMonthlyBudget(year, month);
   }, [year, month]);
 }
 

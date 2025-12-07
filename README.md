@@ -106,6 +106,14 @@ npm run dev
 - 프론트엔드: http://localhost:5173
 - 백엔드 API: http://localhost:3001
 
+### 로컬 SQLite 초기화
+
+로컬 개발 중 DB를 초기값으로 되돌리거나 SQLite 파일이 손상된 경우 아래 절차를 그대로 수행하세요.
+
+1. 루트 디렉터리에서 `pnpm --filter team-expense-tracker-backend exec prisma migrate reset --force` 를 실행하면 `backend/prisma/dev.db` 가 삭제되고 모든 마이그레이션이 다시 적용됩니다.
+2. 만약 `database disk image is malformed` 와 같은 손상 오류가 발생하면 `rm backend/prisma/dev.db` 로 파일을 제거한 뒤 `pnpm --filter team-expense-tracker-backend exec prisma migrate deploy` 로 새 DB를 만들고 마이그레이션을 재적용합니다.
+3. 위 과정을 마치면 DB는 최신 마이그레이션 기준의 깨끗한 상태가 되며, 필요 시 초기 예산 설정을 다시 진행하면 됩니다.
+
 ## 프로젝트 구조
 
 ```

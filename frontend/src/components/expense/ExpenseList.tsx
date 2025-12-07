@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useExpenses } from '../../hooks/useExpenses';
+import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
 import { useCurrentBudget } from '../../hooks/useBudget';
 import { syncService } from '../../services/sync/syncService';
 import { formatCurrency, formatDateTimeKorean } from '../../utils/format';
@@ -11,8 +11,10 @@ export default function ExpenseList() {
   const expenses = useExpenses(budget ? { year: budget.year, month: budget.month } : undefined);
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
-  const [filterAuthor, setFilterAuthor] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteMutation = useDeleteExpense();
 
   const handleRetrySync = async () => {
     try {
@@ -43,6 +45,39 @@ export default function ExpenseList() {
     return null;
   };
 
+  const closeModal = () => {
+    setSelectedExpense(null);
+    setDeleteError(null);
+  };
+
+  const handleDeleteExpense = async () => {
+    if (!selectedExpense) {
+      return;
+    }
+
+    const confirmed = window.confirm('선택한 지출을 삭제할까요? 삭제된 내역은 되돌릴 수 없습니다.');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+      await deleteMutation.mutateAsync({
+        sequence: selectedExpense.sequence,
+        description: selectedExpense.description ?? selectedExpense.storeName ?? undefined,
+        authorName: selectedExpense.authorName,
+      });
+      closeModal();
+    } catch (error) {
+      console.error('Delete expense error:', error);
+      const message = error instanceof Error ? error.message : '지출 삭제에 실패했습니다.';
+      setDeleteError(message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // useLiveQuery returns undefined while loading
   if (!budget || !expenses) {
     return (
@@ -57,43 +92,24 @@ export default function ExpenseList() {
     );
   }
 
-  const filteredExpenses = expenses.filter((expense: Expense) =>
-    filterAuthor ? expense.authorName.includes(filterAuthor) : true
-  );
-
-  const uniqueAuthors = Array.from(new Set(expenses.map((e: Expense) => e.authorName)));
-
   return (
     <div className="space-y-6">
-      {/* Filter */}
-      <div className="flex justify-end">
-        <select
-          value={filterAuthor}
-          onChange={(e) => setFilterAuthor(e.target.value)}
-          className="input-field w-auto min-w-[120px] py-1.5 text-sm"
-        >
-          <option value="">모든 사용자</option>
-          {uniqueAuthors.map((author) => (
-            <option key={author} value={author}>
-              {author}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {/* List */}
       <div className="space-y-3">
-        {filteredExpenses.length === 0 ? (
+        {expenses.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
-            <p className="text-lg font-medium text-gray-900">필터링된 사용 내역이 없습니다.</p>
-            <p className="mt-1 text-sm text-gray-500">다른 필터를 선택해보세요.</p>
+            <p className="text-lg font-medium text-gray-900">등록된 지출 내역이 없습니다.</p>
+            <p className="mt-1 text-sm text-gray-500">새로운 지출을 추가해보세요.</p>
           </div>
         ) : (
-          filteredExpenses.map((expense: Expense) => (
+          expenses.map((expense: Expense) => (
             <div
               key={expense.sequence}
               className="group bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer"
-              onClick={() => setSelectedExpense(expense)}
+              onClick={() => {
+                setDeleteError(null);
+                setSelectedExpense(expense);
+              }}
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-3">
@@ -137,7 +153,7 @@ export default function ExpenseList() {
       {selectedExpense && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedExpense(null)}
+          onClick={closeModal}
         >
           <div
             className="bg-white rounded-xl max-w-md w-full overflow-hidden shadow-xl"
@@ -198,7 +214,7 @@ export default function ExpenseList() {
                 </svg>
               )}
               <button
-                onClick={() => setSelectedExpense(null)}
+                onClick={closeModal}
                 className="absolute top-4 right-4 p-1 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-colors"
               >
                 <svg
@@ -260,9 +276,22 @@ export default function ExpenseList() {
                 )}
               </div>
 
+              {deleteError && (
+                <p className="mt-6 text-sm text-red-600" role="alert">
+                  {deleteError}
+                </p>
+              )}
+
               <div className="mt-6 flex gap-3">
-                <button onClick={() => setSelectedExpense(null)} className="btn-secondary flex-1">
+                <button onClick={closeModal} className="btn-secondary flex-1">
                   닫기
+                </button>
+                <button
+                  onClick={handleDeleteExpense}
+                  className="btn-danger flex-1"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? '삭제 중...' : '지출 삭제'}
                 </button>
               </div>
             </div>

@@ -1,32 +1,47 @@
-import { useLiveQuery } from 'dexie-react-hooks';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsService } from '../services/local/settingsService';
+import { budgetService } from '../services/local/budgetService';
+import { settingsApi } from '../services/api';
 
+/**
+ * 앱 설정 조회 (서버에서 가져오기)
+ */
 export function useAppSettings() {
-  return useLiveQuery(async () => {
-    const defaultBudget = await settingsService.getDefaultMonthlyBudget();
-    return {
-      defaultMonthlyBudget: defaultBudget,
-      initialBudget: defaultBudget,
-    };
+  return useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      return settingsApi.get();
+    },
+    staleTime: 1000 * 60 * 5, // 5분 캐싱
   });
 }
 
+/**
+ * 기본 월 예산 업데이트 (서버 우선)
+ */
 export function useUpdateDefaultMonthlyBudget() {
-  return {
-    mutateAsync: async (amount: number) => {
-      // 로컬 설정 저장
-      await settingsService.setDefaultMonthlyBudget(amount);
-      // 백엔드 설정도 업데이트
-      const { settingsApi } = await import('../services/api');
-      await settingsApi.update({ defaultMonthlyBudget: amount });
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (amount: number) => {
+      // 서버에 저장 (원자성 보장)
+      return settingsApi.update({ defaultMonthlyBudget: amount });
     },
-  };
+    onSuccess: () => {
+      // 설정 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
+  });
 }
 
+/**
+ * 전체 데이터 초기화
+ */
 export function useResetAllData() {
-  return {
-    mutateAsync: async (initialBudget: number) => {
-      const { settingsApi, budgetApi } = await import('../services/api');
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (initialBudget: number) => {
       const { syncService } = await import('../services/sync/syncService');
 
       // 1. 백엔드 초기화 (모든 이벤트 삭제 + 초기 예산 설정)
@@ -36,14 +51,18 @@ export function useResetAllData() {
       await settingsService.resetAll();
 
       // 3. 로컬 설정에 초기 예산 저장
-      await settingsService.setDefaultMonthlyBudget(initialBudget);
       await settingsService.setInitialBudget(initialBudget);
 
-      // 4. 현재 월 예산 자동 생성 (백엔드)
-      await budgetApi.ensureCurrent();
+      // 4. 현재 월 예산 로컬 생성 -> 동기화
+      const now = new Date();
+      await budgetService.ensureMonthlyBudget(now.getFullYear(), now.getMonth() + 1);
 
-      // 5. 백엔드와 동기화 (생성된 이벤트 가져오기)
+      // 5. 백엔드와 동기화 (로컬에서 생성한 이벤트 전달)
       await syncService.sync();
     },
-  };
+    onSuccess: () => {
+      // 모든 쿼리 캐시 무효화
+      queryClient.invalidateQueries();
+    },
+  });
 }

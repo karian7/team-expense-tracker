@@ -64,9 +64,8 @@
 - 버그: 예산을 설정해도 페이지 로딩 시 자동으로 이번 달에 반영되지 않음
 - 수정: App.tsx에서 페이지 로딩 시 체크 로직 추가
   1. 로컬 DB에서 이번 달 "기본 월별 예산" 이벤트 확인
-  2. 없으면 백엔드 API (`/api/monthly-budgets/ensure-current`) 호출
-  3. 백엔드에서 중복 방지 (Unique Constraint) 후 이벤트 생성
-  4. sync()로 프론트엔드에 반영
+  2. 없으면 `budgetService.ensureMonthlyBudget()`으로 로컬 이벤트 생성
+  3. 새 이벤트가 있으면 `syncService.sync()`로 서버와 동기화
 
 **발생 조건**:
 
@@ -84,12 +83,12 @@
 1. 설정 페이지에서 월 예산을 500,000원으로 설정
 2. 백엔드 확인: 이번 달에 "기본 월별 예산" 이벤트가 없는지 확인
 3. 페이지 새로고침 (F5) 또는 브라우저 재시작
-4. 브라우저 콘솔에서 "Ensuring current month budget..." 로그 확인
+4. 브라우저 콘솔에서 "Created default monthly budget locally. Syncing..." 로그 확인 (필요 시)
 5. 메인 페이지에서 예산 확인
 
 **예상 결과**:
 
-- ✅ 페이지 로딩 시 자동으로 백엔드 API 호출됨
+- ✅ 페이지 로딩 시 자동으로 로컬 이벤트 생성 및 sync()
 - ✅ 백엔드에 새 이벤트 생성됨:
   - eventType: "BUDGET_IN"
   - amount: 500000
@@ -100,11 +99,8 @@
 **백엔드 확인**:
 
 ```bash
-# 이벤트 목록 확인
+# 이벤트 목록 확인 (동기화 후 서버에도 반영됐는지 확인)
 curl -s "http://localhost:3001/api/events/month/$(date +%Y)/$(date +%-m)" | jq '.data | map({sequence, eventType, amount, description})'
-
-# API 직접 호출 테스트 (멱등성 확인)
-curl -s -X POST "http://localhost:3001/api/monthly-budgets/ensure-current" | jq .
 ```
 
 **중요**: 예산 설정은 **다음 달부터** 적용될 예산을 정의하는 것이고, 현재 달 반영은 **페이지 로딩 시 자동**으로 처리됩니다.

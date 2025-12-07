@@ -47,4 +47,8 @@ export const pendingEventService = {
   async getById(id: string): Promise<PendingEvent | undefined> {
     return db.pendingEvents.get(id);
   },
+
+  async clearAll(): Promise<void> {
+    await db.pendingEvents.clear();
+  },
 };

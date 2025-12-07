@@ -1,6 +1,7 @@
 import { eventService } from '../local/eventService';
-import { eventApi } from '../api';
+import { eventApi, settingsApi } from '../api';
 import { pendingEventService } from '../local/pendingEventService';
+import { settingsService } from '../local/settingsService';
 
 async function pushPendingEvents(): Promise<number> {
   const pendingEvents = await pendingEventService.getAll();
@@ -43,6 +44,21 @@ export const syncService = {
 
       if (events.length === 0) {
         return { newEvents: 0, pushedEvents, lastSequence };
+      }
+
+      const hasResetEvent = events.some((event) => event.eventType === 'BUDGET_RESET');
+
+      if (hasResetEvent) {
+        await settingsService.resetAll();
+        await pendingEventService.clearAll();
+
+        try {
+          const latestSettings = await settingsApi.get();
+          await settingsService.setDefaultMonthlyBudget(latestSettings.defaultMonthlyBudget);
+          await settingsService.setInitialBudget(latestSettings.initialBudget);
+        } catch (settingsError) {
+          console.error('Failed to refresh settings after reset', settingsError);
+        }
       }
 
       await eventService.saveEvents(events);

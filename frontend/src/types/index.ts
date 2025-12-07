@@ -3,7 +3,8 @@ export type BudgetEventType =
   | 'EXPENSE'
   | 'EXPENSE_REVERSAL'
   | 'BUDGET_ADJUSTMENT_INCREASE'
-  | 'BUDGET_ADJUSTMENT_DECREASE';
+  | 'BUDGET_ADJUSTMENT_DECREASE'
+  | 'BUDGET_RESET';
 
 // API Response Types
 export interface ApiResponse<T = unknown> {
@@ -102,15 +103,6 @@ export interface ExpenseFormData {
 export interface AppSettings {
   defaultMonthlyBudget: number;
   initialBudget: number;
-}
-
-// Import Result
-export interface ImportResult {
-  success: number;
-  failed: number;
-  created: number;
-  updated: number;
-  errors: string[];
 }
 
 // Monthly Report
