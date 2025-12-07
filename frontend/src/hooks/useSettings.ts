@@ -27,9 +27,26 @@ export function useUpdateDefaultMonthlyBudget() {
       // 서버에 저장 (원자성 보장)
       return settingsApi.update({ defaultMonthlyBudget: amount });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // 설정 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['settings'] });
+
+      // 현재 월의 로컬 예산 이벤트 생성
+      try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+
+        await budgetService.ensureMonthlyBudget(year, month);
+        // ensureMonthlyBudget 내부에서:
+        // - 서버에서 defaultMonthlyBudget 조회
+        // - 로컬 BUDGET_IN 이벤트 생성 (없는 경우만)
+        // - useLiveQuery 자동 트리거
+      } catch (error) {
+        // 서버는 이미 업데이트됨 → 경고만 출력
+        // 60초 후 자동 동기화로 최종 일관성 보장
+        console.warn('[useSettings] 로컬 월별 예산 이벤트 생성 실패 (다음 동기화 시 복구):', error);
+      }
     },
   });
 }

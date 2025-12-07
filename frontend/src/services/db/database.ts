@@ -16,6 +16,9 @@ export interface BudgetEvent {
   ocrRawData: string | null;
   referenceSequence: number | null;
   createdAt: string;
+  isLocalOnly?: boolean;
+  syncState?: 'pending' | 'failed';
+  pendingId?: string;
 }
 
 // Settings 인터페이스

@@ -47,7 +47,7 @@ export interface CreateBudgetEventPayload {
   storeName?: string;
   description?: string;
   receiptImage?: string;
-  ocrRawData?: Record<string, unknown>;
+  ocrRawData?: Record<string, unknown> | OcrResult;
   referenceSequence?: number | null;
 }
 
@@ -95,6 +95,7 @@ export interface ExpenseFormData {
   amount: number;
   expenseDate: string;
   storeName?: string;
+  description?: string;
   receiptImage: string; // base64 encoded
   ocrRawData?: OcrResult | Record<string, unknown>;
 }
