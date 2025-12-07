@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { useCreateExpense } from '../../hooks/useExpenses';
 import { getCurrentDate } from '../../utils/format';
 import { API_ORIGIN } from '../../services/api';
-import type { ExpenseFormData, OcrResult } from '../../types';
+import type { OcrResult } from '../../types';
+import type { CreateExpenseData } from '../../services/local/expenseService';
 
 interface ExpenseFormProps {
   imageUrl: string;
@@ -21,18 +22,21 @@ export default function ExpenseForm({
   const [savedAuthorName] = useState<string>(() => localStorage.getItem('lastAuthorName') || '');
   const createMutation = useCreateExpense();
 
+  // Local mutation states
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
     setValue,
-  } = useForm<ExpenseFormData>({
+  } = useForm<Omit<CreateExpenseData, 'receiptImageUrl' | 'ocrRawData'>>({
     defaultValues: {
       authorName: savedAuthorName,
       amount: ocrResult.amount || 0,
       expenseDate: ocrResult.date || getCurrentDate(),
       storeName: ocrResult.storeName || '',
-      receiptImageUrl: imageUrl,
     },
   });
 
@@ -43,8 +47,11 @@ export default function ExpenseForm({
     if (ocrResult.storeName) setValue('storeName', ocrResult.storeName);
   }, [ocrResult, savedAuthorName, setValue]);
 
-  const onSubmit = async (data: ExpenseFormData) => {
+  const onSubmit = async (data: Omit<CreateExpenseData, 'receiptImageUrl' | 'ocrRawData'>) => {
     try {
+      setIsPending(true);
+      setError(null);
+
       // 작성자 이름을 로컬 스토리지에 저장
       localStorage.setItem('lastAuthorName', data.authorName);
 
@@ -57,8 +64,11 @@ export default function ExpenseForm({
       if (onSuccess) {
         onSuccess();
       }
-    } catch (error) {
-      console.error('Submit error:', error);
+    } catch (err) {
+      console.error('Submit error:', err);
+      setError(err as Error);
+    } finally {
+      setIsPending(false);
     }
   };
 
@@ -165,7 +175,7 @@ export default function ExpenseForm({
       </div>
 
       {/* Error Message */}
-      {createMutation.isError && (
+      {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -181,7 +191,7 @@ export default function ExpenseForm({
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          저장 실패: {createMutation.error?.message || '알 수 없는 오류'}
+          저장 실패: {error.message || '알 수 없는 오류'}
         </div>
       )}
 
@@ -192,13 +202,13 @@ export default function ExpenseForm({
             type="button"
             onClick={onCancel}
             className="btn-secondary flex-1"
-            disabled={createMutation.isPending}
+            disabled={isPending}
           >
             취소
           </button>
         )}
-        <button type="submit" className="btn-primary flex-1" disabled={createMutation.isPending}>
-          {createMutation.isPending ? '저장 중...' : '저장하기'}
+        <button type="submit" className="btn-primary flex-1" disabled={isPending}>
+          {isPending ? '저장 중...' : '저장하기'}
         </button>
       </div>
     </form>

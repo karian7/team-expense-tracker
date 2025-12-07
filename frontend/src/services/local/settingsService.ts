@@ -1,4 +1,4 @@
-import { db, Settings, now } from '../db/database';
+import { db, type Settings, now } from '../db/database';
 
 export interface AppSettings {
   defaultMonthlyBudget: number;

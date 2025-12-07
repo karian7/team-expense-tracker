@@ -1,4 +1,4 @@
-import Dexie, { Table } from 'dexie';
+import Dexie, { type Table } from 'dexie';
 
 // 동기화 가능한 엔티티 인터페이스
 export interface SyncableEntity {

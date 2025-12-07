@@ -8,7 +8,7 @@ interface SettingsPageProps {
 }
 
 export default function SettingsPage({ onClose }: SettingsPageProps) {
-  const { data: settings, isLoading } = useSettings();
+  const settings = useSettings();
   const updateMutation = useUpdateSettings();
   const setInitialBudgetMutation = useSetInitialBudget();
   const exportMutation = useExportExpenses();
@@ -18,8 +18,16 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [newBudget, setNewBudget] = useState(0);
 
+  // Local mutation states
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isExporting] = useState(false);
+  const [isDownloadingTemplate] = useState(false);
+  // const [isImporting, setIsImporting] = useState(false);
+
   const handleUpdateBudget = async () => {
     try {
+      setIsUpdating(true);
       await updateMutation.mutateAsync({
         defaultMonthlyBudget: newBudget,
       });
@@ -28,6 +36,8 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     } catch (error) {
       console.error('Budget update error:', error);
       alert('예산 변경에 실패했습니다.');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -47,11 +57,14 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     }
 
     try {
+      setIsResetting(true);
       await setInitialBudgetMutation.mutateAsync(0);
       alert('모든 데이터가 초기화되었습니다.');
     } catch (error) {
       console.error('Reset error:', error);
       alert('초기화에 실패했습니다.');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -70,6 +83,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     }
 
     try {
+      // setIsImporting(true);
       const result = await importMutation.mutateAsync(file);
 
       let message = '복원 완료\n';
@@ -90,18 +104,18 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       console.error('Import error:', error);
       alert('복원에 실패했습니다.');
     }
+    // finally {
+    //   setIsImporting(false);
+    // }
   };
 
-  if (isLoading) {
+  // useLiveQuery returns undefined while loading
+  if (!settings) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
-  }
-
-  if (!settings) {
-    return null;
   }
 
   return (
@@ -186,7 +200,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
               <button
                 onClick={handleExport}
                 className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left group"
-                disabled={exportMutation.isPending}
+                disabled={isExporting}
               >
                 <div>
                   <p className="font-medium text-gray-900">데이터 내보내기</p>
@@ -213,7 +227,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
               <button
                 onClick={handleDownloadTemplate}
                 className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left group"
-                disabled={templateMutation.isPending}
+                disabled={isDownloadingTemplate}
               >
                 <div>
                   <p className="font-medium text-gray-900">CSV 템플릿 다운로드</p>
@@ -288,9 +302,9 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
               <button
                 onClick={handleReset}
                 className="w-full py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors"
-                disabled={setInitialBudgetMutation.isPending}
+                disabled={isResetting}
               >
-                {setInitialBudgetMutation.isPending ? '초기화 중...' : '초기화하기'}
+                {isResetting ? '초기화 중...' : '초기화하기'}
               </button>
             </div>
           </section>
@@ -326,9 +340,9 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 <button
                   onClick={handleUpdateBudget}
                   className="btn-primary flex-1"
-                  disabled={updateMutation.isPending}
+                  disabled={isUpdating}
                 >
-                  {updateMutation.isPending ? '저장 중...' : '저장'}
+                  {isUpdating ? '저장 중...' : '저장'}
                 </button>
               </div>
             </div>

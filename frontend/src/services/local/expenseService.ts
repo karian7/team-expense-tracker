@@ -1,4 +1,4 @@
-import { db, Expense, now, generateId } from '../db/database';
+import { db, type Expense, now, generateId } from '../db/database';
 import { budgetService } from './budgetService';
 
 /**
@@ -86,8 +86,6 @@ export async function createExpense(data: CreateExpenseData): Promise<Expense> {
  * 사용 내역 조회 (필터링 지원)
  */
 export async function getExpenses(filter: ExpenseFilter = {}): Promise<Expense[]> {
-  let query = db.expenses.where('deleted').equals(false);
-
   // 연도/월 필터
   if (filter.year !== undefined && filter.month !== undefined) {
     const monthlyBudget = await budgetService.getMonthlyBudget(filter.year, filter.month);
@@ -97,13 +95,48 @@ export async function getExpenses(filter: ExpenseFilter = {}): Promise<Expense[]
       return [];
     }
 
-    query = db.expenses
+    let expenses = await db.expenses
       .where('monthlyBudgetId')
       .equals(monthlyBudget.id)
-      .and((e) => !e.deleted);
+      .and((e) => !e.deleted)
+      .toArray();
+
+    // 작성자 필터
+    if (filter.authorName) {
+      expenses = expenses.filter((e) =>
+        e.authorName.toLowerCase().includes(filter.authorName!.toLowerCase())
+      );
+    }
+
+    // 날짜 범위 필터
+    if (filter.startDate || filter.endDate) {
+      expenses = expenses.filter((e) => {
+        const expenseDate = e.expenseDate;
+        if (filter.startDate && expenseDate < filter.startDate) return false;
+        if (filter.endDate && expenseDate > filter.endDate) return false;
+        return true;
+      });
+    }
+
+    // 정렬: 최신순
+    expenses.sort((a, b) => b.expenseDate.localeCompare(a.expenseDate));
+
+    // Limit/Offset
+    if (filter.offset !== undefined) {
+      expenses = expenses.slice(filter.offset);
+    }
+    if (filter.limit !== undefined) {
+      expenses = expenses.slice(0, filter.limit);
+    }
+
+    return expenses;
   }
 
-  let expenses = await query.toArray();
+  // 연도/월 필터가 없으면 전체 조회
+  let expenses = await db.expenses.toArray();
+
+  // deleted 필터링
+  expenses = expenses.filter((e) => !e.deleted);
 
   // 작성자 필터
   if (filter.authorName) {

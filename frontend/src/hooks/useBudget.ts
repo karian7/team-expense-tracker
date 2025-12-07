@@ -1,27 +1,20 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { budgetApi } from '../services/api';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { budgetService } from '../services/local/budgetService';
 
 export function useCurrentBudget() {
-  return useQuery({
-    queryKey: ['budget', 'current'],
-    queryFn: () => budgetApi.getCurrent(),
-    staleTime: 30000, // 30 seconds
-  });
+  return useLiveQuery(() => budgetService.getCurrentMonthlyBudget());
 }
 
 export function useBudgetByMonth(year: number, month: number) {
-  return useQuery({
-    queryKey: ['budget', year, month],
-    queryFn: () => budgetApi.getByMonth(year, month),
-    enabled: !!year && !!month,
-  });
+  return useLiveQuery(() => {
+    if (!year || !month) return undefined;
+    return budgetService.getOrCreateMonthlyBudget(year, month);
+  }, [year, month]);
 }
 
 export function useUpdateBudgetBaseAmount() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
+  return {
+    mutateAsync: async ({
       year,
       month,
       baseAmount,
@@ -29,9 +22,11 @@ export function useUpdateBudgetBaseAmount() {
       year: number;
       month: number;
       baseAmount: number;
-    }) => budgetApi.updateBaseAmount(year, month, baseAmount),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['budget'] });
+    }) => {
+      return budgetService.updateMonthlyBudgetBaseAmount(year, month, baseAmount);
     },
-  });
+    mutate: ({ year, month, baseAmount }: { year: number; month: number; baseAmount: number }) => {
+      budgetService.updateMonthlyBudgetBaseAmount(year, month, baseAmount);
+    },
+  };
 }

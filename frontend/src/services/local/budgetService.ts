@@ -1,4 +1,4 @@
-import { db, MonthlyBudget, now, generateId } from '../db/database';
+import { db, type MonthlyBudget, now, generateId } from '../db/database';
 import { settingsService } from './settingsService';
 
 /**

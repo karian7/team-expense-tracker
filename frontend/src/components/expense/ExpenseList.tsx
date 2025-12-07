@@ -3,31 +3,33 @@ import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
 import { useCurrentBudget } from '../../hooks/useBudget';
 import { formatCurrency, formatDateKorean } from '../../utils/format';
 import { API_ORIGIN } from '../../services/api';
-import type { Expense, OcrResult } from '../../types';
+import type { Expense } from '../../services/db/database';
+import type { OcrResult } from '../../types';
 
 export default function ExpenseList() {
-  const { data: budget } = useCurrentBudget();
-  const {
-    data: expenses,
-    isLoading,
-    error,
-  } = useExpenses(budget ? { year: budget.year, month: budget.month } : undefined);
+  const budget = useCurrentBudget();
+  const expenses = useExpenses(budget ? { year: budget.year, month: budget.month } : undefined);
   const deleteMutation = useDeleteExpense();
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [filterAuthor, setFilterAuthor] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('이 사용 내역을 삭제하시겠습니까?')) {
       try {
+        setIsDeleting(true);
         await deleteMutation.mutateAsync(id);
       } catch (error) {
         console.error('Delete error:', error);
+      } finally {
+        setIsDeleting(false);
       }
     }
   };
 
-  if (isLoading) {
+  // useLiveQuery returns undefined while loading
+  if (!budget || !expenses) {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
@@ -40,19 +42,11 @@ export default function ExpenseList() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="card bg-red-500/10 border border-red-500/30">
-        <p className="text-red-400">사용 내역을 불러오는데 실패했습니다.</p>
-      </div>
-    );
-  }
-
-  const filteredExpenses = expenses?.filter((expense) =>
+  const filteredExpenses = expenses.filter((expense) =>
     filterAuthor ? expense.authorName.includes(filterAuthor) : true
   );
 
-  const uniqueAuthors = Array.from(new Set(expenses?.map((e) => e.authorName) || []));
+  const uniqueAuthors = Array.from(new Set(expenses.map((e) => e.authorName)));
 
   return (
     <div className="space-y-6">
@@ -74,7 +68,7 @@ export default function ExpenseList() {
 
       {/* List */}
       <div className="space-y-3">
-        {!filteredExpenses || filteredExpenses.length === 0 ? (
+        {filteredExpenses.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
             <p className="text-lg font-medium text-gray-900">필터링된 사용 내역이 없습니다.</p>
             <p className="mt-1 text-sm text-gray-500">다른 필터를 선택해보세요.</p>
@@ -108,7 +102,7 @@ export default function ExpenseList() {
                       handleDelete(expense.id);
                     }}
                     className="text-xs text-red-500 hover:text-red-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    disabled={deleteMutation.isPending}
+                    disabled={isDeleting}
                   >
                     삭제
                   </button>
@@ -205,7 +199,7 @@ export default function ExpenseList() {
                     setSelectedExpense(null);
                   }}
                   className="btn-danger flex-1"
-                  disabled={deleteMutation.isPending}
+                  disabled={isDeleting}
                 >
                   삭제하기
                 </button>

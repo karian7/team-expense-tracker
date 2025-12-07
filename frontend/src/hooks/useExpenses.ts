@@ -1,62 +1,50 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { expenseApi } from '../services/api';
-import type { ExpenseFormData } from '../types';
+import { useLiveQuery } from 'dexie-react-hooks';
+import {
+  expenseService,
+  type CreateExpenseData,
+  type UpdateExpenseData,
+} from '../services/local/expenseService';
 
 export function useExpenses(params?: { year?: number; month?: number; authorName?: string }) {
-  return useQuery({
-    queryKey: ['expenses', params],
-    queryFn: () => expenseApi.list(params),
-    staleTime: 10000, // 10 seconds
-  });
+  return useLiveQuery(() => expenseService.getExpenses(params || {}), [params]);
 }
 
 export function useExpense(id: string) {
-  return useQuery({
-    queryKey: ['expense', id],
-    queryFn: () => expenseApi.getById(id),
-    enabled: !!id,
-  });
+  return useLiveQuery(() => {
+    if (!id) return undefined;
+    return expenseService.getExpenseById(id);
+  }, [id]);
 }
 
 export function useCreateExpense() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: ExpenseFormData) => expenseApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['budget'] });
+  return {
+    mutateAsync: async (data: CreateExpenseData) => {
+      return expenseService.createExpense(data);
     },
-  });
+    mutate: (data: CreateExpenseData) => {
+      expenseService.createExpense(data);
+    },
+  };
 }
 
 export function useUpdateExpense() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      id,
-      updates,
-    }: {
-      id: string;
-      updates: Partial<Omit<ExpenseFormData, 'receiptImageUrl' | 'ocrRawData'>>;
-    }) => expenseApi.update(id, updates),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['expense', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['budget'] });
+  return {
+    mutateAsync: async ({ id, updates }: { id: string; updates: UpdateExpenseData }) => {
+      return expenseService.updateExpense(id, updates);
     },
-  });
+    mutate: ({ id, updates }: { id: string; updates: UpdateExpenseData }) => {
+      expenseService.updateExpense(id, updates);
+    },
+  };
 }
 
 export function useDeleteExpense() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) => expenseApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['budget'] });
+  return {
+    mutateAsync: async (id: string) => {
+      return expenseService.deleteExpense(id);
     },
-  });
+    mutate: (id: string) => {
+      expenseService.deleteExpense(id);
+    },
+  };
 }

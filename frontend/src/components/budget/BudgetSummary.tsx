@@ -2,9 +2,10 @@ import { useCurrentBudget } from '../../hooks/useBudget';
 import { formatCurrency } from '../../utils/format';
 
 export default function BudgetSummary() {
-  const { data: budget, isLoading, error } = useCurrentBudget();
+  const budget = useCurrentBudget();
 
-  if (isLoading) {
+  // useLiveQuery returns undefined while loading
+  if (!budget) {
     return (
       <div className="card animate-pulse border border-white/10">
         <div className="h-8 bg-white/10 rounded w-1/3 mb-4"></div>
@@ -12,16 +13,6 @@ export default function BudgetSummary() {
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="card bg-red-500/10 border border-red-500/30">
-        <p className="text-red-400">예산 정보를 불러오는데 실패했습니다.</p>
-      </div>
-    );
-  }
-
-  if (!budget) return null;
 
   const balance = budget.balance;
   const totalBudget = budget.totalBudget;

@@ -1,36 +1,34 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { settingsApi } from '../services/api';
-import type { AppSettings } from '../types';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { settingsService, type AppSettings } from '../services/local/settingsService';
 
 export function useSettings() {
-  return useQuery({
-    queryKey: ['settings'],
-    queryFn: () => settingsApi.get(),
-    staleTime: 60000, // 1 minute
-  });
+  return useLiveQuery(() => settingsService.getAppSettings());
 }
 
 export function useUpdateSettings() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (settings: Partial<AppSettings>) => settingsApi.update(settings),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['settings'], data);
-      queryClient.invalidateQueries({ queryKey: ['budget'] });
+  return {
+    mutateAsync: async (settings: Partial<AppSettings>) => {
+      if (settings.defaultMonthlyBudget !== undefined) {
+        await settingsService.setDefaultMonthlyBudget(settings.defaultMonthlyBudget);
+      }
+      return settingsService.getAppSettings();
     },
-  });
+    mutate: (settings: Partial<AppSettings>) => {
+      if (settings.defaultMonthlyBudget !== undefined) {
+        settingsService.setDefaultMonthlyBudget(settings.defaultMonthlyBudget);
+      }
+    },
+  };
 }
 
 export function useSetInitialBudget() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (initialBudget: number) => settingsApi.setInitialBudget(initialBudget),
-    onSuccess: (data) => {
-      queryClient.setQueryData(['settings'], data);
-      // 모든 데이터가 리셋되므로 모든 쿼리 무효화
-      queryClient.invalidateQueries();
+  return {
+    mutateAsync: async (initialBudget: number) => {
+      await settingsService.setInitialBudget(initialBudget);
+      return settingsService.getAppSettings();
     },
-  });
+    mutate: (initialBudget: number) => {
+      settingsService.setInitialBudget(initialBudget);
+    },
+  };
 }
