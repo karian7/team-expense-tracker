@@ -47,12 +47,25 @@ export interface SyncMetadata {
   pendingChanges: number;
 }
 
+// SyncQueue 인터페이스 (동기화 대기 중인 변경사항)
+export interface SyncQueueItem {
+  id: string; // 큐 아이템 고유 ID
+  entity: 'budgets' | 'expenses' | 'settings';
+  operation: 'create' | 'update' | 'delete';
+  entityId: string; // 실제 엔티티 ID
+  data: string; // JSON 직렬화된 데이터
+  timestamp: string;
+  retryCount: number;
+  lastError?: string;
+}
+
 // Dexie Database 클래스
 class ExpenseTrackerDB extends Dexie {
   monthlyBudgets!: Table<MonthlyBudget, string>;
   expenses!: Table<Expense, string>;
   settings!: Table<Settings, string>;
   syncMetadata!: Table<SyncMetadata, string>;
+  syncQueue!: Table<SyncQueueItem, string>;
 
   constructor() {
     super('ExpenseTrackerDB');
@@ -70,6 +83,9 @@ class ExpenseTrackerDB extends Dexie {
 
       // SyncMetadata: entity가 primary key
       syncMetadata: 'entity',
+
+      // SyncQueue: 동기화 큐
+      syncQueue: 'id, entity, timestamp, retryCount',
     });
   }
 }
