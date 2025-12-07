@@ -256,11 +256,47 @@ export async function getMonthlyReport(
   return {
     budget: toMonthlyBudgetResponse(budget),
     statistics: {
-      totalExpenses: budget.totalSpent,
+      totalExpenses: budget.totalSpent.toNumber(),
       expenseCount: expenses.length,
       dailyBreakdown,
       authorBreakdown,
       topExpenses,
     },
   };
+}
+
+/**
+ * 현재 월 예산 잔액을 특정 금액으로 조정
+ * 차액을 예산 조정 내역으로 기록
+ */
+export async function adjustCurrentMonthBudget(
+  targetBalance: number,
+  description: string
+): Promise<MonthlyBudgetResponse> {
+  const { year, month } = getCurrentYearMonth();
+  const budget = await getOrCreateMonthlyBudget(year, month);
+
+  const currentBalance = budget.balance;
+  const adjustmentAmount = targetBalance - currentBalance;
+
+  if (adjustmentAmount === 0) {
+    throw new AppError('조정할 금액이 없습니다.', 400);
+  }
+
+  // 예산 조정 내역을 Expense로 기록 (음수 금액 = 예산 추가)
+  await prisma.expense.create({
+    data: {
+      monthlyBudgetId: budget.id,
+      authorName: 'SYSTEM',
+      amount: new Decimal(-adjustmentAmount), // 음수로 저장하여 지출이 줄어드는 효과
+      expenseDate: new Date(),
+      storeName: null,
+      receiptImageUrl: null,
+      description: description || '예산 조정',
+      ocrRawData: null,
+    },
+  });
+
+  // 예산 재계산
+  return recalculateMonthlyBudget(budget.id);
 }

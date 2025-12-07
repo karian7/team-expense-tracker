@@ -40,7 +40,8 @@ export interface ExpenseResponse {
   amount: number;
   expenseDate: Date;
   storeName: string | null;
-  receiptImageUrl: string;
+  receiptImageUrl: string | null;
+  description: string | null;
   ocrRawData: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -96,6 +97,12 @@ export interface AppSettings {
 
 export interface UpdateSettingsRequest {
   defaultMonthlyBudget?: number;
+}
+
+// Budget Adjustment Types
+export interface AdjustCurrentBudgetRequest {
+  targetBalance: number;
+  description: string;
 }
 
 // Export/Import Types

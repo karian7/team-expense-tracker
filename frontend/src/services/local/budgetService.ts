@@ -73,7 +73,7 @@ export async function getOrCreateMonthlyBudget(
     };
 
     await db.monthlyBudgets.add(budget);
-    
+
     // 동기화 큐에 추가
     await syncQueue.enqueue('budgets', 'create', budget.id, budget);
   }
@@ -111,7 +111,7 @@ export async function updateMonthlyBudgetBaseAmount(
   };
 
   await db.monthlyBudgets.update(budget.id, updates);
-  
+
   // 동기화 큐에 추가
   const updatedBudget = { ...budget, ...updates };
   await syncQueue.enqueue('budgets', 'update', budget.id, updatedBudget);
@@ -201,7 +201,7 @@ export async function rolloverMonth(
   };
 
   await db.monthlyBudgets.add(newBudget);
-  
+
   // 동기화 큐에 추가
   await syncQueue.enqueue('budgets', 'create', newBudget.id, newBudget);
 
@@ -230,12 +230,56 @@ export async function deleteMonthlyBudget(id: string): Promise<void> {
     deleted: true,
     updatedAt: now(),
   });
-  
+
   // 동기화 큐에 추가
   const budget = await db.monthlyBudgets.get(id);
   if (budget) {
     await syncQueue.enqueue('budgets', 'delete', id, { ...budget, deleted: true });
   }
+}
+
+/**
+ * 현재 월 예산 잔액을 특정 금액으로 조정
+ */
+export async function adjustCurrentBudget(
+  targetBalance: number,
+  description: string
+): Promise<MonthlyBudget> {
+  const { year, month } = getCurrentYearMonth();
+  const budget = await getOrCreateMonthlyBudget(year, month);
+
+  const currentBalance = budget.balance;
+  const adjustmentAmount = targetBalance - currentBalance;
+
+  if (adjustmentAmount === 0) {
+    throw new Error('조정할 금액이 없습니다.');
+  }
+
+  // 예산 조정 내역을 Expense로 기록 (음수 금액 = 예산 추가)
+  const timestamp = now();
+  const expense = {
+    id: generateId(),
+    monthlyBudgetId: budget.id,
+    authorName: 'SYSTEM',
+    amount: -adjustmentAmount, // 음수로 저장하여 지출이 줄어드는 효과
+    expenseDate: new Date().toISOString(),
+    storeName: null,
+    receiptImageUrl: null,
+    description: description || '예산 조정',
+    ocrRawData: null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    version: 1,
+    deleted: false,
+  };
+
+  await db.expenses.add(expense);
+
+  // 동기화 큐에 추가
+  await syncQueue.enqueue('expenses', 'create', expense.id, expense);
+
+  // 예산 재계산
+  return recalculateMonthlyBudget(budget.id);
 }
 
 export const budgetService = {
@@ -246,4 +290,5 @@ export const budgetService = {
   rolloverMonth,
   getMonthlyBudget,
   deleteMonthlyBudget,
+  adjustCurrentBudget,
 };

@@ -5,8 +5,9 @@ import {
   updateMonthlyBudgetBaseAmount,
   rolloverMonth,
   getMonthlyReport,
+  adjustCurrentMonthBudget,
 } from '../services/budgetService';
-import { ApiResponse, UpdateMonthlyBudgetRequest } from '../types';
+import { ApiResponse, UpdateMonthlyBudgetRequest, AdjustCurrentBudgetRequest } from '../types';
 import { AppError } from '../middleware/errorHandler';
 
 /**
@@ -157,6 +158,38 @@ export async function getReport(
     res.json({
       success: true,
       data: report,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /api/monthly-budgets/current/adjust
+ * 현재 월 예산 잔액 조정
+ */
+export async function adjustCurrentBudget(
+  req: Request<Record<string, never>, ApiResponse, AdjustCurrentBudgetRequest>,
+  res: Response<ApiResponse>,
+  next: NextFunction
+) {
+  try {
+    const { targetBalance, description } = req.body;
+
+    if (targetBalance === undefined || isNaN(targetBalance) || targetBalance < 0) {
+      throw new AppError('Invalid target balance', 400);
+    }
+
+    if (!description || description.trim().length === 0) {
+      throw new AppError('Description is required', 400);
+    }
+
+    const budget = await adjustCurrentMonthBudget(targetBalance, description.trim());
+
+    res.json({
+      success: true,
+      data: budget,
+      message: 'Budget adjusted successfully',
     });
   } catch (error) {
     next(error);

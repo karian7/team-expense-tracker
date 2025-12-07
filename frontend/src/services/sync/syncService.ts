@@ -64,9 +64,16 @@ async function mergeServerData(data: PullResponse): Promise<void> {
   for (const budget of data.budgets) {
     const existing = await db.monthlyBudgets.get(budget.id);
 
+    // 서버 데이터에 필수 필드 추가
+    const budgetWithDefaults = {
+      ...budget,
+      version: budget.version ?? 1,
+      deleted: budget.deleted ?? false,
+    };
+
     if (!existing) {
       // 신규 항목: 추가
-      await db.monthlyBudgets.add(budget);
+      await db.monthlyBudgets.add(budgetWithDefaults);
     } else {
       // 기존 항목: LWW로 판단
       const serverTime = new Date(budget.updatedAt).getTime();
@@ -74,10 +81,10 @@ async function mergeServerData(data: PullResponse): Promise<void> {
 
       if (serverTime > localTime) {
         // 서버가 더 최신
-        await db.monthlyBudgets.put(budget);
-      } else if (serverTime === localTime && budget.version > existing.version) {
+        await db.monthlyBudgets.put(budgetWithDefaults);
+      } else if (serverTime === localTime && budgetWithDefaults.version > existing.version) {
         // 시간 동일하면 버전으로 판단
-        await db.monthlyBudgets.put(budget);
+        await db.monthlyBudgets.put(budgetWithDefaults);
       }
       // 클라이언트가 더 최신이면 무시 (다음 push에서 서버로 전송됨)
     }
@@ -87,16 +94,23 @@ async function mergeServerData(data: PullResponse): Promise<void> {
   for (const expense of data.expenses) {
     const existing = await db.expenses.get(expense.id);
 
+    // 서버 데이터에 필수 필드 추가
+    const expenseWithDefaults = {
+      ...expense,
+      version: expense.version ?? 1,
+      deleted: expense.deleted ?? false,
+    };
+
     if (!existing) {
-      await db.expenses.add(expense);
+      await db.expenses.add(expenseWithDefaults);
     } else {
       const serverTime = new Date(expense.updatedAt).getTime();
       const localTime = new Date(existing.updatedAt).getTime();
 
       if (serverTime > localTime) {
-        await db.expenses.put(expense);
-      } else if (serverTime === localTime && expense.version > existing.version) {
-        await db.expenses.put(expense);
+        await db.expenses.put(expenseWithDefaults);
+      } else if (serverTime === localTime && expenseWithDefaults.version > existing.version) {
+        await db.expenses.put(expenseWithDefaults);
       }
     }
   }
@@ -105,16 +119,23 @@ async function mergeServerData(data: PullResponse): Promise<void> {
   for (const setting of data.settings) {
     const existing = await db.settings.get(setting.key);
 
+    // 서버 데이터에 필수 필드 추가
+    const settingWithDefaults = {
+      ...setting,
+      version: setting.version ?? 1,
+      deleted: setting.deleted ?? false,
+    };
+
     if (!existing) {
-      await db.settings.add(setting);
+      await db.settings.add(settingWithDefaults);
     } else {
       const serverTime = new Date(setting.updatedAt).getTime();
       const localTime = new Date(existing.updatedAt).getTime();
 
       if (serverTime > localTime) {
-        await db.settings.put(setting);
-      } else if (serverTime === localTime && setting.version > existing.version) {
-        await db.settings.put(setting);
+        await db.settings.put(settingWithDefaults);
+      } else if (serverTime === localTime && settingWithDefaults.version > existing.version) {
+        await db.settings.put(settingWithDefaults);
       }
     }
   }

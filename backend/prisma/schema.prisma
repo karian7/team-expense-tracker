@@ -32,10 +32,11 @@ model Expense {
   monthlyBudgetId String
   monthlyBudget   MonthlyBudget @relation(fields: [monthlyBudgetId], references: [id], onDelete: Cascade)
   authorName      String // 작성자 이름
-  amount          Decimal // 사용 금액
+  amount          Decimal // 사용 금액 (예산 조정의 경우 음수)
   expenseDate     DateTime // 사용 날짜
   storeName       String? // 상호명
-  receiptImageUrl String // 영수증 이미지 경로
+  receiptImageUrl String? // 영수증 이미지 경로 (예산 조정의 경우 null)
+  description     String? // 예산 조정 설명
   ocrRawData      String? // OCR 원본 데이터 (JSON string)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

@@ -18,6 +18,7 @@
 ### 백엔드 (Node.js + Express + Prisma + SQLite)
 
 **비즈니스 로직**:
+
 - `budgetService.ts`: 월별 예산 자동 이월, 재계산 로직
 - `expenseService.ts`: 지출 CRUD, 날짜 기반 MonthlyBudget 자동 매핑
 - `ocrService.ts`: OpenAI/Google Vision API 호출
@@ -25,6 +26,7 @@
 - `exportService.ts`: CSV import/export
 
 **데이터 모델** (Prisma):
+
 - `MonthlyBudget`: year, month, baseAmount, carriedAmount, totalBudget, totalSpent, balance
 - `Expense`: authorName, amount, expenseDate, storeName, receiptImageUrl, ocrRawData
 - `Settings`: key-value 스토어
@@ -34,15 +36,18 @@
 ### 프론트엔드 (React + Vite + React Query + Tailwind)
 
 **상태 관리**:
+
 - React Query v5로 서버 상태 캐싱 (staleTime: 10-60초)
 - useState로 로컬 UI 상태 관리
 
 **컴포넌트 구조**:
+
 - `HomePage`: 메인 허브 (영수증 업로드 → 지출 입력 → 목록)
 - `BudgetSummary`, `ExpenseList`, `ExpenseForm`, `ReceiptUploader`
 - `MonthlyReportPage`, `SettingsPage`
 
 **데이터 흐름**:
+
 ```
 UI 이벤트 → React Query Mutation → API 호출 → 서버 DB 변경 → 쿼리 무효화 → UI 갱신
 ```
@@ -54,16 +59,19 @@ UI 이벤트 → React Query Mutation → API 호출 → 서버 DB 변경 → �
 ### 클라이언트 (React + Dexie.js + IndexedDB)
 
 **로컬 데이터베이스**: IndexedDB (Dexie.js wrapper)
+
 - 모든 데이터를 브라우저에 저장
 - 비즈니스 로직 실행 (예산 재계산, 이월 등)
 - 오프라인에서도 완전 작동
 
 **동기화 시스템**:
+
 - 백그라운드에서 서버와 양방향 동기화
 - Last-Write-Wins (LWW) 충돌 해결 전략
 - 동기화 큐 (실패 시 재시도)
 
 **데이터 흐름**:
+
 ```
 UI 이벤트 → 로컬 서비스 → IndexedDB 변경 → 동기화 큐 → 서버 동기화 → UI 갱신
 ```
@@ -71,11 +79,13 @@ UI 이벤트 → 로컬 서비스 → IndexedDB 변경 → 동기화 큐 → 서
 ### 백엔드 (최소화)
 
 **역할**:
+
 1. **동기화 서버**: 클라이언트 간 데이터 동기화
 2. **OpenAI API 프록시**: OCR 처리 (API 키 숨김)
 3. **백업 스토리지**: 데이터 영구 보관
 
 **API 엔드포인트** (3개로 축소):
+
 - `POST /api/sync/pull`: 서버 변경사항 다운로드
 - `POST /api/sync/push`: 클라이언트 변경사항 업로드
 - `POST /api/ocr/analyze`: OCR 처리
@@ -87,12 +97,14 @@ UI 이벤트 → 로컬 서비스 → IndexedDB 변경 → 동기화 큐 → 서
 ### 클라이언트사이드 DB
 
 **선택: Dexie.js**
+
 - IndexedDB의 간편한 래퍼
 - TypeScript 지원 우수
 - React hooks 제공 (`dexie-react-hooks`)
 - 경량 (~30KB)
 
 **대안 검토**:
+
 - ❌ RxDB: 과도한 복잡성, 큰 번들 크기
 - ❌ PouchDB: CouchDB 백엔드 필요, 구조 변경 큼
 
@@ -102,14 +114,15 @@ UI 이벤트 → 로컬 서비스 → IndexedDB 변경 → 동기화 큐 → 서
 
 ```typescript
 interface SyncableEntity {
-  id: string
-  updatedAt: string      // ISO timestamp
-  version: number        // Optimistic locking
-  deleted: boolean       // Soft delete
+  id: string;
+  updatedAt: string; // ISO timestamp
+  version: number; // Optimistic locking
+  deleted: boolean; // Soft delete
 }
 ```
 
 **충돌 해결**:
+
 1. `updatedAt`이 더 최신인 레코드가 승리
 2. 동일 시간이면 `version` 번호로 판단
 3. 충돌 발생 시 사용자에게 알림 (드문 경우)
@@ -117,10 +130,12 @@ interface SyncableEntity {
 ### 영수증 이미지 저장
 
 **옵션 1: IndexedDB Blob Storage (추천)**
+
 - 장점: 완전한 오프라인 지원
 - 단점: 브라우저 저장소 한계 (50MB~수GB)
 
 **옵션 2: 서버 저장 + URL 동기화**
+
 - 장점: 저장소 무제한
 - 단점: 이미지 조회 시 네트워크 필요
 
@@ -133,69 +148,69 @@ interface SyncableEntity {
 ### Dexie.js 스키마
 
 ```typescript
-import Dexie, { Table } from 'dexie'
+import Dexie, { Table } from 'dexie';
 
 interface MonthlyBudget {
-  id: string
-  year: number
-  month: number
-  baseAmount: number
-  carriedAmount: number
-  totalBudget: number
-  totalSpent: number
-  balance: number
-  updatedAt: string
-  deleted: boolean
-  version: number
+  id: string;
+  year: number;
+  month: number;
+  baseAmount: number;
+  carriedAmount: number;
+  totalBudget: number;
+  totalSpent: number;
+  balance: number;
+  updatedAt: string;
+  deleted: boolean;
+  version: number;
 }
 
 interface Expense {
-  id: string
-  monthlyBudgetId: string
-  authorName: string
-  amount: number
-  expenseDate: string
-  storeName?: string
-  receiptImageUrl: string
-  receiptImageBlob?: Blob  // 로컬 저장
-  ocrRawData?: string
-  updatedAt: string
-  deleted: boolean
-  version: number
+  id: string;
+  monthlyBudgetId: string;
+  authorName: string;
+  amount: number;
+  expenseDate: string;
+  storeName?: string;
+  receiptImageUrl: string;
+  receiptImageBlob?: Blob; // 로컬 저장
+  ocrRawData?: string;
+  updatedAt: string;
+  deleted: boolean;
+  version: number;
 }
 
 interface Settings {
-  key: string              // Primary key
-  value: string            // JSON 문자열
-  updatedAt: string
-  version: number
+  key: string; // Primary key
+  value: string; // JSON 문자열
+  updatedAt: string;
+  version: number;
 }
 
 interface SyncMetadata {
-  entity: string           // 'expenses' | 'budgets' | 'settings'
-  lastSyncTime: string     // ISO timestamp
-  pendingChanges: number   // 동기화 대기 중인 변경사항 수
+  entity: string; // 'expenses' | 'budgets' | 'settings'
+  lastSyncTime: string; // ISO timestamp
+  pendingChanges: number; // 동기화 대기 중인 변경사항 수
 }
 
 class ExpenseTrackerDB extends Dexie {
-  monthlyBudgets!: Table<MonthlyBudget>
-  expenses!: Table<Expense>
-  settings!: Table<Settings>
-  syncMetadata!: Table<SyncMetadata>
+  monthlyBudgets!: Table<MonthlyBudget>;
+  expenses!: Table<Expense>;
+  settings!: Table<Settings>;
+  syncMetadata!: Table<SyncMetadata>;
 
   constructor() {
-    super('ExpenseTrackerDB')
+    super('ExpenseTrackerDB');
 
     this.version(1).stores({
       monthlyBudgets: 'id, [year+month], updatedAt, deleted',
       expenses: 'id, monthlyBudgetId, expenseDate, authorName, updatedAt, deleted',
       settings: 'key',
-      syncMetadata: 'entity'
-    })
+      syncMetadata: 'entity',
+    });
   }
 }
 
-export const db = new ExpenseTrackerDB()
+export const db = new ExpenseTrackerDB();
 ```
 
 ---
@@ -254,6 +269,7 @@ frontend/src/services/
 **API**: `POST /api/sync/pull`
 
 **요청**:
+
 ```typescript
 {
   entities: ['expenses', 'budgets', 'settings'],
@@ -266,6 +282,7 @@ frontend/src/services/
 ```
 
 **응답**:
+
 ```typescript
 {
   expenses: [
@@ -279,6 +296,7 @@ frontend/src/services/
 ```
 
 **클라이언트 처리**:
+
 1. 각 엔티티를 `updatedAt` 기준으로 병합
 2. `deleted: true`인 항목은 로컬에서 삭제
 3. 충돌 시 LWW 적용
@@ -289,6 +307,7 @@ frontend/src/services/
 **API**: `POST /api/sync/push`
 
 **요청**:
+
 ```typescript
 {
   changes: [
@@ -312,6 +331,7 @@ frontend/src/services/
 ```
 
 **응답**:
+
 ```typescript
 {
   accepted: [
@@ -330,6 +350,7 @@ frontend/src/services/
 ```
 
 **클라이언트 처리**:
+
 1. `accepted` 항목은 동기화 큐에서 제거
 2. `conflicts` 발생 시:
    - 서버 버전을 로컬에 병합
@@ -361,7 +382,9 @@ frontend/src/services/
 **목표**: 로컬 DB 및 서비스 레이어 구축
 
 **작업**:
+
 1. Dexie.js 설치
+
    ```bash
    cd frontend
    pnpm add dexie dexie-react-hooks
@@ -382,6 +405,7 @@ frontend/src/services/
    - 예산 재계산 로직 테스트
 
 **검증**:
+
 - 브라우저 DevTools로 IndexedDB 데이터 확인
 - 단위 테스트 (Vitest)
 
@@ -392,23 +416,22 @@ frontend/src/services/
 **목표**: React Query 훅을 로컬 DB 사용으로 변경
 
 **작업**:
+
 1. React Query 훅 리팩토링
    - `useBudget.ts`: `budgetApi` → `budgetService` (로컬)
    - `useExpenses.ts`: `expenseApi` → `expenseService` (로컬)
    - `useSettings.ts`: `settingsApi` → `settingsService` (로컬)
 
 2. Dexie-React-Hooks 통합
+
    ```typescript
-   import { useLiveQuery } from 'dexie-react-hooks'
+   import { useLiveQuery } from 'dexie-react-hooks';
 
    export function useCurrentBudget() {
      return useLiveQuery(() => {
-       const now = new Date()
-       return budgetService.getOrCreateMonthlyBudget(
-         now.getFullYear(),
-         now.getMonth() + 1
-       )
-     })
+       const now = new Date();
+       return budgetService.getOrCreateMonthlyBudget(now.getFullYear(), now.getMonth() + 1);
+     });
    }
    ```
 
@@ -422,6 +445,7 @@ frontend/src/services/
    - OpenAI API 키 숨김 필요
 
 **검증**:
+
 - 오프라인 모드에서 앱 작동 확인
 - 네트워크 탭에서 API 호출 없는지 확인 (OCR 제외)
 
@@ -432,75 +456,83 @@ frontend/src/services/
 **목표**: 백그라운드 동기화 시스템 구축
 
 **작업**:
+
 1. 동기화 큐 구현 (`services/sync/syncQueue.ts`)
+
    ```typescript
    interface SyncQueueItem {
-     id: string
-     entity: 'expenses' | 'budgets' | 'settings'
-     operation: 'create' | 'update' | 'delete'
-     data: any
-     timestamp: string
-     retryCount: number
+     id: string;
+     entity: 'expenses' | 'budgets' | 'settings';
+     operation: 'create' | 'update' | 'delete';
+     data: any;
+     timestamp: string;
+     retryCount: number;
    }
 
    class SyncQueue {
-     async enqueue(item: SyncQueueItem): Promise<void>
-     async dequeue(): Promise<SyncQueueItem[]>
-     async remove(id: string): Promise<void>
-     async retry(id: string): Promise<void>
+     async enqueue(item: SyncQueueItem): Promise<void>;
+     async dequeue(): Promise<SyncQueueItem[]>;
+     async remove(id: string): Promise<void>;
+     async retry(id: string): Promise<void>;
    }
    ```
 
 2. Pull 구현 (`services/sync/syncService.ts`)
+
    ```typescript
    async function pull() {
-     const metadata = await db.syncMetadata.toArray()
-     const lastSyncTimes = metadata.reduce((acc, m) => ({
-       ...acc,
-       [m.entity]: m.lastSyncTime
-     }), {})
+     const metadata = await db.syncMetadata.toArray();
+     const lastSyncTimes = metadata.reduce(
+       (acc, m) => ({
+         ...acc,
+         [m.entity]: m.lastSyncTime,
+       }),
+       {}
+     );
 
-     const response = await syncApi.pull({ lastSyncTimes })
+     const response = await syncApi.pull({ lastSyncTimes });
 
      // 서버 데이터를 로컬에 병합 (LWW)
-     await mergeServerData(response)
+     await mergeServerData(response);
 
      // lastSyncTime 업데이트
-     await updateSyncMetadata(response.syncTime)
+     await updateSyncMetadata(response.syncTime);
    }
    ```
 
 3. Push 구현
+
    ```typescript
    async function push() {
-     const queue = await syncQueue.dequeue()
+     const queue = await syncQueue.dequeue();
 
-     const response = await syncApi.push({ changes: queue })
+     const response = await syncApi.push({ changes: queue });
 
      // 성공한 항목 제거
      for (const item of response.accepted) {
-       await syncQueue.remove(item.id)
+       await syncQueue.remove(item.id);
      }
 
      // 충돌 처리
      for (const conflict of response.conflicts) {
-       await resolveConflict(conflict)
+       await resolveConflict(conflict);
      }
    }
    ```
 
 4. LWW 충돌 해결 (`services/sync/conflictResolver.ts`)
+
    ```typescript
    async function resolveConflict(conflict: Conflict) {
-     const { clientVersion, serverVersion } = conflict
+     const { clientVersion, serverVersion } = conflict;
 
      if (serverVersion.updatedAt > clientVersion.updatedAt) {
        // 서버 버전 채택
-       await db[conflict.entity].put(serverVersion)
+       await db[conflict.entity].put(serverVersion);
      } else if (serverVersion.updatedAt === clientVersion.updatedAt) {
        // 버전 번호로 판단
        if (serverVersion.version > clientVersion.version) {
-         await db[conflict.entity].put(serverVersion)
+         await db[conflict.entity].put(serverVersion);
        }
      }
      // 클라이언트가 더 최신이면 무시 (다음 push에서 재시도)
@@ -508,72 +540,78 @@ frontend/src/services/
    ```
 
 5. 백엔드 동기화 API 구현
+
    ```typescript
    // backend/src/routes/syncRoutes.ts
-   router.post('/sync/pull', syncController.pull)
-   router.post('/sync/push', syncController.push)
+   router.post('/sync/pull', syncController.pull);
+   router.post('/sync/push', syncController.push);
 
    // backend/src/services/syncService.ts
    async function pull(lastSyncTimes) {
      const expenses = await prisma.expense.findMany({
-       where: { updatedAt: { gt: lastSyncTimes.expenses } }
-     })
+       where: { updatedAt: { gt: lastSyncTimes.expenses } },
+     });
      // budgets, settings도 동일
 
-     return { expenses, budgets, settings, syncTime: new Date() }
+     return { expenses, budgets, settings, syncTime: new Date() };
    }
 
    async function push(changes) {
-     const accepted = []
-     const conflicts = []
+     const accepted = [];
+     const conflicts = [];
 
      for (const change of changes) {
        const existing = await prisma[change.entity].findUnique({
-         where: { id: change.data.id }
-       })
+         where: { id: change.data.id },
+       });
 
        if (!existing || existing.updatedAt < change.data.updatedAt) {
          // 클라이언트 버전 채택
          await prisma[change.entity].upsert({
            where: { id: change.data.id },
            update: change.data,
-           create: change.data
-         })
-         accepted.push({ id: change.data.id, status: 'success' })
+           create: change.data,
+         });
+         accepted.push({ id: change.data.id, status: 'success' });
        } else {
          // 충돌 발생
          conflicts.push({
            id: change.data.id,
            clientVersion: change.data,
            serverVersion: existing,
-           resolution: 'server_wins'
-         })
+           resolution: 'server_wins',
+         });
        }
      }
 
-     return { accepted, conflicts, syncTime: new Date() }
+     return { accepted, conflicts, syncTime: new Date() };
    }
    ```
 
 6. 주기적 동기화 스케줄러
+
    ```typescript
    // services/sync/scheduler.ts
    export function startSyncScheduler() {
      // 앱 시작 시
-     syncService.syncAll()
+     syncService.syncAll();
 
      // 10분마다
-     setInterval(() => syncService.syncAll(), 10 * 60 * 1000)
+     setInterval(() => syncService.syncAll(), 10 * 60 * 1000);
 
      // 네트워크 재연결 시
-     window.addEventListener('online', () => syncService.syncAll())
+     window.addEventListener('online', () => syncService.syncAll());
 
      // 로컬 변경 발생 후 30초 (디바운싱)
-     db.on('changes', debounce(() => syncService.push(), 30000))
+     db.on(
+       'changes',
+       debounce(() => syncService.push(), 30000)
+     );
    }
    ```
 
 **검증**:
+
 - 오프라인 → 온라인 전환 시 동기화 확인
 - 다른 브라우저/기기에서 동일 데이터 확인
 - 충돌 시나리오 테스트 (동시 편집)
@@ -585,6 +623,7 @@ frontend/src/services/
 **목표**: 불필요한 백엔드 코드 제거
 
 **작업**:
+
 1. 비즈니스 로직 제거
    - ❌ `budgetService.ts` 삭제 (동기화 로직만 유지)
    - ❌ `expenseService.ts` 삭제
@@ -624,6 +663,7 @@ frontend/src/services/
    ```
 
 **검증**:
+
 - 백엔드 빌드 확인
 - API 문서 업데이트
 - 프론트엔드에서 모든 기능 작동 확인
@@ -635,6 +675,7 @@ frontend/src/services/
 **목표**: 안정성 및 성능 검증
 
 **작업**:
+
 1. **동기화 시나리오 테스트**
    - 단일 기기 오프라인 → 온라인
    - 다중 기기 동시 편집
@@ -663,6 +704,7 @@ frontend/src/services/
    - 충돌 해결 시나리오
 
 **검증**:
+
 - E2E 테스트 (Playwright)
 - 성능 프로파일링 (React DevTools Profiler)
 - 브라우저 호환성 테스트 (Chrome, Firefox, Safari, Edge)
@@ -676,6 +718,7 @@ frontend/src/services/
 **마이그레이션 API**: `GET /api/migration/export`
 
 **응답**:
+
 ```typescript
 {
   budgets: MonthlyBudget[],
@@ -685,33 +728,34 @@ frontend/src/services/
 ```
 
 **클라이언트 처리**:
+
 ```typescript
 // services/migration/migrator.ts
 async function migrateFromServer() {
-  const data = await api.get('/api/migration/export')
+  const data = await api.get('/api/migration/export');
 
   await db.transaction('rw', db.monthlyBudgets, db.expenses, db.settings, async () => {
-    await db.monthlyBudgets.bulkPut(data.budgets)
-    await db.expenses.bulkPut(data.expenses)
-    await db.settings.bulkPut(data.settings)
-  })
+    await db.monthlyBudgets.bulkPut(data.budgets);
+    await db.expenses.bulkPut(data.expenses);
+    await db.settings.bulkPut(data.settings);
+  });
 
   // 초기 동기화 시간 설정
   await db.syncMetadata.bulkPut([
     { entity: 'budgets', lastSyncTime: new Date().toISOString(), pendingChanges: 0 },
     { entity: 'expenses', lastSyncTime: new Date().toISOString(), pendingChanges: 0 },
-    { entity: 'settings', lastSyncTime: new Date().toISOString(), pendingChanges: 0 }
-  ])
+    { entity: 'settings', lastSyncTime: new Date().toISOString(), pendingChanges: 0 },
+  ]);
 
-  localStorage.setItem('migrationCompleted', 'true')
+  localStorage.setItem('migrationCompleted', 'true');
 }
 
 // App.tsx에서 호출
 useEffect(() => {
   if (!localStorage.getItem('migrationCompleted')) {
-    migrateFromServer()
+    migrateFromServer();
   }
-}, [])
+}, []);
 ```
 
 ---
@@ -729,29 +773,30 @@ async function saveReceiptImage(file: File): Promise<string> {
   const compressedBlob = await compressImage(file, {
     maxWidth: 800,
     quality: 0.8,
-    format: 'webp'
-  })
+    format: 'webp',
+  });
 
   // 2. IndexedDB에 Blob 저장
-  const id = generateId()
+  const id = generateId();
   await db.expenses.update(id, {
-    receiptImageBlob: compressedBlob
-  })
+    receiptImageBlob: compressedBlob,
+  });
 
   // 3. Blob URL 반환 (표시용)
-  return URL.createObjectURL(compressedBlob)
+  return URL.createObjectURL(compressedBlob);
 }
 
 async function getReceiptImage(id: string): Promise<string> {
-  const expense = await db.expenses.get(id)
+  const expense = await db.expenses.get(id);
   if (expense?.receiptImageBlob) {
-    return URL.createObjectURL(expense.receiptImageBlob)
+    return URL.createObjectURL(expense.receiptImageBlob);
   }
-  throw new Error('Image not found')
+  throw new Error('Image not found');
 }
 ```
 
 **이미지 압축 라이브러리**: `browser-image-compression`
+
 ```bash
 pnpm add browser-image-compression
 ```
@@ -759,11 +804,13 @@ pnpm add browser-image-compression
 ### 저장소 용량 관리
 
 **브라우저별 제한**:
+
 - Chrome: ~60% 디스크 여유 공간
 - Firefox: ~50% 디스크 여유 공간
 - Safari: ~1GB (iOS는 더 적음)
 
 **용량 초과 시 전략**:
+
 1. 경고 표시 (90% 도달 시)
 2. 오래된 이미지 자동 삭제 (6개월 이상)
 3. 서버 백업으로 전환 제안
@@ -777,6 +824,7 @@ pnpm add browser-image-compression
 **리스크**: 사용자가 브라우저 데이터 삭제 시 모든 로컬 데이터 손실
 
 **완화**:
+
 - ✅ 서버에 자동 백업 (동기화)
 - ✅ 경고 메시지 표시 ("브라우저 데이터를 삭제하지 마세요")
 - ✅ 복구 기능 (서버에서 전체 다운로드)
@@ -786,6 +834,7 @@ pnpm add browser-image-compression
 **리스크**: 여러 기기에서 동시 편집 시 데이터 손실 가능
 
 **완화**:
+
 - ✅ LWW로 최신 버전 자동 선택
 - ✅ 충돌 발생 시 사용자 알림
 - ✅ 버전 히스토리 (선택적 구현)
@@ -795,6 +844,7 @@ pnpm add browser-image-compression
 **리스크**: 이미지가 많으면 저장소 한계 도달
 
 **완화**:
+
 - ✅ 이미지 압축 (WebP, 800px, 품질 80%)
 - ✅ 용량 모니터링 및 경고
 - ✅ 오래된 이미지 자동 정리
@@ -804,6 +854,7 @@ pnpm add browser-image-compression
 **리스크**: 동기화 실패 시 데이터 불일치
 
 **완화**:
+
 - ✅ 재시도 로직 (exponential backoff)
 - ✅ 동기화 큐 (실패한 항목 보관)
 - ✅ 수동 동기화 버튼
@@ -813,6 +864,7 @@ pnpm add browser-image-compression
 **리스크**: OpenAI API 사용량 증가로 비용 상승
 
 **완화**:
+
 - ✅ Dummy OCR 프로바이더로 테스트
 - ✅ Google Vision API로 대체 가능
 - ✅ 사용량 모니터링
@@ -823,14 +875,14 @@ pnpm add browser-image-compression
 
 ### 타임라인
 
-| Phase | 기간 | 담당 |
-|-------|------|------|
-| Phase 1: 기반 구축 | 1-2주 | 백엔드 + 프론트엔드 개발자 |
-| Phase 2: 로컬-퍼스트 전환 | 2-3주 | 프론트엔드 개발자 |
-| Phase 3: 동기화 구현 | 2-3주 | 풀스택 개발자 |
-| Phase 4: 백엔드 슬림화 | 1주 | 백엔드 개발자 |
-| Phase 5: 테스트 및 최적화 | 1-2주 | QA + 풀스택 개발자 |
-| **총 예상 기간** | **7-11주** | |
+| Phase                     | 기간       | 담당                       |
+| ------------------------- | ---------- | -------------------------- |
+| Phase 1: 기반 구축        | 1-2주      | 백엔드 + 프론트엔드 개발자 |
+| Phase 2: 로컬-퍼스트 전환 | 2-3주      | 프론트엔드 개발자          |
+| Phase 3: 동기화 구현      | 2-3주      | 풀스택 개발자              |
+| Phase 4: 백엔드 슬림화    | 1주        | 백엔드 개발자              |
+| Phase 5: 테스트 및 최적화 | 1-2주      | QA + 풀스택 개발자         |
+| **총 예상 기간**          | **7-11주** |                            |
 
 ### 리소스 요구사항
 
@@ -863,7 +915,7 @@ pnpm add browser-image-compression
 ### 라이브러리 문서
 
 - [Dexie.js](https://dexie.org/)
-- [Dexie React Hooks](https://dexie.org/docs/dexie-react-hooks/useLiveQuery())
+- [Dexie React Hooks](<https://dexie.org/docs/dexie-react-hooks/useLiveQuery()>)
 - [IndexedDB API](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
 
 ### Local-First 아키텍처 참고

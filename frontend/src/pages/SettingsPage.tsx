@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSettings, useUpdateSettings, useSetInitialBudget } from '../hooks/useSettings';
 import { useExportExpenses, useDownloadTemplate, useImportExpenses } from '../hooks/useExport';
+import { useCurrentBudget, useAdjustCurrentBudget } from '../hooks/useBudget';
 import { formatCurrency } from '../utils/format';
 
 interface SettingsPageProps {
@@ -9,17 +10,23 @@ interface SettingsPageProps {
 
 export default function SettingsPage({ onClose }: SettingsPageProps) {
   const settings = useSettings();
+  const currentBudget = useCurrentBudget();
   const updateMutation = useUpdateSettings();
   const setInitialBudgetMutation = useSetInitialBudget();
+  const adjustBudgetMutation = useAdjustCurrentBudget();
   const exportMutation = useExportExpenses();
   const templateMutation = useDownloadTemplate();
   const importMutation = useImportExpenses();
 
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
   const [newBudget, setNewBudget] = useState(0);
+  const [targetBalance, setTargetBalance] = useState(0);
+  const [adjustDescription, setAdjustDescription] = useState('');
 
   // Local mutation states
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isAdjusting, setIsAdjusting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isExporting] = useState(false);
   const [isDownloadingTemplate] = useState(false);
@@ -38,6 +45,34 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       alert('예산 변경에 실패했습니다.');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleAdjustBudget = async () => {
+    if (!adjustDescription.trim()) {
+      alert('조정 내용을 입력해주세요.');
+      return;
+    }
+
+    if (targetBalance < 0) {
+      alert('목표 잔액은 0원 이상이어야 합니다.');
+      return;
+    }
+
+    try {
+      setIsAdjusting(true);
+      await adjustBudgetMutation.mutateAsync({
+        targetBalance,
+        description: adjustDescription.trim(),
+      });
+      setIsAdjustModalOpen(false);
+      setAdjustDescription('');
+      alert('이번달 예산이 조정되었습니다.');
+    } catch (error) {
+      console.error('Budget adjustment error:', error);
+      alert('예산 조정에 실패했습니다.');
+    } finally {
+      setIsAdjusting(false);
     }
   };
 
@@ -110,7 +145,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   };
 
   // useLiveQuery returns undefined while loading
-  if (!settings) {
+  if (!settings || !currentBudget) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
@@ -167,6 +202,24 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   className="btn-secondary text-sm py-1.5 px-3"
                 >
                   변경
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <div>
+                  <p className="text-sm text-blue-600 font-medium">이번달 남은 예산</p>
+                  <p className="text-xl font-bold text-blue-900">
+                    {formatCurrency(currentBudget.balance)}원
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setTargetBalance(currentBudget.balance);
+                    setIsAdjustModalOpen(true);
+                  }}
+                  className="btn-primary text-sm py-1.5 px-3"
+                >
+                  조정
                 </button>
               </div>
 
@@ -343,6 +396,80 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   disabled={isUpdating}
                 >
                   {isUpdating ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Budget Adjustment Modal */}
+        {isAdjustModalOpen && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 rounded-xl">
+            <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">이번달 예산 조정</h3>
+
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">현재 남은 예산</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {formatCurrency(currentBudget.balance)}원
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">목표 잔액</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={targetBalance}
+                    onChange={(e) => setTargetBalance(Number(e.target.value))}
+                    className="input-field pr-8 font-bold text-lg"
+                    placeholder="0"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                    원
+                  </span>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">조정 내용</label>
+                <textarea
+                  value={adjustDescription}
+                  onChange={(e) => setAdjustDescription(e.target.value)}
+                  className="input-field resize-none"
+                  rows={3}
+                  placeholder="예산 조정 사유를 입력하세요"
+                />
+              </div>
+
+              {targetBalance !== currentBudget.balance && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <p className="text-xs text-blue-600 mb-1">조정 금액</p>
+                  <p
+                    className={`text-lg font-bold ${targetBalance > currentBudget.balance ? 'text-blue-600' : 'text-red-600'}`}
+                  >
+                    {targetBalance > currentBudget.balance ? '+' : ''}
+                    {formatCurrency(targetBalance - currentBudget.balance)}원
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setIsAdjustModalOpen(false);
+                    setAdjustDescription('');
+                  }}
+                  className="btn-secondary flex-1"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleAdjustBudget}
+                  className="btn-primary flex-1"
+                  disabled={isAdjusting}
+                >
+                  {isAdjusting ? '조정 중...' : '조정'}
                 </button>
               </div>
             </div>

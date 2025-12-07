@@ -2,7 +2,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { budgetService } from '../services/local/budgetService';
 
 export function useCurrentBudget() {
-  return useLiveQuery(() => budgetService.getCurrentMonthlyBudget());
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  return useLiveQuery(() => budgetService.getMonthlyBudget(year, month), [year, month]);
 }
 
 export function useBudgetByMonth(year: number, month: number) {
@@ -27,6 +30,23 @@ export function useUpdateBudgetBaseAmount() {
     },
     mutate: ({ year, month, baseAmount }: { year: number; month: number; baseAmount: number }) => {
       budgetService.updateMonthlyBudgetBaseAmount(year, month, baseAmount);
+    },
+  };
+}
+
+export function useAdjustCurrentBudget() {
+  return {
+    mutateAsync: async ({
+      targetBalance,
+      description,
+    }: {
+      targetBalance: number;
+      description: string;
+    }) => {
+      return budgetService.adjustCurrentBudget(targetBalance, description);
+    },
+    mutate: ({ targetBalance, description }: { targetBalance: number; description: string }) => {
+      budgetService.adjustCurrentBudget(targetBalance, description);
     },
   };
 }
