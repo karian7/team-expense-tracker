@@ -189,12 +189,14 @@ return calculateMonthlyBudget(year, month);
 #### 1. IndexedDB (Dexie)
 
 **4개 테이블**:
+
 - `budgetEvents`: 이벤트 저장소 (sequence: PK)
 - `settings`: 로컬 설정
 - `syncMetadata`: 동기화 지점 (lastSequence)
 - `pendingEvents`: 대기 큐 (pending/syncing/failed)
 
 **인덱스**:
+
 - `[year+month]`: 월별 조회 최적화
 - `eventType`, `eventDate`, `authorName`: 필터링
 - `referenceSequence`: 이벤트 역참조
@@ -202,12 +204,14 @@ return calculateMonthlyBudget(year, month);
 #### 2. 임시 Sequence 메커니즘
 
 **로컬 이벤트 생성 시**:
+
 ```typescript
 const tempSequence = -1 * (Date.now() * 1000 + Math.random() * 1000);
 // 예: -1733596800000001 (음수로 서버 sequence와 구분)
 ```
 
 **동기화 후 교체**:
+
 ```typescript
 // 로컬: { sequence: -1733596800000001, ... }
 // 서버 응답: { sequence: 42, ... }
@@ -217,12 +221,14 @@ const tempSequence = -1 * (Date.now() * 1000 + Math.random() * 1000);
 #### 3. 대기 큐 (PendingEvents)
 
 **상태 전이**:
+
 ```
 pending → syncing → (제거) [성공]
 pending → syncing → failed [재시도 대기]
 ```
 
 **PendingEvent 구조**:
+
 ```typescript
 {
   id: string;                    // UUID
@@ -236,6 +242,7 @@ pending → syncing → failed [재시도 대기]
 #### 4. 동기화 루프
 
 **자동 동기화** (60초 주기):
+
 1. **Push**: `pendingEvents` 큐를 비우며 서버에 전송
    - 성공: 임시 sequence → 서버 sequence 교체
    - 실패: 상태를 `failed`로 변경, 다음 루프에서 재시도
@@ -246,12 +253,14 @@ pending → syncing → failed [재시도 대기]
 ### 오프라인 동작
 
 **사용자가 오프라인에서 지출 기록**:
+
 1. `eventService.createLocalEvent()` → Dexie에 즉시 저장
 2. `useLiveQuery` 트리거 → UI 즉시 업데이트 (0ms)
 3. `pendingEvents` 큐에 추가 (status: pending)
 4. 사용자는 정상적으로 앱 사용 가능
 
 **온라인 복귀 시**:
+
 1. 자동 동기화 루프 실행 (또는 수동 트리거)
 2. 대기 중인 이벤트들을 순차적으로 서버에 전송
 3. 성공한 이벤트는 큐에서 제거
@@ -269,29 +278,30 @@ pending → syncing → failed [재시도 대기]
 
 ### Event Sourcing 원칙 ✅
 
-| 원칙 | 상태 | 비고 |
-|------|------|------|
-| Append-Only | ✅ | INSERT만 가능, UPDATE/DELETE 불가 |
-| Sequence 기반 순서 | ✅ | Auto-increment PK |
-| 완전 재구성 가능 | ✅ | 모든 이벤트로부터 상태 계산 |
-| 복식부기 원칙 | ✅ | 이월 = 계산된 값 |
-| 동기화 지원 | ✅ | Sequence 기반 부분 동기화 |
-| Race Condition 방지 | ✅ | Unique constraint + Try-catch |
+| 원칙                | 상태 | 비고                              |
+| ------------------- | ---- | --------------------------------- |
+| Append-Only         | ✅   | INSERT만 가능, UPDATE/DELETE 불가 |
+| Sequence 기반 순서  | ✅   | Auto-increment PK                 |
+| 완전 재구성 가능    | ✅   | 모든 이벤트로부터 상태 계산       |
+| 복식부기 원칙       | ✅   | 이월 = 계산된 값                  |
+| 동기화 지원         | ✅   | Sequence 기반 부분 동기화         |
+| Race Condition 방지 | ✅   | Unique constraint + Try-catch     |
 
 ### Local First 원칙 ✅
 
-| 원칙 | 상태 | 비고 |
-|------|------|------|
-| 오프라인 쓰기 | ✅ | 임시 sequence로 즉시 저장 |
-| 즉시 UI 반응 | ✅ | useLiveQuery 자동 업데이트 |
-| 백그라운드 동기화 | ✅ | 60초 주기 자동 실행 |
-| 충돌 해결 | ✅ | 서버 우선 (Last-Write-Wins) |
-| 대기 큐 | ✅ | pendingEvents 테이블 |
-| 재시도 메커니즘 | ✅ | 실패 시 다음 루프에서 재시도 |
+| 원칙              | 상태 | 비고                         |
+| ----------------- | ---- | ---------------------------- |
+| 오프라인 쓰기     | ✅   | 임시 sequence로 즉시 저장    |
+| 즉시 UI 반응      | ✅   | useLiveQuery 자동 업데이트   |
+| 백그라운드 동기화 | ✅   | 60초 주기 자동 실행          |
+| 충돌 해결         | ✅   | 서버 우선 (Last-Write-Wins)  |
+| 대기 큐           | ✅   | pendingEvents 테이블         |
+| 재시도 메커니즘   | ✅   | 실패 시 다음 루프에서 재시도 |
 
 ### 예외 사항
 
 **월 기본 예산만 예외 처리**:
+
 - `ensureMonthlyBudget()`: 로컬 우선 생성 → 서버 동기화
 - Race Condition 방지: TaskMap으로 동시 요청 방지
 - 서버 검증: 동일 월 기본 예산 중복 생성 시 에러 무시
