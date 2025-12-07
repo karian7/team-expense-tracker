@@ -8,6 +8,7 @@ import receiptRoutes from './routes/receiptRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import exportRoutes from './routes/exportRoutes';
 import syncRoutes from './routes/syncRoutes';
+import eventRoutes from './routes/eventRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 // Load environment variables
@@ -80,6 +81,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // API Routes
+app.use('/api/events', eventRoutes);
 app.use('/api/monthly-budgets', budgetRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/receipts', receiptRoutes);

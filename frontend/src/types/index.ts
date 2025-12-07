@@ -6,34 +6,42 @@ export interface ApiResponse<T = unknown> {
   message?: string;
 }
 
-// Monthly Budget
-export interface MonthlyBudget {
-  id: string;
+// Budget Event (Event Sourcing)
+export interface BudgetEvent {
+  sequence: number;
+  eventType: 'BUDGET_IN' | 'EXPENSE';
+  eventDate: string;
   year: number;
   month: number;
-  baseAmount: number;
-  carriedAmount: number;
+  authorName: string;
+  amount: number;
+  storeName: string | null;
+  description: string | null;
+  receiptImage: string | null;
+  ocrRawData: string | null;
+  createdAt: string;
+}
+
+// Monthly Budget (Computed from events)
+export interface MonthlyBudget {
+  year: number;
+  month: number;
+  budgetIn: number;
+  previousBalance: number;
   totalBudget: number;
   totalSpent: number;
   balance: number;
-  createdAt: string;
-  updatedAt: string;
+  eventCount: number;
 }
 
-// Expense
-export interface Expense {
-  id: string;
-  monthlyBudgetId: string;
-  authorName: string;
-  amount: number;
-  expenseDate: string;
-  storeName: string | null;
-  receiptImageUrl?: string; // deprecated
-  receiptImage: string | null; // base64 encoded
-  ocrRawData: string | null;
-  createdAt: string;
-  updatedAt: string;
+// Sync Response
+export interface SyncEventsResponse {
+  lastSequence: number;
+  events: BudgetEvent[];
 }
+
+// Expense (alias for BudgetEvent with EXPENSE type)
+export type Expense = BudgetEvent;
 
 // OCR Result
 export interface OcrResult {
@@ -95,7 +103,7 @@ export interface MonthlyReportStatistics {
   expenseCount: number;
   dailyBreakdown: DailyBreakdown[];
   authorBreakdown: AuthorBreakdown[];
-  topExpenses: Expense[];
+  topExpenses: BudgetEvent[];
 }
 
 export interface MonthlyReport {

@@ -8,62 +8,55 @@ export interface ApiResponse<T = unknown> {
   message?: string;
 }
 
-// Monthly Budget Types
-export interface MonthlyBudgetResponse {
-  id: string;
+// Budget Event Types (복식부기 원칙)
+export interface BudgetEventResponse {
+  sequence: number;
+  eventType: 'BUDGET_IN' | 'EXPENSE'; // 예산 유입 | 지출
+  eventDate: Date;
   year: number;
   month: number;
-  baseAmount: number;
-  carriedAmount: number;
-  totalBudget: number;
-  totalSpent: number;
-  balance: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateMonthlyBudgetRequest {
-  year: number;
-  month: number;
-  baseAmount: number;
-}
-
-export interface UpdateMonthlyBudgetRequest {
-  baseAmount?: number;
-}
-
-// Expense Types
-export interface ExpenseResponse {
-  id: string;
-  monthlyBudgetId: string;
   authorName: string;
-  amount: number;
-  expenseDate: Date;
+  amount: number; // 항상 양수
   storeName: string | null;
-  receiptImageUrl: string | null;
-  receiptImage: string | null; // base64 encoded image
   description: string | null;
+  receiptImage: string | null; // base64 encoded image
   ocrRawData: string | null;
   createdAt: Date;
-  updatedAt: Date;
 }
 
-export interface CreateExpenseRequest {
+export interface CreateBudgetEventRequest {
+  eventType: 'BUDGET_IN' | 'EXPENSE';
+  eventDate: string; // ISO date string
+  year: number;
+  month: number;
   authorName: string;
-  amount: number;
-  expenseDate: string; // ISO date string
+  amount: number; // 항상 양수
   storeName?: string;
-  receiptImageUrl?: string; // deprecated
+  description?: string;
   receiptImage?: string; // base64 encoded image
   ocrRawData?: Record<string, unknown>;
 }
 
-export interface UpdateExpenseRequest {
-  authorName?: string;
-  amount?: number;
-  expenseDate?: string;
-  storeName?: string;
+// Sync API Types
+export interface SyncEventsResponse {
+  lastSequence: number;
+  events: BudgetEventResponse[];
 }
+
+// Computed Monthly Budget (client-side calculation result)
+export interface MonthlyBudgetResponse {
+  year: number;
+  month: number;
+  budgetIn: number; // 이번 달 예산 유입 (BASE_BUDGET)
+  previousBalance: number; // 이전 달 잔액 (계산된 값, 이벤트 아님!)
+  totalBudget: number; // previousBalance + budgetIn
+  totalSpent: number; // 이번 달 지출
+  balance: number; // totalBudget - totalSpent
+  eventCount: number;
+}
+
+// Expense Types (now derived from BudgetEvent)
+export type ExpenseResponse = BudgetEventResponse;
 
 // OCR Types
 export interface OcrResult {

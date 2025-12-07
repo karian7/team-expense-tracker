@@ -8,6 +8,7 @@ import type {
   AppSettings,
   ImportResult,
   MonthlyReport,
+  BudgetEvent,
 } from '../types';
 
 const inferBackendOrigin = () => {
@@ -25,7 +26,48 @@ const apiClient = axios.create({
   },
 });
 
-// Budget API
+// Event API (Event Sourcing)
+export const eventApi = {
+  sync: async (sinceSequence: number = 0) => {
+    const { data } = await apiClient.get(`/events/sync?since=${sinceSequence}`);
+    return data.data as { lastSequence: number; events: BudgetEvent[] };
+  },
+
+  getLatestSequence: async (): Promise<number> => {
+    const { data } = await apiClient.get('/events/latest-sequence');
+    return data.data.sequence;
+  },
+
+  getEventsByMonth: async (year: number, month: number) => {
+    const { data } = await apiClient.get(`/events/month/${year}/${month}`);
+    return data.data;
+  },
+
+  calculateBudget: async (year: number, month: number): Promise<MonthlyBudget> => {
+    const { data } = await apiClient.get<ApiResponse<MonthlyBudget>>(
+      `/events/budget/${year}/${month}`
+    );
+    return data.data!;
+  },
+
+  createEvent: async (event: {
+    eventType: 'BUDGET_IN' | 'EXPENSE';
+    eventDate: string;
+    year: number;
+    month: number;
+    authorName: string;
+    amount: number;
+    storeName?: string;
+    description?: string;
+    receiptImage?: string;
+    ocrRawData?: Record<string, unknown>;
+  }) => {
+    const { data } = await apiClient.post('/events', event);
+    return data.data;
+  },
+};
+
+// Budget API (Legacy - 호환성 유지)
 export const budgetApi = {
   getCurrent: async (): Promise<MonthlyBudget> => {
     const { data } = await apiClient.get<ApiResponse<MonthlyBudget>>('/monthly-budgets/current');
@@ -54,6 +96,21 @@ export const budgetApi = {
     const { data } = await apiClient.put<ApiResponse<MonthlyBudget>>(
       `/monthly-budgets/${year}/${month}`,
       { baseAmount }
+    );
+    return data.data!;
+  },
+
+  adjustCurrent: async (targetBalance: number, description: string): Promise<MonthlyBudget> => {
+    const { data } = await apiClient.post<ApiResponse<MonthlyBudget>>(
+      '/monthly-budgets/current/adjust',
+      { targetBalance, description }
+    );
+    return data.data!;
+  },
+
+  ensureCurrent: async (): Promise<{ created: boolean; message: string }> => {
+    const { data } = await apiClient.post<ApiResponse<{ created: boolean; message: string }>>(
+      '/monthly-budgets/ensure-current'
     );
     return data.data!;
   },

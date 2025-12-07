@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useCreateExpense } from '../../hooks/useExpenses';
 import { getCurrentDateTime, formatDateTimeLocal } from '../../utils/format';
-import type { OcrResult } from '../../types';
-import type { CreateExpenseData } from '../../services/local/expenseService';
+import type { OcrResult, ExpenseFormData } from '../../types';
 
 interface ExpenseFormProps {
   imageBuffer: string; // base64 encoded
@@ -30,7 +29,7 @@ export default function ExpenseForm({
     handleSubmit,
     formState: { errors },
     setValue,
-  } = useForm<Omit<CreateExpenseData, 'receiptImage' | 'ocrRawData'>>({
+  } = useForm<Omit<ExpenseFormData, 'receiptImage' | 'ocrRawData'>>({
     defaultValues: {
       authorName: savedAuthorName,
       amount: ocrResult.amount || 0,
@@ -46,7 +45,7 @@ export default function ExpenseForm({
     if (ocrResult.storeName) setValue('storeName', ocrResult.storeName);
   }, [ocrResult, savedAuthorName, setValue]);
 
-  const onSubmit = async (data: Omit<CreateExpenseData, 'receiptImage' | 'ocrRawData'>) => {
+  const onSubmit = async (data: Omit<ExpenseFormData, 'receiptImage' | 'ocrRawData'>) => {
     try {
       setIsPending(true);
       setError(null);

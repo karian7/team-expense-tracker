@@ -1,91 +1,53 @@
 import Dexie, { type Table } from 'dexie';
 
-// 동기화 가능한 엔티티 인터페이스
-export interface SyncableEntity {
-  updatedAt: string; // ISO timestamp
-  version: number; // Optimistic locking
-  deleted: boolean; // Soft delete
-}
-
-// MonthlyBudget 인터페이스
-export interface MonthlyBudget extends SyncableEntity {
-  id: string;
+// Budget Event (Event Sourcing)
+export interface BudgetEvent {
+  sequence: number; // Primary Key
+  eventType: 'BUDGET_IN' | 'EXPENSE';
+  eventDate: string;
   year: number;
   month: number;
-  baseAmount: number;
-  carriedAmount: number;
-  totalBudget: number;
-  totalSpent: number;
-  balance: number;
-  createdAt: string;
-}
-
-// Expense 인터페이스
-export interface Expense extends SyncableEntity {
-  id: string;
-  monthlyBudgetId: string;
   authorName: string;
   amount: number;
-  expenseDate: string; // YYYY-MM-DD 형식
-  storeName?: string;
-  receiptImageUrl?: string; // deprecated
-  receiptImage?: string; // base64 encoded image
-  ocrRawData?: string; // JSON 문자열
+  storeName: string | null;
+  description: string | null;
+  receiptImage: string | null;
+  ocrRawData: string | null;
   createdAt: string;
 }
 
 // Settings 인터페이스
-export interface Settings extends SyncableEntity {
+export interface Settings {
   key: string; // Primary key
   value: string; // JSON 문자열
 }
 
 // SyncMetadata 인터페이스
 export interface SyncMetadata {
-  entity: 'expenses' | 'budgets' | 'settings';
+  key: 'lastSequence'; // 'lastSequence'만 사용
+  value: number; // 마지막으로 동기화한 sequence 번호
   lastSyncTime: string;
-  pendingChanges: number;
 }
 
-// SyncQueue 인터페이스 (동기화 대기 중인 변경사항)
-export interface SyncQueueItem {
-  id: string; // 큐 아이템 고유 ID
-  entity: 'budgets' | 'expenses' | 'settings';
-  operation: 'create' | 'update' | 'delete';
-  entityId: string; // 실제 엔티티 ID
-  data: string; // JSON 직렬화된 데이터
-  timestamp: string;
-  retryCount: number;
-  lastError?: string;
-}
-
-// Dexie Database 클래스
+// Dexie Database 클래스 (Event Sourcing)
 class ExpenseTrackerDB extends Dexie {
-  monthlyBudgets!: Table<MonthlyBudget, string>;
-  expenses!: Table<Expense, string>;
+  budgetEvents!: Table<BudgetEvent, number>;
   settings!: Table<Settings, string>;
   syncMetadata!: Table<SyncMetadata, string>;
-  syncQueue!: Table<SyncQueueItem, string>;
 
   constructor() {
     super('ExpenseTrackerDB');
 
-    // 스키마 버전 1
-    this.version(1).stores({
-      // MonthlyBudget: id로 조회, [year+month] 복합 인덱스, updatedAt, deleted로 필터링
-      monthlyBudgets: 'id, [year+month], updatedAt, deleted',
-
-      // Expense: id로 조회, monthlyBudgetId, expenseDate, authorName으로 필터링
-      expenses: 'id, monthlyBudgetId, expenseDate, authorName, updatedAt, deleted',
+    // 스키마 버전 2 (Event Sourcing)
+    this.version(2).stores({
+      // BudgetEvent: sequence가 primary key, year+month, eventType으로 필터링
+      budgetEvents: 'sequence, [year+month], eventType, eventDate, authorName',
 
       // Settings: key가 primary key
-      settings: 'key, updatedAt',
+      settings: 'key',
 
-      // SyncMetadata: entity가 primary key
-      syncMetadata: 'entity',
-
-      // SyncQueue: 동기화 큐
-      syncQueue: 'id, entity, timestamp, retryCount',
+      // SyncMetadata: key가 primary key
+      syncMetadata: 'key',
     });
   }
 }

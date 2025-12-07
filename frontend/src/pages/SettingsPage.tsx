@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { useSettings, useUpdateSettings, useSetInitialBudget } from '../hooks/useSettings';
+import {
+  useAppSettings,
+  useUpdateDefaultMonthlyBudget,
+  useResetAllData,
+} from '../hooks/useSettings';
 import { useExportExpenses, useDownloadTemplate, useImportExpenses } from '../hooks/useExport';
 import { useCurrentBudget, useAdjustCurrentBudget } from '../hooks/useBudget';
 import { formatCurrency } from '../utils/format';
@@ -9,10 +13,10 @@ interface SettingsPageProps {
 }
 
 export default function SettingsPage({ onClose }: SettingsPageProps) {
-  const settings = useSettings();
+  const settings = useAppSettings();
   const currentBudget = useCurrentBudget();
-  const updateMutation = useUpdateSettings();
-  const setInitialBudgetMutation = useSetInitialBudget();
+  const updateMutation = useUpdateDefaultMonthlyBudget();
+  const resetMutation = useResetAllData();
   const adjustBudgetMutation = useAdjustCurrentBudget();
   const exportMutation = useExportExpenses();
   const templateMutation = useDownloadTemplate();
@@ -20,9 +24,11 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [newBudget, setNewBudget] = useState(0);
   const [targetBalance, setTargetBalance] = useState(0);
   const [adjustDescription, setAdjustDescription] = useState('');
+  const [initialBudget, setInitialBudget] = useState(0);
 
   // Local mutation states
   const [isUpdating, setIsUpdating] = useState(false);
@@ -35,9 +41,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const handleUpdateBudget = async () => {
     try {
       setIsUpdating(true);
-      await updateMutation.mutateAsync({
-        defaultMonthlyBudget: newBudget,
-      });
+      await updateMutation.mutateAsync(newBudget);
       setIsBudgetModalOpen(false);
       alert('예산이 변경되었습니다.');
     } catch (error) {
@@ -70,30 +74,35 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       alert('이번달 예산이 조정되었습니다.');
     } catch (error) {
       console.error('Budget adjustment error:', error);
-      alert('예산 조정에 실패했습니다.');
+
+      // 백엔드에서 보낸 에러 메시지 추출
+      let errorMessage = '예산 조정에 실패했습니다.';
+      if (error && typeof error === 'object' && 'response' in error) {
+        const response = (error as { response?: { data?: { error?: string } } }).response;
+        if (response?.data?.error) {
+          errorMessage = response.data.error;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      alert(errorMessage);
     } finally {
       setIsAdjusting(false);
     }
   };
 
   const handleReset = async () => {
-    const confirmMessage = '⚠️ 경고: 모든 데이터가 삭제됩니다!\n\n정말로 초기화하시겠습니까?';
-
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
-
-    if (
-      !window.confirm(
-        '정말로 모든 데이터를 삭제하고 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다!'
-      )
-    ) {
+    if (initialBudget < 0) {
+      alert('초기 예산은 0원 이상이어야 합니다.');
       return;
     }
 
     try {
       setIsResetting(true);
-      await setInitialBudgetMutation.mutateAsync(0);
+      await resetMutation.mutateAsync(initialBudget);
+      setIsResetModalOpen(false);
+      setInitialBudget(0);
       alert('모든 데이터가 초기화되었습니다.');
     } catch (error) {
       console.error('Reset error:', error);
@@ -348,16 +357,20 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
             </h2>
 
             <div className="p-4 bg-red-50 rounded-lg border border-red-100">
-              <h3 className="font-bold text-red-800 mb-1">데이터 초기화</h3>
+              <h3 className="font-bold text-red-800 mb-1">데이터 초기화 및 초기 예산 설정</h3>
               <p className="text-sm text-red-600 mb-4">
-                모든 지출 내역과 설정이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                모든 지출 내역과 예산이 삭제되고 초기 예산이 설정됩니다. 이 작업은 되돌릴 수
+                없습니다.
               </p>
               <button
-                onClick={handleReset}
+                onClick={() => {
+                  setInitialBudget(1000000);
+                  setIsResetModalOpen(true);
+                }}
                 className="w-full py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors"
                 disabled={isResetting}
               >
-                {isResetting ? '초기화 중...' : '초기화하기'}
+                🚨 모든 데이터 삭제 및 초기 예산 설정
               </button>
             </div>
           </section>
@@ -470,6 +483,71 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   disabled={isAdjusting}
                 >
                   {isAdjusting ? '조정 중...' : '조정'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Modal */}
+        {isResetModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+              <h3 className="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
+                <span className="text-xl">⚠️</span> 데이터 초기화 및 초기 예산 설정
+              </h3>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-red-800 font-medium mb-2">경고:</p>
+                <ul className="text-sm text-red-700 space-y-1 list-disc list-inside">
+                  <li>모든 지출 내역이 삭제됩니다</li>
+                  <li>모든 예산 기록이 삭제됩니다</li>
+                  <li>모든 설정이 초기화됩니다</li>
+                  <li>이 작업은 되돌릴 수 없습니다!</li>
+                </ul>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  초기 예산 설정 (원)
+                </label>
+                <input
+                  type="number"
+                  value={initialBudget}
+                  onChange={(e) => setInitialBudget(parseInt(e.target.value) || 0)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="예: 1000000"
+                  min="0"
+                  step="10000"
+                />
+                <p className="text-xs text-gray-500 mt-1">초기화 후 설정될 기본 월별 예산입니다.</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setIsResetModalOpen(false);
+                    setInitialBudget(0);
+                  }}
+                  className="btn-secondary flex-1"
+                  disabled={isResetting}
+                >
+                  취소
+                </button>
+                <button
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        '⚠️ 마지막 확인\n\n정말로 모든 데이터를 삭제하고 초기화하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다!'
+                      )
+                    ) {
+                      handleReset();
+                    }
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex-1"
+                  disabled={isResetting}
+                >
+                  {isResetting ? '초기화 중...' : '초기화 실행'}
                 </button>
               </div>
             </div>

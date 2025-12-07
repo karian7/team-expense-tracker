@@ -1,5 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { budgetService } from '../services/local/budgetService';
+import { budgetApi } from '../services/api';
+import { syncService } from '../services/sync/syncService';
 
 export function useCurrentBudget() {
   const now = new Date();
@@ -16,37 +18,16 @@ export function useBudgetByMonth(year: number, month: number) {
 }
 
 export function useUpdateBudgetBaseAmount() {
-  return {
-    mutateAsync: async ({
-      year,
-      month,
-      baseAmount,
-    }: {
-      year: number;
-      month: number;
-      baseAmount: number;
-    }) => {
-      return budgetService.updateMonthlyBudgetBaseAmount(year, month, baseAmount);
-    },
-    mutate: ({ year, month, baseAmount }: { year: number; month: number; baseAmount: number }) => {
-      budgetService.updateMonthlyBudgetBaseAmount(year, month, baseAmount);
-    },
-  };
+  return { mutateAsync: async () => {} };
 }
 
 export function useAdjustCurrentBudget() {
   return {
-    mutateAsync: async ({
-      targetBalance,
-      description,
-    }: {
-      targetBalance: number;
-      description: string;
-    }) => {
-      return budgetService.adjustCurrentBudget(targetBalance, description);
-    },
-    mutate: ({ targetBalance, description }: { targetBalance: number; description: string }) => {
-      budgetService.adjustCurrentBudget(targetBalance, description);
+    mutateAsync: async (params: { targetBalance: number; description: string }) => {
+      // 백엔드 API 호출
+      await budgetApi.adjustCurrent(params.targetBalance, params.description);
+      // 동기화하여 로컬 DB 업데이트
+      await syncService.sync();
     },
   };
 }

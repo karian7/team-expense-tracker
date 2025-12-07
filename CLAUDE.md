@@ -121,3 +121,49 @@ cd frontend && pnpm build
 - `backend/src/services/ocr/OcrProviderFactory.ts` - OCR 프로바이더 선택
 - `backend/prisma/schema.prisma` - 데이터베이스 스키마
 - `frontend/src/hooks/` - React Query 기반 API 훅
+
+## 복식부기 원칙 (중요!)
+
+**이월은 이벤트가 아닌 계산된 값입니다!**
+
+### 이벤트 타입 (2가지만):
+
+- `BUDGET_IN`: 예산 유입 (기본 예산, 추가 예산)
+- `EXPENSE`: 지출 (영수증 기반)
+
+### 복식부기 공식:
+
+```
+이전 달 잔액 + 이번 달 예산 유입 - 이번 달 지출 = 이번 달 잔액
+```
+
+### 예시:
+
+```
+1월: BUDGET_IN(300,000) - EXPENSE(50,000) = 잔액 250,000
+2월: BUDGET_IN(300,000) + 이월(250,000) = 총 550,000
+     ↑ 이월은 1월 잔액을 재계산한 값 (이벤트 아님!)
+```
+
+**상세 문서**: `docs/DOUBLE_ENTRY_ACCOUNTING.md`
+
+## Race Condition 방지 ⚠️
+
+**문제**: 두 사용자가 동시에 월별 예산 조회 → 중복 생성?
+
+**해결**:
+
+1. **Unique Constraint**: `(year, month, eventType, authorName, description)`
+2. **Try-Catch 패턴**: 생성 실패 시 재조회
+3. **Idempotent**: 여러 번 호출해도 결과 동일
+
+```typescript
+try {
+  await createBudgetEvent({ description: '기본 월별 예산' });
+} catch (error) {
+  // 이미 생성됨 → 무시
+}
+return calculateMonthlyBudget(year, month);
+```
+
+**상세**: `docs/RACE_CONDITION_PREVENTION.md`

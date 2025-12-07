@@ -3,12 +3,12 @@ import {
   getCurrentMonthlyBudget,
   getOrCreateMonthlyBudget,
   updateMonthlyBudgetBaseAmount,
-  rolloverMonth,
-  getMonthlyReport,
   adjustCurrentMonthBudget,
-} from '../services/budgetService';
-import { ApiResponse, UpdateMonthlyBudgetRequest, AdjustCurrentBudgetRequest } from '../types';
+} from '../services/legacyBudgetService';
+import { ApiResponse, AdjustCurrentBudgetRequest } from '../types';
 import { AppError } from '../middleware/errorHandler';
+import { getEventsByMonth } from '../services/budgetEventService';
+import { ensureCurrentMonthBudget } from '../services/settingsService';
 
 /**
  * GET /api/monthly-budgets/current
@@ -64,7 +64,7 @@ export async function getBudgetByMonth(
  * 월 예산의 기본 금액 설정
  */
 export async function updateBudgetBaseAmount(
-  req: Request<{ year: string; month: string }, ApiResponse, UpdateMonthlyBudgetRequest>,
+  req: Request<{ year: string; month: string }, ApiResponse, { baseAmount: number }>,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
@@ -95,7 +95,7 @@ export async function updateBudgetBaseAmount(
 
 /**
  * POST /api/monthly-budgets/rollover
- * 월 이월 처리
+ * 월 이월 처리 (더 이상 필요 없음 - 자동 처리)
  */
 export async function handleRollover(
   req: Request<
@@ -107,15 +107,11 @@ export async function handleRollover(
   next: NextFunction
 ) {
   try {
-    const { fromYear, fromMonth, toYear, toMonth, newBaseAmount } = req.body;
+    const { toYear, toMonth, newBaseAmount } = req.body;
 
     if (
-      !fromYear ||
-      !fromMonth ||
       !toYear ||
       !toMonth ||
-      fromMonth < 1 ||
-      fromMonth > 12 ||
       toMonth < 1 ||
       toMonth > 12 ||
       newBaseAmount === undefined ||
@@ -124,7 +120,8 @@ export async function handleRollover(
       throw new AppError('Invalid rollover parameters', 400);
     }
 
-    const budget = await rolloverMonth(fromYear, fromMonth, toYear, toMonth, newBaseAmount);
+    // 자동으로 이월 처리됨
+    const budget = await getOrCreateMonthlyBudget(toYear, toMonth);
 
     res.json({
       success: true,
@@ -153,11 +150,24 @@ export async function getReport(
       throw new AppError('Invalid year or month', 400);
     }
 
-    const report = await getMonthlyReport(year, month);
+    const budget = await getOrCreateMonthlyBudget(year, month);
+    const events = await getEventsByMonth(year, month);
+
+    // 복식부기: EXPENSE 이벤트만 지출
+    const expenseEvents = events.filter((e) => e.eventType === 'EXPENSE');
 
     res.json({
       success: true,
-      data: report,
+      data: {
+        budget,
+        statistics: {
+          totalExpenses: budget.totalSpent,
+          expenseCount: expenseEvents.length,
+          dailyBreakdown: [],
+          authorBreakdown: [],
+          topExpenses: expenseEvents.slice(0, 5),
+        },
+      },
     });
   } catch (error) {
     next(error);
@@ -190,6 +200,27 @@ export async function adjustCurrentBudget(
       success: true,
       data: budget,
       message: 'Budget adjusted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /api/monthly-budgets/ensure-current
+ * 현재 월에 기본 예산 반영 보장 (중복 방지)
+ */
+export async function ensureCurrentMonthBudgetController(
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction
+) {
+  try {
+    const result = await ensureCurrentMonthBudget();
+
+    res.json({
+      success: true,
+      data: result,
     });
   } catch (error) {
     next(error);

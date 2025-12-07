@@ -16,6 +16,7 @@
 ### Backend
 
 #### 1. Database Schema (`backend/prisma/schema.prisma`)
+
 ```prisma
 model Expense {
   // ...
@@ -26,30 +27,35 @@ model Expense {
 ```
 
 #### 2. Upload Middleware (`backend/src/middleware/upload.ts`)
+
 - `multer.diskStorage()` → `multer.memoryStorage()`
 - 파일을 메모리에 직접 저장
 
 #### 3. Receipt Controller (`backend/src/controllers/receiptController.ts`)
+
 - `normalizeReceiptImage()` 제거
 - `processReceiptImage()` 추가: Buffer 반환
 - 480px로 리사이징 + JPEG 변환
 - Response: `{ imageId, imageBuffer (base64), ocrResult }`
 
 #### 4. OCR Services
+
 - `IOcrProvider` 인터페이스: `analyzeReceiptFromBuffer(Buffer)` 메서드 추가
 - `OpenAIOcrProvider`: Buffer 기반 분석
 - `GoogleVisionOcrProvider`: Buffer 기반 분석
 - `DummyOcrProvider`: Buffer 기반 분석
 
 #### 5. Expense Service (`backend/src/services/expenseService.ts`)
+
 - `CreateExpenseRequest`: `receiptImage` (base64) 필드 추가
 - `toExpenseResponse()`: Buffer를 base64로 자동 변환
 
 #### 6. Types (`backend/src/types/index.ts`)
+
 ```typescript
 interface ExpenseResponse {
   receiptImageUrl: string | null; // deprecated
-  receiptImage: string | null;    // base64 encoded
+  receiptImage: string | null; // base64 encoded
 }
 
 interface ReceiptUploadResponse {
@@ -62,27 +68,32 @@ interface ReceiptUploadResponse {
 ### Frontend
 
 #### 1. Database Schema (`frontend/src/services/db/database.ts`)
+
 ```typescript
 interface Expense {
   receiptImageUrl?: string; // deprecated
-  receiptImage?: string;    // base64 encoded
+  receiptImage?: string; // base64 encoded
 }
 ```
 
 #### 2. Types (`frontend/src/types/index.ts`)
+
 - `Expense`: `receiptImage` 필드 추가
 - `ReceiptUploadResponse`: `imageBuffer` 필드로 변경
 - `ExpenseFormData`: `receiptImage` 필드 사용
 
 #### 3. API Service (`frontend/src/services/api.ts`)
+
 - `receiptApi.parse()`: `imageBlob` 파라미터 사용
 
 #### 4. Components
+
 - `ExpenseForm.tsx`: base64 이미지 표시
 - `ExpenseList.tsx`: base64 우선, fallback으로 URL 지원
 - `HomePage.tsx`: `imageBuffer` prop 전달
 
 #### 5. Local Service (`frontend/src/services/local/expenseService.ts`)
+
 - `CreateExpenseData`: `receiptImage` 필드 사용
 
 ## 마이그레이션
@@ -119,11 +130,13 @@ Processing expense xxx...
 ## 호환성
 
 ### 하위 호환성
+
 - `receiptImageUrl` 필드는 deprecated이지만 유지
 - 기존 데이터는 마이그레이션 스크립트로 변환 필요
 - Frontend는 `receiptImage` 우선, 없으면 `receiptImageUrl` fallback
 
 ### 롤백 가능
+
 - `receiptImageUrl` 필드가 여전히 존재
 - 필요시 blob → 파일로 역변환 가능
 

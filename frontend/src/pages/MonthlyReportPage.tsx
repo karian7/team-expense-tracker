@@ -321,7 +321,7 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
                   <div className="space-y-3">
                     {statistics.topExpenses.map((expense, index) => (
                       <div
-                        key={expense.id}
+                        key={expense.sequence}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                       >
                         <div className="flex items-center gap-4">
@@ -334,7 +334,7 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
                             </div>
                             <div className="text-sm text-gray-500">
                               {expense.authorName} ·{' '}
-                              {new Date(expense.expenseDate).toLocaleDateString('ko-KR')}
+                              {new Date(expense.eventDate).toLocaleDateString('ko-KR')}
                             </div>
                           </div>
                         </div>

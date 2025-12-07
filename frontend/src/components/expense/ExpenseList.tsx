@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
 import { useCurrentBudget } from '../../hooks/useBudget';
 import { formatCurrency, formatDateTimeKorean } from '../../utils/format';
-import { API_ORIGIN } from '../../services/api';
-import type { Expense } from '../../services/db/database';
-import type { OcrResult } from '../../types';
+
+import type { Expense, OcrResult } from '../../types';
 
 export default function ExpenseList() {
   const budget = useCurrentBudget();
@@ -15,11 +14,11 @@ export default function ExpenseList() {
   const [filterAuthor, setFilterAuthor] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (sequence: number) => {
     if (window.confirm('이 사용 내역을 삭제하시겠습니까?')) {
       try {
         setIsDeleting(true);
-        await deleteMutation.mutateAsync(id);
+        await deleteMutation.mutateAsync(sequence);
       } catch (error) {
         console.error('Delete error:', error);
       } finally {
@@ -42,11 +41,11 @@ export default function ExpenseList() {
     );
   }
 
-  const filteredExpenses = expenses.filter((expense) =>
+  const filteredExpenses = expenses.filter((expense: Expense) =>
     filterAuthor ? expense.authorName.includes(filterAuthor) : true
   );
 
-  const uniqueAuthors = Array.from(new Set(expenses.map((e) => e.authorName)));
+  const uniqueAuthors = Array.from(new Set(expenses.map((e: Expense) => e.authorName)));
 
   return (
     <div className="space-y-6">
@@ -74,9 +73,9 @@ export default function ExpenseList() {
             <p className="mt-1 text-sm text-gray-500">다른 필터를 선택해보세요.</p>
           </div>
         ) : (
-          filteredExpenses.map((expense) => (
+          filteredExpenses.map((expense: Expense) => (
             <div
-              key={expense.id}
+              key={expense.sequence}
               className="group bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer"
               onClick={() => setSelectedExpense(expense)}
             >
@@ -90,7 +89,7 @@ export default function ExpenseList() {
                       {expense.storeName || '상호명 없음'}
                     </h3>
                     <div className="text-sm text-gray-500 mt-0.5">
-                      {expense.authorName} · {formatDateTimeKorean(expense.expenseDate)}
+                      {expense.authorName} · {formatDateTimeKorean(expense.eventDate)}
                     </div>
                   </div>
                 </div>
@@ -99,7 +98,7 @@ export default function ExpenseList() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(expense.id);
+                      handleDelete(expense.sequence);
                     }}
                     className="text-xs text-red-500 hover:text-red-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
                     disabled={isDeleting}
@@ -124,13 +123,9 @@ export default function ExpenseList() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative h-48 bg-gray-100 flex items-center justify-center">
-              {selectedExpense.receiptImage || selectedExpense.receiptImageUrl ? (
+              {selectedExpense.receiptImage ? (
                 <img
-                  src={
-                    selectedExpense.receiptImage
-                      ? `data:image/jpeg;base64,${selectedExpense.receiptImage}`
-                      : `${API_ORIGIN}${selectedExpense.receiptImageUrl}`
-                  }
+                  src={`data:image/jpeg;base64,${selectedExpense.receiptImage}`}
                   alt="Receipt"
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -209,7 +204,7 @@ export default function ExpenseList() {
                     {selectedExpense.storeName || '상호명 없음'}
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
-                    {formatDateTimeKorean(selectedExpense.expenseDate)}
+                    {formatDateTimeKorean(selectedExpense.eventDate)}
                   </p>
                 </div>
                 <div className="text-xl font-bold text-primary-600">
@@ -247,7 +242,7 @@ export default function ExpenseList() {
               <div className="mt-6 flex gap-3">
                 <button
                   onClick={() => {
-                    handleDelete(selectedExpense.id);
+                    handleDelete(selectedExpense.sequence);
                     setSelectedExpense(null);
                   }}
                   className="btn-danger flex-1"

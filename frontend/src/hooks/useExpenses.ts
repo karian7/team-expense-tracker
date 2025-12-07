@@ -1,50 +1,39 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import {
-  expenseService,
-  type CreateExpenseData,
-  type UpdateExpenseData,
-} from '../services/local/expenseService';
+import { expenseService } from '../services/local/expenseService';
+import type { ExpenseFormData } from '../types';
+import { expenseApi } from '../services/api';
 
-export function useExpenses(params?: { year?: number; month?: number; authorName?: string }) {
-  return useLiveQuery(() => expenseService.getExpenses(params || {}), [params]);
+export function useExpenses(params?: { year?: number; month?: number }) {
+  return useLiveQuery(async () => {
+    if (!params?.year || !params?.month) return [];
+    return expenseService.getExpensesByMonth(params.year, params.month);
+  }, [params?.year, params?.month]);
 }
 
-export function useExpense(id: string) {
-  return useLiveQuery(() => {
-    if (!id) return undefined;
-    return expenseService.getExpenseById(id);
-  }, [id]);
+export function useExpenseById(sequence: number) {
+  return useLiveQuery(() => expenseService.getExpenseById(sequence), [sequence]);
 }
 
 export function useCreateExpense() {
   return {
-    mutateAsync: async (data: CreateExpenseData) => {
-      return expenseService.createExpense(data);
-    },
-    mutate: (data: CreateExpenseData) => {
-      expenseService.createExpense(data);
+    mutateAsync: async (data: ExpenseFormData) => {
+      return expenseApi.create(data);
     },
   };
 }
 
 export function useUpdateExpense() {
   return {
-    mutateAsync: async ({ id, updates }: { id: string; updates: UpdateExpenseData }) => {
-      return expenseService.updateExpense(id, updates);
-    },
-    mutate: ({ id, updates }: { id: string; updates: UpdateExpenseData }) => {
-      expenseService.updateExpense(id, updates);
+    mutateAsync: async () => {
+      throw new Error('Update not supported');
     },
   };
 }
 
 export function useDeleteExpense() {
   return {
-    mutateAsync: async (id: string) => {
-      return expenseService.deleteExpense(id);
-    },
-    mutate: (id: string) => {
-      expenseService.deleteExpense(id);
+    mutateAsync: async (sequence: number) => {
+      return expenseApi.delete(sequence.toString());
     },
   };
 }

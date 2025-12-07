@@ -1,4 +1,6 @@
 import prisma from '../utils/prisma';
+import { Decimal } from '@prisma/client/runtime/library';
+import { BUDGET_EVENT_CONSTANTS } from '../constants/budgetEvents';
 
 export interface AppSettings {
   defaultMonthlyBudget: number;
@@ -53,7 +55,7 @@ export async function getAppSettings(): Promise<AppSettings> {
 }
 
 /**
- * 기본 월별 예산 설정
+ * 기본 월별 예산 설정 (다음 달부터 적용)
  */
 export async function setDefaultMonthlyBudget(amount: number): Promise<void> {
   await setSetting(
@@ -61,6 +63,63 @@ export async function setDefaultMonthlyBudget(amount: number): Promise<void> {
     amount.toString(),
     '매월 자동 생성되는 기본 회식비 금액'
   );
+}
+
+/**
+ * 현재 월에 기본 예산 반영 보장
+ * 조건:
+ * 1. defaultMonthlyBudget > 0
+ * 2. 이번 달에 "기본 월별 예산" 이벤트가 없음
+ * → 이벤트 생성 (Unique Constraint로 중복 방지)
+ */
+export async function ensureCurrentMonthBudget(): Promise<{
+  created: boolean;
+  message: string;
+}> {
+  const defaultBudget = await getDefaultMonthlyBudget();
+
+  if (defaultBudget <= 0) {
+    return { created: false, message: 'Default monthly budget is not set' };
+  }
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  // "기본 월별 예산" 이벤트가 이미 있는지 확인
+  const existingEvent = await prisma.budgetEvent.findFirst({
+    where: {
+      year,
+      month,
+      eventType: 'BUDGET_IN',
+      authorName: BUDGET_EVENT_CONSTANTS.SYSTEM_AUTHOR,
+      description: BUDGET_EVENT_CONSTANTS.MONTHLY_BUDGET_DESCRIPTION,
+    },
+  });
+
+  if (existingEvent) {
+    return { created: false, message: 'Monthly budget already reflected' };
+  }
+
+  // 이벤트 생성 (Unique Constraint로 중복 방지)
+  try {
+    await prisma.budgetEvent.create({
+      data: {
+        eventType: 'BUDGET_IN',
+        eventDate: new Date(year, month - 1, 1),
+        year,
+        month,
+        authorName: BUDGET_EVENT_CONSTANTS.SYSTEM_AUTHOR,
+        amount: new Decimal(defaultBudget),
+        description: BUDGET_EVENT_CONSTANTS.MONTHLY_BUDGET_DESCRIPTION,
+      },
+    });
+
+    return { created: true, message: 'Monthly budget reflected successfully' };
+  } catch {
+    // Unique Constraint 위반 = 이미 다른 요청이 생성함
+    return { created: false, message: 'Monthly budget already reflected (race condition)' };
+  }
 }
 
 /**
@@ -79,8 +138,7 @@ export async function setInitialBudget(amount: number): Promise<void> {
   // 트랜잭션으로 모든 작업 수행
   await prisma.$transaction(
     async (tx) => {
-      await tx.expense.deleteMany({});
-      await tx.monthlyBudget.deleteMany({});
+      await tx.budgetEvent.deleteMany({});
 
       await tx.settings.upsert({
         where: { key: SETTINGS_KEYS.INITIAL_BUDGET },

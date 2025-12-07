@@ -5,13 +5,8 @@ import {
   getExpenseById,
   updateExpense,
   deleteExpense,
-} from '../services/expenseService';
-import {
-  ApiResponse,
-  CreateExpenseRequest,
-  UpdateExpenseRequest,
-  ExpenseQueryParams,
-} from '../types';
+} from '../services/legacyExpenseService';
+import { ApiResponse, ExpenseQueryParams } from '../types';
 import { AppError } from '../middleware/errorHandler';
 
 /**
@@ -66,7 +61,13 @@ export async function getExpense(
 ) {
   try {
     const { id } = req.params;
-    const expense = await getExpenseById(id);
+    const sequence = parseInt(id, 10);
+
+    if (isNaN(sequence)) {
+      throw new AppError('Invalid expense ID', 400);
+    }
+
+    const expense = await getExpenseById(sequence);
 
     if (!expense) {
       throw new AppError('Expense not found', 404);
@@ -86,7 +87,18 @@ export async function getExpense(
  * 사용 내역 생성
  */
 export async function createNewExpense(
-  req: Request<Record<string, never>, ApiResponse, CreateExpenseRequest>,
+  req: Request<
+    Record<string, never>,
+    ApiResponse,
+    {
+      authorName: string;
+      amount: number;
+      expenseDate: string;
+      storeName?: string;
+      receiptImage?: string;
+      ocrRawData?: Record<string, unknown>;
+    }
+  >,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
@@ -131,47 +143,36 @@ export async function createNewExpense(
 
 /**
  * PUT /api/expenses/:id
- * 사용 내역 수정
+ * 사용 내역 수정 (Event Sourcing에서는 지원하지 않음)
  */
 export async function updateExistingExpense(
-  req: Request<{ id: string }, ApiResponse, UpdateExpenseRequest>,
+  req: Request<
+    { id: string },
+    ApiResponse,
+    {
+      authorName?: string;
+      amount?: number;
+      expenseDate?: string;
+      storeName?: string;
+    }
+  >,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
   try {
     const { id } = req.params;
-    const { authorName, amount, expenseDate, storeName } = req.body;
+    const sequence = parseInt(id, 10);
 
-    const updateData: UpdateExpenseRequest = {};
-
-    if (authorName !== undefined) {
-      if (!authorName.trim()) {
-        throw new AppError('Author name cannot be empty', 400);
-      }
-      updateData.authorName = authorName.trim();
+    if (isNaN(sequence)) {
+      throw new AppError('Invalid expense ID', 400);
     }
 
-    if (amount !== undefined) {
-      if (isNaN(amount) || amount <= 0) {
-        throw new AppError('Valid amount is required', 400);
-      }
-      updateData.amount = amount;
-    }
-
-    if (expenseDate !== undefined) {
-      updateData.expenseDate = expenseDate;
-    }
-
-    if (storeName !== undefined) {
-      updateData.storeName = storeName?.trim();
-    }
-
-    const expense = await updateExpense(id, updateData);
+    const expense = await updateExpense();
 
     res.json({
       success: true,
       data: expense,
-      message: 'Expense updated successfully',
+      message: 'Update not supported in event sourcing',
     });
   } catch (error) {
     next(error);
@@ -180,7 +181,7 @@ export async function updateExistingExpense(
 
 /**
  * DELETE /api/expenses/:id
- * 사용 내역 삭제
+ * 사용 내역 삭제 (Event Sourcing에서는 지원하지 않음)
  */
 export async function deleteExistingExpense(
   req: Request<{ id: string }>,
@@ -189,12 +190,17 @@ export async function deleteExistingExpense(
 ) {
   try {
     const { id } = req.params;
+    const sequence = parseInt(id, 10);
 
-    await deleteExpense(id);
+    if (isNaN(sequence)) {
+      throw new AppError('Invalid expense ID', 400);
+    }
+
+    await deleteExpense();
 
     res.json({
       success: true,
-      message: 'Expense deleted successfully',
+      message: 'Delete not supported in event sourcing',
     });
   } catch (error) {
     next(error);
