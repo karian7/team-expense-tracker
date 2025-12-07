@@ -106,7 +106,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   };
 
   // useQuery returns { data, isLoading, error }
-  if (settings.isLoading || currentBudget.isLoading) {
+  if (settings.isLoading || currentBudget === undefined) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
@@ -114,7 +114,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     );
   }
 
-  if (!settings.data || !currentBudget.data) {
+  if (!settings.data || !currentBudget) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-red-600">설정을 불러올 수 없습니다.</div>
@@ -183,12 +183,12 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 <div>
                   <p className="text-sm text-blue-600 font-medium">이번달 남은 예산</p>
                   <p className="text-xl font-bold text-blue-900">
-                    {formatCurrency(currentBudget.data.balance)}원
+                    {formatCurrency(currentBudget.balance)}원
                   </p>
                 </div>
                 <button
                   onClick={() => {
-                    setTargetBalance(currentBudget.data.balance);
+                    setTargetBalance(currentBudget.balance);
                     setIsAdjustModalOpen(true);
                   }}
                   className="btn-primary text-sm py-1.5 px-3"
@@ -296,7 +296,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
               <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-500 mb-1">현재 남은 예산</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {formatCurrency(currentBudget.data.balance)}원
+                  {formatCurrency(currentBudget.balance)}원
                 </p>
               </div>
 
@@ -329,14 +329,14 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 />
               </div>
 
-              {targetBalance !== currentBudget.data.balance && (
+              {targetBalance !== currentBudget.balance && (
                 <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
                   <p className="text-xs text-blue-600 mb-1">조정 금액</p>
                   <p
-                    className={`text-lg font-bold ${targetBalance > currentBudget.data.balance ? 'text-blue-600' : 'text-red-600'}`}
+                    className={`text-lg font-bold ${targetBalance > currentBudget.balance ? 'text-blue-600' : 'text-red-600'}`}
                   >
-                    {targetBalance > currentBudget.data.balance ? '+' : ''}
-                    {formatCurrency(targetBalance - currentBudget.data.balance)}원
+                    {targetBalance > currentBudget.balance ? '+' : ''}
+                    {formatCurrency(targetBalance - currentBudget.balance)}원
                   </p>
                 </div>
               )}
