@@ -1,5 +1,6 @@
 import { db, type MonthlyBudget, now, generateId } from '../db/database';
 import { settingsService } from './settingsService';
+import { syncQueue } from '../sync/syncQueue';
 
 /**
  * 이전 월 계산 유틸리티
@@ -72,6 +73,9 @@ export async function getOrCreateMonthlyBudget(
     };
 
     await db.monthlyBudgets.add(budget);
+    
+    // 동기화 큐에 추가
+    await syncQueue.enqueue('budgets', 'create', budget.id, budget);
   }
 
   return budget;
@@ -107,8 +111,12 @@ export async function updateMonthlyBudgetBaseAmount(
   };
 
   await db.monthlyBudgets.update(budget.id, updates);
+  
+  // 동기화 큐에 추가
+  const updatedBudget = { ...budget, ...updates };
+  await syncQueue.enqueue('budgets', 'update', budget.id, updatedBudget);
 
-  return { ...budget, ...updates };
+  return updatedBudget;
 }
 
 /**
@@ -193,6 +201,9 @@ export async function rolloverMonth(
   };
 
   await db.monthlyBudgets.add(newBudget);
+  
+  // 동기화 큐에 추가
+  await syncQueue.enqueue('budgets', 'create', newBudget.id, newBudget);
 
   return newBudget;
 }
@@ -219,6 +230,12 @@ export async function deleteMonthlyBudget(id: string): Promise<void> {
     deleted: true,
     updatedAt: now(),
   });
+  
+  // 동기화 큐에 추가
+  const budget = await db.monthlyBudgets.get(id);
+  if (budget) {
+    await syncQueue.enqueue('budgets', 'delete', id, { ...budget, deleted: true });
+  }
 }
 
 export const budgetService = {

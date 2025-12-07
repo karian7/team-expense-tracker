@@ -1,1 +1,9 @@
 allowScripts: '["sharp"]'
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - esbuild
+  - prisma
+  - protobufjs
+  - sharp

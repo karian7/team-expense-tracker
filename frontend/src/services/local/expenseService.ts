@@ -1,5 +1,6 @@
 import { db, type Expense, now, generateId } from '../db/database';
 import { budgetService } from './budgetService';
+import { syncQueue } from '../sync/syncQueue';
 
 /**
  * 날짜 문자열에서 년/월 추출
@@ -75,6 +76,9 @@ export async function createExpense(data: CreateExpenseData): Promise<Expense> {
   };
 
   await db.expenses.add(expense);
+
+  // 동기화 큐에 추가
+  await syncQueue.enqueue('expenses', 'create', expense.id, expense);
 
   // 월별 예산 재계산
   await budgetService.recalculateMonthlyBudget(monthlyBudget.id);
@@ -224,6 +228,9 @@ export async function updateExpense(id: string, data: UpdateExpenseData): Promis
 
   await db.expenses.update(id, updates);
 
+  // 동기화 큐에 추가
+  await syncQueue.enqueue('expenses', 'update', id, { ...expense, ...updates });
+
   // 이전 월 예산 재계산
   await budgetService.recalculateMonthlyBudget(oldMonthlyBudgetId);
 
@@ -252,6 +259,9 @@ export async function deleteExpense(id: string): Promise<void> {
     deleted: true,
     updatedAt: now(),
   });
+
+  // 동기화 큐에 추가
+  await syncQueue.enqueue('expenses', 'delete', id, { ...expense, deleted: true });
 
   // 월별 예산 재계산
   await budgetService.recalculateMonthlyBudget(monthlyBudgetId);
