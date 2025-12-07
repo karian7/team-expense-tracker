@@ -8,10 +8,15 @@
     "lint": "pnpm --dir backend lint && pnpm --dir frontend lint",
     "lint:fix": "pnpm --dir backend lint:fix && pnpm --dir frontend lint:fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" && pnpm --dir backend format && pnpm --dir frontend format",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" && pnpm --dir backend format:check && pnpm --dir frontend format:check"
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" && pnpm --dir backend format:check && pnpm --dir frontend format:check",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
+    "axios": "^1.13.2",
     "concurrently": "^9.1.2"
   }
 }

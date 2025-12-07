@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
+import { useExpenses } from '../../hooks/useExpenses';
 import { useCurrentBudget } from '../../hooks/useBudget';
+import { syncService } from '../../services/sync/syncService';
 import { formatCurrency, formatDateTimeKorean } from '../../utils/format';
 
 import type { Expense, OcrResult } from '../../types';
@@ -8,23 +9,38 @@ import type { Expense, OcrResult } from '../../types';
 export default function ExpenseList() {
   const budget = useCurrentBudget();
   const expenses = useExpenses(budget ? { year: budget.year, month: budget.month } : undefined);
-  const deleteMutation = useDeleteExpense();
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [filterAuthor, setFilterAuthor] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleDelete = async (sequence: number) => {
-    if (window.confirm('이 사용 내역을 삭제하시겠습니까?')) {
-      try {
-        setIsDeleting(true);
-        await deleteMutation.mutateAsync(sequence);
-      } catch (error) {
-        console.error('Delete error:', error);
-      } finally {
-        setIsDeleting(false);
-      }
+  const handleRetrySync = async () => {
+    try {
+      setIsSyncing(true);
+      await syncService.sync();
+    } catch (error) {
+      console.error('Retry sync failed:', error);
+    } finally {
+      setIsSyncing(false);
     }
+  };
+
+  const renderSyncBadge = (expense: Expense) => {
+    if (expense.syncState === 'failed') {
+      return (
+        <span className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full">동기화 실패</span>
+      );
+    }
+
+    if (expense.syncState === 'pending') {
+      return (
+        <span className="text-xs px-2 py-0.5 bg-yellow-50 text-yellow-700 rounded-full">
+          동기화 중
+        </span>
+      );
+    }
+
+    return null;
   };
 
   // useLiveQuery returns undefined while loading
@@ -94,17 +110,22 @@ export default function ExpenseList() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-bold text-gray-900">{formatCurrency(expense.amount)}원</div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(expense.sequence);
-                    }}
-                    className="text-xs text-red-500 hover:text-red-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    disabled={isDeleting}
-                  >
-                    삭제
-                  </button>
+                  <div className="font-bold text-gray-900 flex items-center justify-end gap-2">
+                    <span>{formatCurrency(expense.amount)}원</span>
+                    {renderSyncBadge(expense)}
+                  </div>
+                  {expense.syncState === 'failed' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRetrySync();
+                      }}
+                      className="text-xs text-red-600 hover:text-red-700 mt-2"
+                      disabled={isSyncing}
+                    >
+                      재시도
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -240,16 +261,6 @@ export default function ExpenseList() {
               </div>
 
               <div className="mt-6 flex gap-3">
-                <button
-                  onClick={() => {
-                    handleDelete(selectedExpense.sequence);
-                    setSelectedExpense(null);
-                  }}
-                  className="btn-danger flex-1"
-                  disabled={isDeleting}
-                >
-                  삭제하기
-                </button>
                 <button onClick={() => setSelectedExpense(null)} className="btn-secondary flex-1">
                   닫기
                 </button>

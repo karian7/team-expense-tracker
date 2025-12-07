@@ -55,6 +55,13 @@ function App() {
     initializeApp();
   }, []);
 
+  useEffect(() => {
+    const timer = syncService.startAutoSync(60000);
+    return () => {
+      syncService.stopAutoSync(timer);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <HomePage />

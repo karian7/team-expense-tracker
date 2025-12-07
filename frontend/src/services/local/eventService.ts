@@ -1,4 +1,18 @@
-import { db, type BudgetEvent } from '../db/database';
+import { db, now, type BudgetEvent } from '../db/database';
+import type { CreateBudgetEventPayload } from '../../types';
+import { pendingEventService } from './pendingEventService';
+
+const createTempSequence = () => -1 * (Date.now() * 1000 + Math.floor(Math.random() * 1000));
+
+const INCOMING_EVENT_TYPES = new Set<BudgetEvent['eventType']>([
+  'BUDGET_IN',
+  'BUDGET_ADJUSTMENT_INCREASE',
+]);
+
+const OUTGOING_EVENT_TYPES = new Set<BudgetEvent['eventType']>([
+  'EXPENSE',
+  'BUDGET_ADJUSTMENT_DECREASE',
+]);
 
 /**
  * 로컬 이벤트 조회
@@ -40,6 +54,40 @@ export const eventService = {
     await db.budgetEvents.bulkPut(events);
   },
 
+  async createLocalEvent(payload: CreateBudgetEventPayload): Promise<BudgetEvent> {
+    const tempSequence = createTempSequence();
+    const pending = await pendingEventService.enqueue(payload, tempSequence);
+    const event: BudgetEvent = {
+      sequence: tempSequence,
+      eventType: payload.eventType,
+      eventDate: payload.eventDate,
+      year: payload.year,
+      month: payload.month,
+      authorName: payload.authorName,
+      amount: payload.amount,
+      storeName: payload.storeName ?? null,
+      description: payload.description ?? null,
+      receiptImage: payload.receiptImage ?? null,
+      ocrRawData: payload.ocrRawData ? JSON.stringify(payload.ocrRawData) : null,
+      referenceSequence: payload.referenceSequence ?? null,
+      createdAt: now(),
+      isLocalOnly: true,
+      syncState: 'pending',
+      pendingId: pending.id,
+    };
+
+    await db.budgetEvents.put(event);
+    return event;
+  },
+
+  async markEventSyncState(sequence: number, state: 'pending' | 'failed'): Promise<void> {
+    await db.budgetEvents.update(sequence, { syncState: state });
+  },
+
+  async removeEvent(sequence: number): Promise<void> {
+    await db.budgetEvents.delete(sequence);
+  },
+
   /**
    * 마지막 동기화 sequence 업데이트
    */
@@ -61,12 +109,18 @@ export const eventService = {
     let totalSpent = 0;
 
     events.forEach((event) => {
-      if (event.eventType === 'BUDGET_IN') {
+      if (INCOMING_EVENT_TYPES.has(event.eventType)) {
         budgetIn += event.amount;
-      } else if (event.eventType === 'EXPENSE') {
+      } else if (OUTGOING_EVENT_TYPES.has(event.eventType)) {
         totalSpent += event.amount;
+      } else if (event.eventType === 'EXPENSE_REVERSAL') {
+        totalSpent -= event.amount;
       }
     });
+
+    if (totalSpent < 0) {
+      totalSpent = 0;
+    }
 
     // 이전 달 잔액 계산 (재귀)
     let previousBalance = 0;

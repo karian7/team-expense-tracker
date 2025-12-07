@@ -1,15 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import sharp from 'sharp';
 import heicConvert from 'heic-convert';
+import { randomUUID } from 'crypto';
 import {
   analyzeReceiptWithBuffer,
   reanalyzeReceiptFromBlob,
   getOcrProviderInfo,
 } from '../services/ocrService';
-import { ApiResponse, ReceiptUploadResponse, CreateBudgetEventRequest } from '../types';
+import { ApiResponse, ReceiptUploadResponse } from '../types';
 import { AppError } from '../middleware/errorHandler';
-import { createBudgetEvent } from '../services/budgetEventService';
-import { getCurrentYearMonth } from '../utils/date';
 
 const HEIC_MIME_TYPES = new Set([
   'image/heic',
@@ -107,15 +106,13 @@ async function createOcrImage(rotatedBuffer: Buffer): Promise<Buffer> {
 
 /**
  * POST /api/receipts/upload
- * 영수증 업로드 및 OCR 분석 → 즉시 이벤트 생성
+ * 영수증 업로드 및 OCR 분석 결과만 반환 (이벤트 생성 X)
  *
  * 처리 흐름:
  * 1. HEIC → JPEG 변환 및 회전
  * 2. 저장용 이미지 생성 (압축)
  * 3. OCR용 이미지 생성 (최적화)
- * 4. OCR 분석 실행
- * 5. EXPENSE 이벤트 생성
- * 6. 생성된 이벤트 반환
+ * 4. OCR 분석 실행 후 결과/이미지 버퍼 반환
  */
 export async function uploadReceipt(
   req: Request,
@@ -125,11 +122,6 @@ export async function uploadReceipt(
   try {
     if (!req.file) {
       throw new AppError('No file uploaded', 400);
-    }
-
-    const { authorName } = req.body;
-    if (!authorName) {
-      throw new AppError('Author name is required', 400);
     }
 
     // 1. 기본 변환 및 회전
@@ -144,32 +136,14 @@ export async function uploadReceipt(
     // 4. OCR 분석 (최적화된 이미지 사용)
     const ocrResult = await analyzeReceiptWithBuffer(ocrBuffer);
 
-    // 5. OCR 결과로 이벤트 생성
-    const { year, month } = getCurrentYearMonth();
-    const eventDate = ocrResult.date ? new Date(ocrResult.date) : new Date();
-
-    const eventData: CreateBudgetEventRequest = {
-      eventType: 'EXPENSE',
-      eventDate: eventDate.toISOString(),
-      year,
-      month,
-      authorName,
-      amount: ocrResult.amount || 0,
-      storeName: ocrResult.storeName || undefined,
-      receiptImage: storageBuffer.toString('base64'),
-      ocrRawData: ocrResult.rawText ? { rawText: ocrResult.rawText } : undefined,
-    };
-
-    const event = await createBudgetEvent(eventData);
-
     res.json({
       success: true,
       data: {
-        imageId: `event-${event.sequence}`,
+        imageId: randomUUID(),
         imageBuffer: storageBuffer.toString('base64'),
         ocrResult,
       },
-      message: 'Receipt uploaded and event created successfully',
+      message: 'Receipt processed successfully',
     });
   } catch (error) {
     next(error);

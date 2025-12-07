@@ -184,7 +184,7 @@ export async function updateExistingExpense(
  * 사용 내역 삭제 (Event Sourcing에서는 지원하지 않음)
  */
 export async function deleteExistingExpense(
-  req: Request<{ id: string }>,
+  req: Request<{ id: string }, ApiResponse, Record<string, never>, { actorName?: string }>,
   res: Response<ApiResponse>,
   next: NextFunction
 ) {
@@ -196,11 +196,13 @@ export async function deleteExistingExpense(
       throw new AppError('Invalid expense ID', 400);
     }
 
-    await deleteExpense();
+    const actorName = typeof req.query.actorName === 'string' ? req.query.actorName : undefined;
+    const reversalEvent = await deleteExpense(sequence, actorName);
 
     res.json({
       success: true,
-      message: 'Delete not supported in event sourcing',
+      data: reversalEvent,
+      message: 'Expense deletion event created',
     });
   } catch (error) {
     next(error);

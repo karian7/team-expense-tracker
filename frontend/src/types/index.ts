@@ -1,3 +1,10 @@
+export type BudgetEventType =
+  | 'BUDGET_IN'
+  | 'EXPENSE'
+  | 'EXPENSE_REVERSAL'
+  | 'BUDGET_ADJUSTMENT_INCREASE'
+  | 'BUDGET_ADJUSTMENT_DECREASE';
+
 // API Response Types
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -9,7 +16,7 @@ export interface ApiResponse<T = unknown> {
 // Budget Event (Event Sourcing)
 export interface BudgetEvent {
   sequence: number;
-  eventType: 'BUDGET_IN' | 'EXPENSE';
+  eventType: BudgetEventType;
   eventDate: string;
   year: number;
   month: number;
@@ -19,7 +26,28 @@ export interface BudgetEvent {
   description: string | null;
   receiptImage: string | null;
   ocrRawData: string | null;
+  referenceSequence: number | null;
   createdAt: string;
+  /** 로컬에서만 존재하는 임시 이벤트 여부 */
+  isLocalOnly?: boolean;
+  /** 동기화 대기 상태 */
+  syncState?: 'pending' | 'failed';
+  /** 대기 큐 식별자 */
+  pendingId?: string;
+}
+
+export interface CreateBudgetEventPayload {
+  eventType: BudgetEventType;
+  eventDate: string;
+  year: number;
+  month: number;
+  authorName: string;
+  amount: number;
+  storeName?: string;
+  description?: string;
+  receiptImage?: string;
+  ocrRawData?: Record<string, unknown>;
+  referenceSequence?: number | null;
 }
 
 // Monthly Budget (Computed from events)

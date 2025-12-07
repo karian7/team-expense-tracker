@@ -14,7 +14,7 @@ model BudgetEvent {
   sequence    Int      @id @default(autoincrement())
   
   // 이벤트 메타데이터
-  eventType   String   // "BUDGET_IN" | "EXPENSE" 만 존재 (복식부기)
+  eventType   String   // "BUDGET_IN" | "EXPENSE" | "EXPENSE_REVERSAL" | "BUDGET_ADJUSTMENT_INCREASE" | "BUDGET_ADJUSTMENT_DECREASE"
   eventDate   DateTime // 실제 발생 날짜
   year        Int      // 집계용 인덱스
   month       Int
@@ -28,14 +28,18 @@ model BudgetEvent {
   // 영수증 (EXPENSE만 해당)
   receiptImage Bytes?
   ocrRawData   String?
-  
+
+  // 관련 이벤트 (예: 삭제된 지출 원본)
+  referenceSequence Int?
+
   // 타임스탬프 (이벤트 기록 시각)
   createdAt   DateTime @default(now())
-  
+
   @@unique([year, month, eventType, authorName, description])
   @@index([year, month])
   @@index([eventDate])
   @@index([authorName])
+  @@index([referenceSequence])
   @@map("budget_events")
 }
 

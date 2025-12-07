@@ -169,7 +169,11 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
         <header className="bg-white border-b border-gray-200 sticky top-0 z-10 rounded-t-xl">
           <div className="px-6 h-14 flex items-center justify-between">
             <h1 className="text-lg font-bold text-gray-900">설정</h1>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-900">
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-900"
+              data-testid="settings-close-button"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-6 w-6"
@@ -209,6 +213,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     setIsBudgetModalOpen(true);
                   }}
                   className="btn-secondary text-sm py-1.5 px-3"
+                  data-testid="change-monthly-budget-button"
                 >
                   변경
                 </button>
@@ -227,6 +232,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     setIsAdjustModalOpen(true);
                   }}
                   className="btn-primary text-sm py-1.5 px-3"
+                  data-testid="adjust-budget-button"
                 >
                   조정
                 </button>
@@ -263,6 +269,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 onClick={handleExport}
                 className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left group"
                 disabled={isExporting}
+                data-testid="export-csv-button"
               >
                 <div>
                   <p className="font-medium text-gray-900">데이터 내보내기</p>
@@ -290,6 +297,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 onClick={handleDownloadTemplate}
                 className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-left group"
                 disabled={isDownloadingTemplate}
+                data-testid="download-template-button"
               >
                 <div>
                   <p className="font-medium text-gray-900">CSV 템플릿 다운로드</p>
@@ -320,6 +328,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   onChange={handleImport}
                   className="hidden"
                   id="import-csv"
+                  data-testid="import-csv-input"
                 />
                 <label
                   htmlFor="import-csv"
@@ -369,6 +378,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 }}
                 className="w-full py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors"
                 disabled={isResetting}
+                data-testid="reset-all-data-button"
               >
                 🚨 모든 데이터 삭제 및 초기 예산 설정
               </button>
@@ -390,6 +400,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     onChange={(e) => setNewBudget(Number(e.target.value))}
                     className="input-field pr-8 font-bold text-lg"
                     placeholder="0"
+                    data-testid="monthly-budget-input"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
                     원
@@ -400,6 +411,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 <button
                   onClick={() => setIsBudgetModalOpen(false)}
                   className="btn-secondary flex-1"
+                  data-testid="cancel-budget-button"
                 >
                   취소
                 </button>
@@ -407,6 +419,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   onClick={handleUpdateBudget}
                   className="btn-primary flex-1"
                   disabled={isUpdating}
+                  data-testid="save-budget-button"
                 >
                   {isUpdating ? '저장 중...' : '저장'}
                 </button>
@@ -437,6 +450,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     onChange={(e) => setTargetBalance(Number(e.target.value))}
                     className="input-field pr-8 font-bold text-lg"
                     placeholder="0"
+                    data-testid="target-balance-input"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
                     원
@@ -452,6 +466,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   className="input-field resize-none"
                   rows={3}
                   placeholder="예산 조정 사유를 입력하세요"
+                  data-testid="adjust-description-input"
                 />
               </div>
 
@@ -474,6 +489,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     setAdjustDescription('');
                   }}
                   className="btn-secondary flex-1"
+                  data-testid="cancel-adjust-button"
                 >
                   취소
                 </button>
@@ -481,6 +497,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   onClick={handleAdjustBudget}
                   className="btn-primary flex-1"
                   disabled={isAdjusting}
+                  data-testid="save-adjust-button"
                 >
                   {isAdjusting ? '조정 중...' : '조정'}
                 </button>
@@ -519,6 +536,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   placeholder="예: 1000000"
                   min="0"
                   step="10000"
+                  data-testid="initial-budget-input"
                 />
                 <p className="text-xs text-gray-500 mt-1">초기화 후 설정될 기본 월별 예산입니다.</p>
               </div>
@@ -531,6 +549,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   }}
                   className="btn-secondary flex-1"
                   disabled={isResetting}
+                  data-testid="cancel-reset-button"
                 >
                   취소
                 </button>
@@ -546,6 +565,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                   }}
                   className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex-1"
                   disabled={isResetting}
+                  data-testid="confirm-reset-button"
                 >
                   {isResetting ? '초기화 중...' : '초기화 실행'}
                 </button>

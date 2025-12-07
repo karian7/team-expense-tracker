@@ -8,6 +8,10 @@ import {
   MonthlyBudgetResponse,
 } from '../types';
 
+const INCOMING_EVENT_TYPES = new Set(['BUDGET_IN', 'BUDGET_ADJUSTMENT_INCREASE']);
+
+const OUTGOING_EVENT_TYPES = new Set(['EXPENSE', 'BUDGET_ADJUSTMENT_DECREASE']);
+
 const toBudgetEventResponse = (event: unknown): BudgetEventResponse => {
   const rawEvent = event as Record<string, unknown>;
 
@@ -39,6 +43,7 @@ export async function createBudgetEvent(
       description: data.description || null,
       receiptImage: data.receiptImage ? Buffer.from(data.receiptImage, 'base64') : null,
       ocrRawData: data.ocrRawData ? JSON.stringify(data.ocrRawData) : null,
+      referenceSequence: data.referenceSequence ?? null,
     },
   });
 
@@ -104,12 +109,18 @@ export async function calculateMonthlyBudget(
   let totalSpent = 0; // 이번 달 지출
 
   events.forEach((event) => {
-    if (event.eventType === 'BUDGET_IN') {
+    if (INCOMING_EVENT_TYPES.has(event.eventType)) {
       budgetIn += event.amount;
-    } else if (event.eventType === 'EXPENSE') {
+    } else if (OUTGOING_EVENT_TYPES.has(event.eventType)) {
       totalSpent += event.amount;
+    } else if (event.eventType === 'EXPENSE_REVERSAL') {
+      totalSpent -= event.amount;
     }
   });
+
+  if (totalSpent < 0) {
+    totalSpent = 0;
+  }
 
   // 이전 달 잔액 계산 (재귀)
   let previousBalance = 0;
@@ -193,6 +204,21 @@ export async function getEventBySequence(sequence: number): Promise<BudgetEventR
   const event = await prisma.budgetEvent.findUnique({
     where: {
       sequence,
+    },
+  });
+
+  return event ? toBudgetEventResponse(event) : null;
+}
+
+export async function getEventByReferenceSequence(
+  referenceSequence: number
+): Promise<BudgetEventResponse | null> {
+  const event = await prisma.budgetEvent.findFirst({
+    where: {
+      referenceSequence,
+    },
+    orderBy: {
+      sequence: 'desc',
     },
   });
 

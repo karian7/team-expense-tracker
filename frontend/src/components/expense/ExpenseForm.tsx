@@ -118,6 +118,7 @@ export default function ExpenseForm({
               {...register('authorName', { required: '작성자 이름을 입력해주세요' })}
               className={`input-field ${errors.authorName ? 'border-red-300 focus:ring-red-500' : ''}`}
               placeholder="이름을 입력하세요"
+              data-testid="expense-author-input"
             />
             {errors.authorName && (
               <p className="mt-1 text-xs text-red-500">{errors.authorName.message}</p>
@@ -137,6 +138,7 @@ export default function ExpenseForm({
                 })}
                 className={`input-field pr-8 font-bold text-lg ${errors.amount ? 'border-red-300 focus:ring-red-500' : ''}`}
                 placeholder="0"
+                data-testid="expense-amount-input"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
                 원
@@ -154,6 +156,7 @@ export default function ExpenseForm({
               {...register('storeName', { required: '상호명을 입력해주세요' })}
               className={`input-field ${errors.storeName ? 'border-red-300 focus:ring-red-500' : ''}`}
               placeholder="식당/카페 이름"
+              data-testid="expense-storename-input"
             />
             {errors.storeName && (
               <p className="mt-1 text-xs text-red-500">{errors.storeName.message}</p>
@@ -168,6 +171,7 @@ export default function ExpenseForm({
               type="datetime-local"
               {...register('expenseDate', { required: '날짜와 시간을 선택해주세요' })}
               className={`input-field ${errors.expenseDate ? 'border-red-300 focus:ring-red-500' : ''}`}
+              data-testid="expense-date-input"
             />
             {errors.expenseDate && (
               <p className="mt-1 text-xs text-red-500">{errors.expenseDate.message}</p>
@@ -205,11 +209,17 @@ export default function ExpenseForm({
             onClick={onCancel}
             className="btn-secondary flex-1"
             disabled={isPending}
+            data-testid="cancel-expense-button"
           >
             취소
           </button>
         )}
-        <button type="submit" className="btn-primary flex-1" disabled={isPending}>
+        <button
+          type="submit"
+          className="btn-primary flex-1"
+          disabled={isPending}
+          data-testid="save-expense-button"
+        >
           {isPending ? '저장 중...' : '저장하기'}
         </button>
       </div>

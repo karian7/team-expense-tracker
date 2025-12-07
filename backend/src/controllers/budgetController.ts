@@ -153,8 +153,16 @@ export async function getReport(
     const budget = await getOrCreateMonthlyBudget(year, month);
     const events = await getEventsByMonth(year, month);
 
-    // 복식부기: EXPENSE 이벤트만 지출
-    const expenseEvents = events.filter((e) => e.eventType === 'EXPENSE');
+    const deletedSequences = new Set(
+      events
+        .filter((event) => event.eventType === 'EXPENSE_REVERSAL' && event.referenceSequence)
+        .map((event) => event.referenceSequence as number)
+    );
+
+    // 복식부기: 실제 지출 + 삭제되지 않은 항목만 통계로 사용
+    const expenseEvents = events.filter(
+      (event) => event.eventType === 'EXPENSE' && !deletedSequences.has(event.sequence)
+    );
 
     res.json({
       success: true,

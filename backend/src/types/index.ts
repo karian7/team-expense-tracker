@@ -1,5 +1,12 @@
 import { Decimal } from '@prisma/client/runtime/library';
 
+export type BudgetEventType =
+  | 'BUDGET_IN'
+  | 'EXPENSE'
+  | 'EXPENSE_REVERSAL'
+  | 'BUDGET_ADJUSTMENT_INCREASE'
+  | 'BUDGET_ADJUSTMENT_DECREASE';
+
 // API Response Types
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -11,7 +18,7 @@ export interface ApiResponse<T = unknown> {
 // Budget Event Types (복식부기 원칙)
 export interface BudgetEventResponse {
   sequence: number;
-  eventType: 'BUDGET_IN' | 'EXPENSE'; // 예산 유입 | 지출
+  eventType: BudgetEventType; // 예산 유입 | 지출 | 조정 | 취소
   eventDate: Date;
   year: number;
   month: number;
@@ -21,11 +28,12 @@ export interface BudgetEventResponse {
   description: string | null;
   receiptImage: string | null; // base64 encoded image
   ocrRawData: string | null;
+  referenceSequence: number | null;
   createdAt: Date;
 }
 
 export interface CreateBudgetEventRequest {
-  eventType: 'BUDGET_IN' | 'EXPENSE';
+  eventType: BudgetEventType;
   eventDate: string; // ISO date string
   year: number;
   month: number;
@@ -35,6 +43,7 @@ export interface CreateBudgetEventRequest {
   description?: string;
   receiptImage?: string; // base64 encoded image
   ocrRawData?: Record<string, unknown>;
+  referenceSequence?: number | null;
 }
 
 // Sync API Types

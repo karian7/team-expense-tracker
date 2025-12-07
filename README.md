@@ -131,6 +131,19 @@ team-expense-tracker/
 └── docker-compose.yml
 ```
 
+## 로컬 퍼스트 & 이벤트 소싱 아키텍처
+
+이 서비스는 **로컬 퍼스트(Local-First)** 전략과 **이벤트 소싱(Event Sourcing)** 을 조합해 오프라인에서도 동일한 UX를 제공합니다.
+
+- **단일 이벤트 스트림**: 모든 예산/지출 변경은 `BudgetEvent` 로 기록되며, 프론트엔드 Dexie DB가 서버 이벤트 로그를 그대로 캐싱합니다.
+- **로컬 우선 쓰기**: 사용자가 지출을 등록하거나 예산을 조정하면 `eventService.createLocalEvent` 가 즉시 Dexie에 임시 이벤트를 추가하고 `pendingEvents` 큐에 동기화 페이로드를 저장합니다. UI는 이 데이터를 바로 렌더링하므로 네트워크 상태와 무관하게 즉시 반영됩니다.
+- **동기화 루프**: `syncService` 는 앱 초기화 및 주기적 타이머(기본 60초)로 실행됩니다.
+  1. `pendingEvents` 큐를 비우며 서버에 이벤트를 푸시하고, 성공 시 임시 이벤트를 서버 응답으로 교체합니다.
+  2. 가장 최근 sequence 이후의 서버 이벤트를 풀링하여 Dexie `budgetEvents` 와 `syncMetadata` 를 갱신합니다.
+- **상태 표시**: 아직 서버에 반영되지 않은 이벤트는 `syncState` 가 `pending/failed` 로 표시되며, 사용자에게 재시도 버튼이 노출됩니다.
+
+> **TIP:** 새로운 변형을 추가할 때도 “로컬에 먼저 이벤트를 적재하고, 큐에 넣은 뒤 syncService 로 전파” 패턴을 지키면 일관성을 유지할 수 있습니다.
+
 ## API 엔드포인트
 
 ### 영수증
@@ -180,6 +193,38 @@ team-expense-tracker/
 - 메인 대시보드에서 현재 월 잔액 즉시 확인
 - 사용 내역 목록에서 상세 내역 확인
 - 날짜 또는 작성자로 필터링
+
+## 테스트
+
+### E2E 테스트
+
+Playwright를 사용한 End-to-End 테스트가 포함되어 있습니다.
+
+```bash
+# E2E 테스트 실행 (헤드리스 모드)
+pnpm test:e2e
+
+# UI 모드로 실행 (추천)
+pnpm test:e2e:ui
+
+# 브라우저를 보면서 실행
+pnpm test:e2e:headed
+
+# 테스트 리포트 보기
+pnpm test:e2e:report
+```
+
+**테스트 범위**:
+
+- ✅ 초기 설정 및 예산 관리 (TC-001~002-3)
+- ✅ 사용 내역 CRUD 및 필터링 (TC-009~012)
+- ✅ 자동 잔액 계산 및 경고 (TC-018~020)
+- ✅ CSV 백업/복원 (TC-013~017)
+- ✅ UI/UX 반응형 (TC-021~023)
+- ✅ 통합 시나리오 (TC-024)
+- ✅ 보안 (SQL Injection, XSS) (TC-027~030)
+
+자세한 내용은 [E2E 테스트 가이드](e2e/README.md) 및 [TEST_CASES.md](TEST_CASES.md)를 참고하세요.
 
 ## 라이선스
 

@@ -29,13 +29,14 @@ export default function BudgetSummary() {
   const progressColor = getProgressColor(percentage);
 
   return (
-    <div className="card">
+    <div className="card" data-testid="budget-summary">
       <div className="flex justify-between items-end mb-4">
         <div>
           <h2 className="text-sm font-medium text-gray-500 mb-1">이번 달 남은 예산</h2>
           <div className="flex items-baseline gap-2">
             <span
               className={`text-3xl font-bold ${balance >= 0 ? 'text-gray-900' : 'text-red-600'}`}
+              data-testid="current-balance"
             >
               {formatCurrency(balance)}
             </span>
@@ -44,7 +45,7 @@ export default function BudgetSummary() {
         </div>
         <div className="text-right">
           <div className="text-sm text-gray-500 mb-1">총 예산</div>
-          <div className="font-medium text-gray-900">
+          <div className="font-medium text-gray-900" data-testid="total-budget">
             {formatCurrency(totalBudget)}원
             {previousBalance !== 0 && (
               <span className="ml-2 text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">

@@ -51,6 +51,7 @@ export default function HomePage() {
               onClick={() => setShowReport(true)}
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               aria-label="월별 리포트"
+              data-testid="monthly-report-button"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -71,6 +72,7 @@ export default function HomePage() {
               onClick={() => setShowSettings(true)}
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               aria-label="설정"
+              data-testid="settings-button"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -112,6 +114,7 @@ export default function HomePage() {
                 <button
                   onClick={() => setCurrentStep('upload')}
                   className="btn-primary flex items-center gap-2 shadow-sm"
+                  data-testid="add-expense-button"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -136,7 +139,11 @@ export default function HomePage() {
             <div className="card">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-900">영수증 업로드</h2>
-                <button onClick={handleCancel} className="text-gray-400 hover:text-gray-600">
+                <button
+                  onClick={handleCancel}
+                  className="text-gray-400 hover:text-gray-600"
+                  data-testid="cancel-upload-button"
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-6 w-6"

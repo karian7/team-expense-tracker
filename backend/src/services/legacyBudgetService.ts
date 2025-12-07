@@ -63,9 +63,10 @@ export async function updateMonthlyBudgetBaseAmount(
   const adjustment = baseAmount - currentBudget.budgetIn;
 
   if (adjustment !== 0) {
-    // 예산 추가 또는 감소를 BUDGET_IN 이벤트로 기록
+    const eventType = adjustment > 0 ? 'BUDGET_ADJUSTMENT_INCREASE' : 'BUDGET_ADJUSTMENT_DECREASE';
+
     await createBudgetEvent({
-      eventType: 'BUDGET_IN',
+      eventType,
       eventDate: new Date(year, month - 1, 1).toISOString(),
       year,
       month,
@@ -74,7 +75,7 @@ export async function updateMonthlyBudgetBaseAmount(
       description:
         adjustment > 0
           ? `예산 추가: ${adjustment.toLocaleString()}원`
-          : `예산 감소: ${Math.abs(adjustment).toLocaleString()}원 (취소 이벤트 필요)`,
+          : `예산 감소: ${Math.abs(adjustment).toLocaleString()}원`,
     });
   }
 
@@ -98,31 +99,21 @@ export async function adjustCurrentMonthBudget(
     throw new Error('조정할 금액이 없습니다.');
   }
 
+  const adjustmentEventType =
+    adjustmentAmount > 0 ? 'BUDGET_ADJUSTMENT_INCREASE' : 'BUDGET_ADJUSTMENT_DECREASE';
+
   try {
-    // 잔액 증가 = 예산 추가, 잔액 감소 = 지출 추가
-    if (adjustmentAmount > 0) {
-      // 예산 추가
-      await createBudgetEvent({
-        eventType: 'BUDGET_IN',
-        eventDate: new Date().toISOString(),
-        year,
-        month,
-        authorName: 'SYSTEM',
-        amount: adjustmentAmount,
-        description: description || `예산 조정 (+${adjustmentAmount.toLocaleString()}원)`,
-      });
-    } else {
-      // 지출 추가 (잔액 감소)
-      await createBudgetEvent({
-        eventType: 'EXPENSE',
-        eventDate: new Date().toISOString(),
-        year,
-        month,
-        authorName: 'SYSTEM',
-        amount: Math.abs(adjustmentAmount),
-        description: description || `예산 조정 (-${Math.abs(adjustmentAmount).toLocaleString()}원)`,
-      });
-    }
+    await createBudgetEvent({
+      eventType: adjustmentEventType,
+      eventDate: new Date().toISOString(),
+      year,
+      month,
+      authorName: 'SYSTEM',
+      amount: Math.abs(adjustmentAmount),
+      description:
+        description ||
+        `예산 조정 (${adjustmentAmount > 0 ? '+' : '-'}${Math.abs(adjustmentAmount).toLocaleString()}원)`,
+    });
   } catch (error) {
     // Prisma Unique Constraint 에러 확인
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {

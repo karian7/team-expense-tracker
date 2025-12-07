@@ -28,10 +28,12 @@
 이전 달 잔액 + 이번 달 예산 유입 - 이번 달 지출 = 이번 달 잔액
 ```
 
-### 이벤트 타입 (2가지만)
+### 이벤트 타입 (지출/예산 조정 포함)
 
 1. **BUDGET_IN**: 예산 유입 (기본 예산, 추가 예산)
 2. **EXPENSE**: 지출 (영수증 기반)
+3. **EXPENSE_REVERSAL**: 지출 삭제/환불 (대상 sequence 참조)
+4. **BUDGET_ADJUSTMENT_INCREASE / _DECREASE**: 시스템/관리자 잔액 조정 이벤트
 
 ---
 
@@ -45,7 +47,7 @@
 model BudgetEvent {
   sequence    Int      @id @default(autoincrement())
 
-  eventType   String   // "BUDGET_IN" | "EXPENSE"
+  eventType   String   // "BUDGET_IN" | "EXPENSE" | "EXPENSE_REVERSAL" | "BUDGET_ADJUSTMENT_INCREASE" | "BUDGET_ADJUSTMENT_DECREASE"
   eventDate   DateTime
   year        Int
   month       Int
@@ -57,6 +59,7 @@ model BudgetEvent {
 
   receiptImage Bytes?
   ocrRawData   String?
+  referenceSequence Int?
 
   createdAt   DateTime @default(now())
 
@@ -83,7 +86,7 @@ npx prisma migrate dev --name event_sourcing_migration
 // Event
 export interface BudgetEventResponse {
   sequence: number;
-  eventType: 'BUDGET_IN' | 'EXPENSE';
+  eventType: 'BUDGET_IN' | 'EXPENSE' | 'EXPENSE_REVERSAL' | 'BUDGET_ADJUSTMENT_INCREASE' | 'BUDGET_ADJUSTMENT_DECREASE';
   eventDate: string;
   year: number;
   month: number;
@@ -93,6 +96,7 @@ export interface BudgetEventResponse {
   description: string | null;
   receiptImage: string | null;
   ocrRawData: string | null;
+  referenceSequence: number | null;
   createdAt: string;
 }
 

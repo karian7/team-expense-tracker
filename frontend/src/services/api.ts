@@ -9,6 +9,7 @@ import type {
   ImportResult,
   MonthlyReport,
   BudgetEvent,
+  CreateBudgetEventPayload,
 } from '../types';
 
 const inferBackendOrigin = () => {
@@ -50,18 +51,7 @@ export const eventApi = {
     return data.data!;
   },
 
-  createEvent: async (event: {
-    eventType: 'BUDGET_IN' | 'EXPENSE';
-    eventDate: string;
-    year: number;
-    month: number;
-    authorName: string;
-    amount: number;
-    storeName?: string;
-    description?: string;
-    receiptImage?: string;
-    ocrRawData?: Record<string, unknown>;
-  }) => {
+  createEvent: async (event: CreateBudgetEventPayload) => {
     const { data } = await apiClient.post('/events', event);
     return data.data;
   },

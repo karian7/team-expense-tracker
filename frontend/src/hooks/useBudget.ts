@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { budgetService } from '../services/local/budgetService';
-import { budgetApi } from '../services/api';
+import { eventService } from '../services/local/eventService';
 import { syncService } from '../services/sync/syncService';
+import { BUDGET_EVENT_CONSTANTS } from '../constants/budgetEvents';
 
 export function useCurrentBudget() {
   const now = new Date();
@@ -24,10 +25,33 @@ export function useUpdateBudgetBaseAmount() {
 export function useAdjustCurrentBudget() {
   return {
     mutateAsync: async (params: { targetBalance: number; description: string }) => {
-      // 백엔드 API 호출
-      await budgetApi.adjustCurrent(params.targetBalance, params.description);
-      // 동기화하여 로컬 DB 업데이트
-      await syncService.sync();
+      const currentBudget = await budgetService.getCurrentBudget();
+      const adjustment = params.targetBalance - currentBudget.balance;
+
+      if (adjustment === 0) {
+        return;
+      }
+
+      const payload = {
+        eventType:
+          adjustment > 0
+            ? ('BUDGET_ADJUSTMENT_INCREASE' as const)
+            : ('BUDGET_ADJUSTMENT_DECREASE' as const),
+        eventDate: new Date().toISOString(),
+        year: currentBudget.year,
+        month: currentBudget.month,
+        authorName: BUDGET_EVENT_CONSTANTS.SYSTEM_AUTHOR,
+        amount: Math.abs(adjustment),
+        description: params.description?.trim() || '예산 조정',
+      };
+
+      await eventService.createLocalEvent(payload);
+
+      try {
+        await syncService.sync();
+      } catch (error) {
+        console.warn('Budget adjustment sync failed:', error);
+      }
     },
   };
 }
