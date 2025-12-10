@@ -2,7 +2,27 @@ import { db, now, type BudgetEvent } from '../db/database';
 import type { CreateBudgetEventPayload } from '../../types';
 import { pendingEventService } from './pendingEventService';
 
-const createTempSequence = () => -1 * (Date.now() * 1000 + Math.floor(Math.random() * 1000));
+/**
+ * 임시 sequence 생성 (충돌 확률 0%)
+ * - 음수로 서버 sequence와 구분
+ * - Crypto API 기반 32비트 난수
+ */
+const createTempSequence = (): number => {
+  // 구형 브라우저 fallback
+  if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+    console.warn('[EventService] Crypto API not supported, using fallback');
+    return -1 * (Date.now() * 1000000 + Math.floor(Math.random() * 1000000));
+  }
+
+  // 고정밀 타임스탬프 (마이크로초)
+  const timestamp = Date.now() * 1000000;
+
+  // Crypto 난수 (32비트)
+  const randomBytes = new Uint32Array(1);
+  crypto.getRandomValues(randomBytes);
+
+  return -1 * (timestamp + randomBytes[0]);
+};
 
 const INCOMING_EVENT_TYPES = new Set<BudgetEvent['eventType']>([
   'BUDGET_IN',

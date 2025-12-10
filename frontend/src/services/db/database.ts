@@ -34,14 +34,19 @@ export interface SyncMetadata {
   lastSyncTime: string;
 }
 
+// 동기화 상태 머신
+export type SyncState = 'pending' | 'syncing' | 'synced' | 'failed';
+
 export interface PendingEvent {
   id: string;
   tempSequence: number;
   payload: CreateBudgetEventPayload;
-  status: 'pending' | 'syncing' | 'failed';
+  status: SyncState;
   createdAt: string;
   updatedAt: string;
   lastError?: string;
+  retryCount?: number; // 재시도 횟수
+  lastSyncAttempt?: string; // 마지막 동기화 시도 시간
 }
 
 // Dexie Database 클래스 (Event Sourcing)
@@ -54,8 +59,8 @@ class ExpenseTrackerDB extends Dexie {
   constructor() {
     super('ExpenseTrackerDB');
 
-    // 스키마 버전 4 (Event Sourcing + 로컬 큐 + referenceSequence 인덱스)
-    this.version(4)
+    // 스키마 버전 5 (tempSequence 인덱스 추가)
+    this.version(5)
       .stores({
         // BudgetEvent: sequence가 primary key, year+month, eventType으로 필터링
         budgetEvents: 'sequence, [year+month], eventType, eventDate, authorName, referenceSequence',
@@ -66,8 +71,8 @@ class ExpenseTrackerDB extends Dexie {
         // SyncMetadata: key가 primary key
         syncMetadata: 'key',
 
-        // PendingEvents: 로컬 이벤트 큐
-        pendingEvents: 'id, status, createdAt',
+        // PendingEvents: 로컬 이벤트 큐, tempSequence 인덱스 추가
+        pendingEvents: 'id, tempSequence, status, createdAt',
       })
       .upgrade(async (tx) => {
         await tx

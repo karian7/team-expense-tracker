@@ -40,7 +40,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const timer = syncService.startAutoSync(60000);
+    const timer = syncService.startAutoSync(5000);
     return () => {
       syncService.stopAutoSync(timer);
     };
