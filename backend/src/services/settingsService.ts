@@ -124,13 +124,30 @@ export async function setInitialBudget(amount: number): Promise<void> {
 }
 
 /**
- * 모든 데이터 초기화 (테스트용)
- * ⚠️ 모든 이벤트와 설정이 삭제됩니다!
+ * 전체 데이터 초기화 (이벤트 소싱 원칙 준수)
+ * ✅ 기존 이벤트를 삭제하지 않고 BUDGET_RESET 이벤트를 추가합니다.
+ * ✅ BUDGET_RESET 이후의 이벤트만 유효하게 됩니다.
+ * ✅ Sequence는 계속 증가하며, 이벤트 히스토리가 보존됩니다.
  */
 export async function resetAllData(): Promise<void> {
+  const now = new Date();
+
   await prisma.$transaction(
     async (tx) => {
-      await tx.budgetEvent.deleteMany({});
+      // ✅ BUDGET_RESET 이벤트 추가 (삭제 X)
+      await tx.budgetEvent.create({
+        data: {
+          eventType: 'BUDGET_RESET',
+          eventDate: now,
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+          authorName: 'SYSTEM',
+          amount: new Decimal(0),
+          description: `전체 데이터 리셋 (${now.toISOString()})`,
+        },
+      });
+
+      // Settings는 삭제 (이벤트가 아니므로)
       await tx.settings.deleteMany({});
     },
     { timeout: 15000 }
