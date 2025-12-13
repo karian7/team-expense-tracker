@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { syncService } from './syncService';
 import { eventService } from '../local/eventService';
 import { pendingEventService } from '../local/pendingEventService';
-import { settingsService } from '../local/settingsService';
 import { eventApi, settingsApi } from '../api';
 import { db } from '../db/database';
 
