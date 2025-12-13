@@ -132,6 +132,58 @@ export const syncService = {
       await eventService.saveEvents(events);
       await eventService.updateLastSequence(serverSequence);
 
+      // ✅ 로컬 퍼스트 원칙: 남은 pending 이벤트의 sequence 재할당
+      // 서버 최신 sequence 다음으로 정렬하여 로컬 DB에 반영
+      const remainingPending = await pendingEventService.getAll();
+
+      if (remainingPending.length > 0) {
+        let nextSequence = serverSequence + 1;
+        let reassignedCount = 0;
+
+        for (const pending of remainingPending) {
+          // Dexie 트랜잭션: budgetEvents와 pendingEvents 원자적 업데이트
+          await db.transaction('rw', db.budgetEvents, db.pendingEvents, async () => {
+            // 1. 기존 tempSequence 이벤트 삭제
+            await db.budgetEvents.delete(pending.tempSequence);
+
+            // 2. 새 sequence로 이벤트 생성 (서버 sequence 다음)
+            const updatedEvent = {
+              sequence: nextSequence,
+              eventType: pending.payload.eventType,
+              eventDate: pending.payload.eventDate,
+              year: pending.payload.year,
+              month: pending.payload.month,
+              authorName: pending.payload.authorName,
+              amount: pending.payload.amount,
+              storeName: pending.payload.storeName ?? null,
+              description: pending.payload.description ?? null,
+              receiptImage: pending.payload.receiptImage ?? null,
+              ocrRawData: pending.payload.ocrRawData
+                ? JSON.stringify(pending.payload.ocrRawData)
+                : null,
+              referenceSequence: pending.payload.referenceSequence ?? null,
+              createdAt: new Date().toISOString(),
+              isLocalOnly: true,
+              syncState: pending.status,
+              pendingId: pending.id,
+            };
+            await db.budgetEvents.put(updatedEvent);
+
+            // 3. pending의 tempSequence 업데이트
+            await db.pendingEvents.update(pending.id, {
+              tempSequence: nextSequence,
+            });
+          });
+
+          nextSequence++;
+          reassignedCount++;
+        }
+
+        console.log(
+          `[Sync] Reassigned ${reassignedCount} pending events to sequences ${serverSequence + 1}-${nextSequence - 1}`
+        );
+      }
+
       console.log(`Synced ${events.length} new events`);
       return { newEvents: events.length, pushedEvents, lastSequence: serverSequence };
     } catch (error) {
