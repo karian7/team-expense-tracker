@@ -52,7 +52,7 @@ export function useUpdateDefaultMonthlyBudget() {
 }
 
 /**
- * 전체 데이터 초기화
+ * 전체 데이터 초기화 (로컬 퍼스트)
  */
 export function useResetAllData() {
   const queryClient = useQueryClient();
@@ -61,22 +61,47 @@ export function useResetAllData() {
     mutationFn: async (initialBudget: number) => {
       const { syncService } = await import('../services/sync/syncService');
       const { pendingEventService } = await import('../services/local/pendingEventService');
+      const { eventService } = await import('../services/local/eventService');
 
-      // 1. 백엔드 초기화 (BUDGET_RESET 이벤트 생성 + 설정 저장)
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const monthStart = new Date(year, month - 1, 1);
+
+      // 1. 서버에 settings만 저장
       await settingsApi.setInitialBudget(initialBudget);
 
       // 2. 로컬 DB 완전 초기화
       await settingsService.resetAll();
       await pendingEventService.clearAll();
 
-      // 3. 동기화 (BUDGET_RESET 이벤트와 서버 설정 가져오기)
-      await syncService.sync();
+      // 3. 로컬 settings 저장
+      await settingsService.setInitialBudget(initialBudget);
+      await settingsService.setDefaultMonthlyBudget(initialBudget);
 
-      // 4. 현재 월 예산 로컬 생성
-      const now = new Date();
-      await budgetService.ensureMonthlyBudget(now.getFullYear(), now.getMonth() + 1);
+      // 4. 로컬에서 BUDGET_RESET 이벤트 생성 (pendingEvents에 추가)
+      await eventService.createLocalEvent({
+        eventType: 'BUDGET_RESET',
+        eventDate: now.toISOString(),
+        year,
+        month,
+        authorName: 'SYSTEM',
+        amount: 0,
+        description: `데이터 초기화 (${now.toISOString()})`,
+      });
 
-      // 5. 다시 동기화하여 현재 월 예산 이벤트를 서버로 전송
+      // 5. 로컬에서 BUDGET_IN 이벤트 생성 (pendingEvents에 추가)
+      await eventService.createLocalEvent({
+        eventType: 'BUDGET_IN',
+        eventDate: monthStart.toISOString(),
+        year,
+        month,
+        authorName: 'SYSTEM',
+        amount: initialBudget,
+        description: '기본 월별 예산',
+      });
+
+      // 6. 동기화 (로컬 이벤트를 서버로 전송)
       await syncService.sync();
     },
     onSuccess: () => {

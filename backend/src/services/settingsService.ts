@@ -73,26 +73,12 @@ export async function getDefaultMonthlyBudget(): Promise<number> {
 }
 
 /**
- * 초기 예산 설정 (이벤트 기반 리셋)
- * ⚠️ BUDGET_RESET 이벤트 이후의 내역만 유효하게 됩니다.
+ * 초기 예산 설정 (Settings만 저장)
+ * ⚠️ BUDGET_RESET 이벤트는 클라이언트가 로컬에서 생성 후 서버로 전송합니다 (로컬 퍼스트).
  */
 export async function setInitialBudget(amount: number): Promise<void> {
-  const now = new Date();
-
   await prisma.$transaction(
     async (tx) => {
-      await tx.budgetEvent.create({
-        data: {
-          eventType: 'BUDGET_RESET',
-          eventDate: now,
-          year: now.getFullYear(),
-          month: now.getMonth() + 1,
-          authorName: 'SYSTEM',
-          amount: new Decimal(0),
-          description: `데이터 초기화 (${now.toISOString()})`,
-        },
-      });
-
       await tx.settings.upsert({
         where: { key: SETTINGS_KEYS.INITIAL_BUDGET },
         create: {
