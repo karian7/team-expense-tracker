@@ -85,11 +85,14 @@ export const syncService = {
       }
 
       const hasResetEvent = events.some((event) => event.eventType === 'BUDGET_RESET');
+      let eventsToSave = events;
 
       if (hasResetEvent) {
+        // 로컬 DB 초기화
         await settingsService.resetAll();
         await pendingEventService.clearAll();
 
+        // 서버 설정 동기화
         try {
           const latestSettings = await settingsApi.get();
           await settingsService.setDefaultMonthlyBudget(latestSettings.defaultMonthlyBudget);
@@ -97,13 +100,24 @@ export const syncService = {
         } catch (settingsError) {
           console.error('Failed to refresh settings after reset', settingsError);
         }
+
+        // 🔧 수정: 가장 최근의 BUDGET_RESET 이벤트와 그 이후의 이벤트만 저장
+        const resetEvents = events.filter((e) => e.eventType === 'BUDGET_RESET');
+        const latestResetEvent = resetEvents[resetEvents.length - 1];
+
+        if (latestResetEvent) {
+          eventsToSave = events.filter((e) => e.sequence >= latestResetEvent.sequence);
+          console.log(
+            `[Sync] BUDGET_RESET detected (sequence: ${latestResetEvent.sequence}), filtering ${events.length - eventsToSave.length} old events`
+          );
+        }
       }
 
-      await eventService.saveEvents(events);
+      await eventService.saveEvents(eventsToSave);
       await eventService.updateLastSequence(serverSequence);
 
-      console.log(`Synced ${events.length} new events`);
-      return { newEvents: events.length, pushedEvents, lastSequence: serverSequence };
+      console.log(`Synced ${eventsToSave.length} new events`);
+      return { newEvents: eventsToSave.length, pushedEvents, lastSequence: serverSequence };
     } catch (error) {
       console.error('Sync failed:', error);
       throw error;

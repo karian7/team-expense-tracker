@@ -60,21 +60,23 @@ export function useResetAllData() {
   return useMutation({
     mutationFn: async (initialBudget: number) => {
       const { syncService } = await import('../services/sync/syncService');
+      const { pendingEventService } = await import('../services/local/pendingEventService');
 
-      // 1. 백엔드 초기화 (모든 이벤트 삭제 + 초기 예산 설정)
+      // 1. 백엔드 초기화 (BUDGET_RESET 이벤트 생성 + 설정 저장)
       await settingsApi.setInitialBudget(initialBudget);
 
-      // 2. 로컬 DB 초기화
+      // 2. 로컬 DB 완전 초기화
       await settingsService.resetAll();
+      await pendingEventService.clearAll();
 
-      // 3. 로컬 설정에 초기 예산 저장
-      await settingsService.setInitialBudget(initialBudget);
+      // 3. 동기화 (BUDGET_RESET 이벤트와 서버 설정 가져오기)
+      await syncService.sync();
 
-      // 4. 현재 월 예산 로컬 생성 -> 동기화
+      // 4. 현재 월 예산 로컬 생성
       const now = new Date();
       await budgetService.ensureMonthlyBudget(now.getFullYear(), now.getMonth() + 1);
 
-      // 5. 백엔드와 동기화 (로컬에서 생성한 이벤트 전달)
+      // 5. 다시 동기화하여 현재 월 예산 이벤트를 서버로 전송
       await syncService.sync();
     },
     onSuccess: () => {

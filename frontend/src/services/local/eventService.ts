@@ -61,6 +61,19 @@ export const eventService = {
   },
 
   /**
+   * 가장 최근의 BUDGET_RESET 이벤트 sequence 조회
+   */
+  async getLatestResetSequence(): Promise<number> {
+    const resetEvents = await db.budgetEvents
+      .where('eventType')
+      .equals('BUDGET_RESET')
+      .reverse()
+      .sortBy('sequence');
+
+    return resetEvents.length > 0 ? resetEvents[resetEvents.length - 1].sequence : 0;
+  },
+
+  /**
    * 이벤트 저장 (서버에서 받은 이벤트)
    */
   async saveEvent(event: BudgetEvent): Promise<void> {
@@ -121,9 +134,19 @@ export const eventService = {
 
   /**
    * 특정 월의 예산 계산 (클라이언트 사이드)
+   * BUDGET_RESET 이벤트 이후의 데이터만 계산합니다.
    */
   async calculateMonthlyBudget(year: number, month: number) {
-    const events = await this.getEventsByMonth(year, month);
+    // 1. 가장 최근의 BUDGET_RESET sequence 조회
+    const resetSequence = await this.getLatestResetSequence();
+
+    // 2. 해당 월의 이벤트 조회
+    let events = await this.getEventsByMonth(year, month);
+
+    // 3. BUDGET_RESET 이후의 이벤트만 필터링
+    if (resetSequence > 0) {
+      events = events.filter((e) => e.sequence > resetSequence);
+    }
 
     let budgetIn = 0;
     let totalSpent = 0;
@@ -148,7 +171,11 @@ export const eventService = {
     const prevYear = month === 1 ? year - 1 : year;
 
     const prevEvents = await this.getEventsByMonth(prevYear, prevMonth);
-    if (prevEvents.length > 0) {
+    // BUDGET_RESET 이후의 이전 달 이벤트가 있는지 확인
+    const prevEventsAfterReset =
+      resetSequence > 0 ? prevEvents.filter((e) => e.sequence > resetSequence) : prevEvents;
+
+    if (prevEventsAfterReset.length > 0) {
       const prevBudget = await this.calculateMonthlyBudget(prevYear, prevMonth);
       previousBalance = prevBudget.balance;
     }
