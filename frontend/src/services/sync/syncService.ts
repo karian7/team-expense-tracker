@@ -137,10 +137,10 @@ export const syncService = {
       const remainingPending = await pendingEventService.getAll();
 
       if (remainingPending.length > 0) {
-        let nextSequence = serverSequence + 1;
-        let reassignedCount = 0;
+        for (let i = 0; i < remainingPending.length; i++) {
+          const pending = remainingPending[i];
+          const newSequence = serverSequence + 1 + i;
 
-        for (const pending of remainingPending) {
           // Dexie 트랜잭션: budgetEvents와 pendingEvents 원자적 업데이트
           await db.transaction('rw', db.budgetEvents, db.pendingEvents, async () => {
             // 1. 기존 tempSequence 이벤트 삭제
@@ -148,7 +148,7 @@ export const syncService = {
 
             // 2. 새 sequence로 이벤트 생성 (서버 sequence 다음)
             const updatedEvent = {
-              sequence: nextSequence,
+              sequence: newSequence,
               eventType: pending.payload.eventType,
               eventDate: pending.payload.eventDate,
               year: pending.payload.year,
@@ -171,16 +171,13 @@ export const syncService = {
 
             // 3. pending의 tempSequence 업데이트
             await db.pendingEvents.update(pending.id, {
-              tempSequence: nextSequence,
+              tempSequence: newSequence,
             });
           });
-
-          nextSequence++;
-          reassignedCount++;
         }
 
         console.log(
-          `[Sync] Reassigned ${reassignedCount} pending events to sequences ${serverSequence + 1}-${nextSequence - 1}`
+          `[Sync] Reassigned ${remainingPending.length} pending events to sequences ${serverSequence + 1}-${serverSequence + remainingPending.length}`
         );
       }
 

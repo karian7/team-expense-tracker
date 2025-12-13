@@ -22,6 +22,23 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
     await db.delete();
     await db.open();
     vi.clearAllMocks();
+
+    // eventApi.createEvent mock 기본 설정 (pending push 시 서버 응답)
+    vi.mocked(eventApi.createEvent).mockImplementation(async (payload) => ({
+      sequence: Date.now(), // 임시 sequence
+      eventType: payload.eventType,
+      eventDate: payload.eventDate,
+      year: payload.year,
+      month: payload.month,
+      authorName: payload.authorName,
+      amount: payload.amount,
+      storeName: payload.storeName ?? null,
+      description: payload.description ?? null,
+      receiptImage: payload.receiptImage ?? null,
+      ocrRawData: payload.ocrRawData ?? null,
+      referenceSequence: payload.referenceSequence ?? null,
+      createdAt: new Date().toISOString(),
+    }));
   });
 
   describe('BUDGET_RESET 필터링', () => {
@@ -109,8 +126,8 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
       const beforeResetDate = new Date('2025-01-10T11:50:00.000Z');
       const afterResetDate = new Date('2025-01-10T12:05:00.000Z');
 
-      // 리셋 이전 pending
-      await pendingEventService.enqueue(
+      // 리셋 이전 pending (retryCount를 10으로 설정하여 push 건너뛰기)
+      const pending1 = await pendingEventService.enqueue(
         {
           eventType: 'EXPENSE',
           eventDate: beforeResetDate.toISOString(),
@@ -122,6 +139,11 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
         },
         -1000
       );
+      // createdAt을 리셋 이전 시간으로 설정
+      await db.pendingEvents.update(pending1.id, {
+        retryCount: 10,
+        createdAt: beforeResetDate.toISOString(),
+      });
       await eventService.saveEvent({
         sequence: -1000,
         eventType: 'EXPENSE',
@@ -138,11 +160,11 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
         createdAt: beforeResetDate.toISOString(),
         isLocalOnly: true,
         syncState: 'pending',
-        pendingId: 'pending-1',
+        pendingId: pending1.id,
       });
 
-      // 리셋 이후 pending
-      await pendingEventService.enqueue(
+      // 리셋 이후 pending (retryCount를 10으로 설정하여 push 건너뛰기)
+      const pending2 = await pendingEventService.enqueue(
         {
           eventType: 'EXPENSE',
           eventDate: afterResetDate.toISOString(),
@@ -154,6 +176,11 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
         },
         -2000
       );
+      // createdAt을 리셋 이후 시간으로 설정
+      await db.pendingEvents.update(pending2.id, {
+        retryCount: 10,
+        createdAt: afterResetDate.toISOString(),
+      });
       await eventService.saveEvent({
         sequence: -2000,
         eventType: 'EXPENSE',
@@ -170,7 +197,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
         createdAt: afterResetDate.toISOString(),
         isLocalOnly: true,
         syncState: 'pending',
-        pendingId: 'pending-2',
+        pendingId: pending2.id,
       });
 
       // Mock API 응답
@@ -231,8 +258,8 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
 
   describe('Sequence 재할당 (로컬 퍼스트)', () => {
     it('남은 pending 이벤트의 sequence를 서버 최신 다음으로 재할당해야 함', async () => {
-      // Given: pending 이벤트와 서버 이벤트
-      await pendingEventService.enqueue(
+      // Given: pending 이벤트와 서버 이벤트 (retryCount 10으로 push 건너뛰기)
+      const pending = await pendingEventService.enqueue(
         {
           eventType: 'EXPENSE',
           eventDate: '2025-01-15T12:00:00.000Z',
@@ -244,6 +271,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
         },
         -1000
       );
+      await db.pendingEvents.update(pending.id, { retryCount: 10 });
       await eventService.saveEvent({
         sequence: -1000,
         eventType: 'EXPENSE',
@@ -260,7 +288,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
         createdAt: '2025-01-15T12:00:00.000Z',
         isLocalOnly: true,
         syncState: 'pending',
-        pendingId: 'pending-1',
+        pendingId: pending.id,
       });
 
       // Mock API 응답
@@ -334,9 +362,9 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
     });
 
     it('여러 pending 이벤트를 순차적으로 재할당해야 함', async () => {
-      // Given: 3개의 pending 이벤트
+      // Given: 3개의 pending 이벤트 (retryCount 10으로 push 건너뛰기)
       for (let i = 0; i < 3; i++) {
-        await pendingEventService.enqueue(
+        const pending = await pendingEventService.enqueue(
           {
             eventType: 'EXPENSE',
             eventDate: `2025-01-${15 + i}T12:00:00.000Z`,
@@ -348,6 +376,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
           },
           -1000 - i
         );
+        await db.pendingEvents.update(pending.id, { retryCount: 10 });
         await eventService.saveEvent({
           sequence: -1000 - i,
           eventType: 'EXPENSE',
@@ -364,7 +393,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
           createdAt: `2025-01-${15 + i}T12:00:00.000Z`,
           isLocalOnly: true,
           syncState: 'pending',
-          pendingId: `pending-${i}`,
+          pendingId: pending.id,
         });
       }
 
@@ -410,8 +439,8 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
       const resetDate = new Date('2025-01-10T12:00:00.000Z');
       const afterResetDate = new Date('2025-01-10T12:05:00.000Z');
 
-      // Given: 리셋 이후 pending 이벤트
-      await pendingEventService.enqueue(
+      // Given: 리셋 이후 pending 이벤트 (retryCount 10으로 push 건너뛰기)
+      const pending = await pendingEventService.enqueue(
         {
           eventType: 'EXPENSE',
           eventDate: afterResetDate.toISOString(),
@@ -423,6 +452,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
         },
         -2000
       );
+      await db.pendingEvents.update(pending.id, { retryCount: 10 });
       await eventService.saveEvent({
         sequence: -2000,
         eventType: 'EXPENSE',
@@ -439,7 +469,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
         createdAt: afterResetDate.toISOString(),
         isLocalOnly: true,
         syncState: 'pending',
-        pendingId: 'pending-2',
+        pendingId: pending.id,
       });
 
       // Mock API 응답
