@@ -88,8 +88,30 @@ export const syncService = {
 
       if (hasResetEvent) {
         // ✅ 이벤트 소싱 원칙: budgetEvents는 삭제하지 않음!
-        // ✅ pendingEvents만 삭제 (아직 sync 안 된 로컬 변경사항, 충돌 방지)
-        await pendingEventService.clearAll();
+
+        // 가장 최근의 BUDGET_RESET 이벤트 찾기
+        const resetEvents = events.filter((e) => e.eventType === 'BUDGET_RESET');
+        const latestResetEvent = resetEvents[resetEvents.length - 1];
+        const resetEventDate = new Date(latestResetEvent.eventDate);
+
+        // ✅ 시간 비교: 리셋 이전 pending만 삭제, 리셋 이후 pending은 유지
+        const allPending = await pendingEventService.getAll();
+        let removedCount = 0;
+        let keptCount = 0;
+
+        for (const pending of allPending) {
+          const pendingCreatedAt = new Date(pending.createdAt);
+
+          if (pendingCreatedAt <= resetEventDate) {
+            // 리셋 이전에 생성된 pending → 삭제
+            await pendingEventService.remove(pending.id);
+            await eventService.removeEvent(pending.tempSequence);
+            removedCount++;
+          } else {
+            // 리셋 이후에 생성된 pending → 유지 (여전히 유효함)
+            keptCount++;
+          }
+        }
 
         // 서버 설정 동기화
         try {
@@ -100,7 +122,9 @@ export const syncService = {
           console.error('Failed to refresh settings after reset', settingsError);
         }
 
-        console.log('[Sync] BUDGET_RESET detected, cleared pending events');
+        console.log(
+          `[Sync] BUDGET_RESET detected (${resetEventDate.toISOString()}), removed ${removedCount} old pending events, kept ${keptCount} new pending events`
+        );
       }
 
       // ✅ 모든 서버 이벤트 저장 (BUDGET_RESET 이전 데이터 포함)
