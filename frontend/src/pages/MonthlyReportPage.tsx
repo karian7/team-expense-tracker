@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { budgetApi } from '../services/api';
+import { reportService } from '../services/local/reportService';
 import {
   BarChart,
   Bar,
@@ -32,8 +32,8 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['monthlyReport', year, month],
-    queryFn: () => budgetApi.getReport(year, month),
+    queryKey: ['localMonthlyReport', year, month],
+    queryFn: () => reportService.getMonthlyReport(year, month),
   });
 
   const handlePreviousMonth = () => {
