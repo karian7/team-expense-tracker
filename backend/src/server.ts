@@ -30,6 +30,9 @@ const allowedOrigins = [
   ...new Set([...parseOrigins(process.env.ALLOWED_ORIGINS), ...defaultOrigins]),
 ];
 
+const jsonBodyLimit = process.env.JSON_BODY_LIMIT ?? '15mb';
+const urlEncodedBodyLimit = process.env.URLENCODED_BODY_LIMIT ?? jsonBodyLimit;
+
 const isOriginAllowed = (origin: string): boolean => {
   const normalized = origin.replace(/\/$/, '');
   const withoutPort = normalized.replace(/:\d+$/, '');
@@ -65,8 +68,8 @@ app.use(
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: jsonBodyLimit }));
+app.use(express.urlencoded({ extended: true, limit: urlEncodedBodyLimit }));
 
 // Static file serving for uploads
 app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));

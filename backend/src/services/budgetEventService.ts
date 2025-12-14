@@ -51,6 +51,8 @@ async function getLastResetSequence(): Promise<number> {
   return resetEvent?.sequence ?? 0;
 }
 
+type PrismaBytes = Uint8Array<ArrayBuffer>;
+
 const toBudgetEventResponse = (event: unknown): BudgetEventResponse => {
   const rawEvent = event as Record<string, unknown>;
 
@@ -60,6 +62,100 @@ const toBudgetEventResponse = (event: unknown): BudgetEventResponse => {
   }
 
   return convertDecimalsToNumbers(rawEvent) as unknown as BudgetEventResponse;
+};
+
+const toBufferFromArrayBufferLike = (value: ArrayBuffer | ArrayBufferView): PrismaBytes => {
+  if (value instanceof ArrayBuffer) {
+    return Buffer.from(value) as PrismaBytes;
+  }
+
+  return Buffer.from(value.buffer, value.byteOffset, value.byteLength) as PrismaBytes;
+};
+
+const toBufferFromIntegerRecord = (value: Record<string, unknown>): PrismaBytes | null => {
+  const keys = Object.keys(value);
+  if (keys.length === 0) {
+    return null;
+  }
+
+  if (!keys.every((key) => /^\d+$/.test(key))) {
+    return null;
+  }
+
+  const sortedIndexes = keys.map(Number).sort((a, b) => a - b);
+  const lastIndex = sortedIndexes[sortedIndexes.length - 1];
+  const buffer = Buffer.alloc(lastIndex + 1) as PrismaBytes;
+
+  for (const index of sortedIndexes) {
+    const raw = value[String(index)];
+    if (typeof raw === 'number') {
+      buffer[index] = raw & 0xff;
+    } else if (typeof raw === 'string') {
+      const parsed = Number.parseInt(raw, 10);
+      buffer[index] = Number.isNaN(parsed) ? 0 : parsed & 0xff;
+    } else {
+      buffer[index] = 0;
+    }
+  }
+
+  return buffer;
+};
+
+const toReceiptImageBuffer = (input?: unknown): PrismaBytes | null => {
+  if (input == null) {
+    return null;
+  }
+
+  if (typeof input === 'string') {
+    return Buffer.from(input, 'base64') as PrismaBytes;
+  }
+
+  if (Buffer.isBuffer(input)) {
+    return input as PrismaBytes;
+  }
+
+  if (input instanceof ArrayBuffer || ArrayBuffer.isView(input as ArrayBufferView)) {
+    return toBufferFromArrayBufferLike(input as ArrayBuffer | ArrayBufferView);
+  }
+
+  if (Array.isArray(input)) {
+    return Buffer.from(input) as PrismaBytes;
+  }
+
+  if (typeof input === 'object') {
+    const candidate = input as {
+      data?: unknown;
+      base64?: unknown;
+      encoding?: BufferEncoding;
+    };
+
+    if (typeof candidate.base64 === 'string') {
+      return Buffer.from(candidate.base64, 'base64') as PrismaBytes;
+    }
+
+    if (candidate.data instanceof ArrayBuffer) {
+      return toBufferFromArrayBufferLike(candidate.data);
+    }
+
+    if (candidate.data && ArrayBuffer.isView(candidate.data as ArrayBufferView)) {
+      return toBufferFromArrayBufferLike(candidate.data as ArrayBufferView);
+    }
+
+    if (Array.isArray(candidate.data)) {
+      return Buffer.from(candidate.data) as PrismaBytes;
+    }
+
+    if (typeof candidate.data === 'string') {
+      return Buffer.from(candidate.data, candidate.encoding ?? 'base64') as PrismaBytes;
+    }
+
+    const fromNumericRecord = toBufferFromIntegerRecord(candidate);
+    if (fromNumericRecord) {
+      return fromNumericRecord;
+    }
+  }
+
+  throw new Error('Unsupported receiptImage format. Provide a base64 string or binary data.');
 };
 
 /**
@@ -81,7 +177,7 @@ export async function createBudgetEvent(
         amount: new Decimal(data.amount),
         storeName: data.storeName || null,
         description: data.description || null,
-        receiptImage: data.receiptImage ? Buffer.from(data.receiptImage, 'base64') : null,
+        receiptImage: toReceiptImageBuffer(data.receiptImage),
         ocrRawData: data.ocrRawData ? JSON.stringify(data.ocrRawData) : null,
         referenceSequence: data.referenceSequence ?? null,
       },
@@ -376,7 +472,7 @@ export async function bulkCreateEvents(
             amount: new Decimal(data.amount),
             storeName: data.storeName || null,
             description: data.description || null,
-            receiptImage: data.receiptImage ? Buffer.from(data.receiptImage, 'base64') : null,
+            receiptImage: toReceiptImageBuffer(data.receiptImage),
             ocrRawData: data.ocrRawData ? JSON.stringify(data.ocrRawData) : null,
             referenceSequence: data.referenceSequence ?? null,
           },

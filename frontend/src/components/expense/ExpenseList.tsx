@@ -6,6 +6,110 @@ import { formatCurrency, formatDateTimeKorean } from '../../utils/format';
 
 import type { Expense, OcrResult } from '../../types';
 
+const toBase64 = (bytes: ArrayLike<number>): string => {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) {
+    const value = bytes[i];
+    if (typeof value === 'number') {
+      binary += String.fromCharCode(value & 0xff);
+    }
+  }
+  return btoa(binary);
+};
+
+const toByteArrayFromRecord = (value: Record<string, unknown>): Uint8Array | null => {
+  const keys = Object.keys(value);
+  if (keys.length === 0) {
+    return null;
+  }
+
+  if (!keys.every((key) => /^\d+$/.test(key))) {
+    return null;
+  }
+
+  const sorted = keys.map(Number).sort((a, b) => a - b);
+  const lastIndex = sorted[sorted.length - 1];
+  const buffer = new Uint8Array(lastIndex + 1);
+
+  for (const index of sorted) {
+    const raw = value[String(index)];
+    if (typeof raw === 'number') {
+      buffer[index] = raw & 0xff;
+    } else if (typeof raw === 'string') {
+      buffer[index] = Number.parseInt(raw, 10) & 0xff;
+    }
+  }
+
+  return buffer;
+};
+
+const normalizeReceiptImage = (image: unknown): string | null => {
+  if (!image) {
+    return null;
+  }
+
+  if (typeof image === 'string') {
+    const dataUrlPrefix = 'data:image';
+    if (image.startsWith(dataUrlPrefix)) {
+      const [, base64] = image.split(',');
+      return base64 ?? null;
+    }
+    return image;
+  }
+
+  if (image instanceof ArrayBuffer) {
+    return toBase64(new Uint8Array(image));
+  }
+
+  if (ArrayBuffer.isView(image)) {
+    return toBase64(new Uint8Array(image.buffer, image.byteOffset, image.byteLength));
+  }
+
+  if (Array.isArray(image)) {
+    return toBase64(Uint8Array.from(image));
+  }
+
+  if (typeof image === 'object') {
+    const candidate = image as {
+      data?: unknown;
+      base64?: unknown;
+      encoding?: string;
+    };
+
+    if (typeof candidate.base64 === 'string') {
+      return candidate.base64;
+    }
+
+    if (candidate.data instanceof ArrayBuffer) {
+      return toBase64(new Uint8Array(candidate.data));
+    }
+
+    if (candidate.data && ArrayBuffer.isView(candidate.data as ArrayBufferView)) {
+      const view = candidate.data as ArrayBufferView;
+      return toBase64(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
+    }
+
+    if (Array.isArray(candidate.data)) {
+      return toBase64(Uint8Array.from(candidate.data));
+    }
+
+    if (typeof candidate.data === 'string') {
+      if (candidate.encoding && candidate.encoding !== 'base64') {
+        const textEncoder = new TextEncoder();
+        return toBase64(textEncoder.encode(candidate.data));
+      }
+      return candidate.data;
+    }
+
+    const fromRecord = toByteArrayFromRecord(candidate);
+    if (fromRecord) {
+      return toBase64(fromRecord);
+    }
+  }
+
+  return null;
+};
+
 export default function ExpenseList() {
   const budget = useCurrentBudget();
   const expenses = useExpenses(budget ? { year: budget.year, month: budget.month } : undefined);
@@ -15,6 +119,9 @@ export default function ExpenseList() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useDeleteExpense();
+  const selectedReceiptImage = selectedExpense
+    ? normalizeReceiptImage(selectedExpense.receiptImage as unknown)
+    : null;
 
   const handleRetrySync = async () => {
     try {
@@ -160,9 +267,9 @@ export default function ExpenseList() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative h-48 bg-gray-100 flex items-center justify-center">
-              {selectedExpense.receiptImage ? (
+              {selectedReceiptImage ? (
                 <img
-                  src={`data:image/jpeg;base64,${selectedExpense.receiptImage}`}
+                  src={`data:image/jpeg;base64,${selectedReceiptImage}`}
                   alt="Receipt"
                   className="w-full h-full object-cover"
                   onError={(e) => {
