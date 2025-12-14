@@ -48,11 +48,18 @@ export async function getAppSettings(): Promise<AppSettings> {
   const defaultBudgetStr = await getSetting(SETTINGS_KEYS.DEFAULT_MONTHLY_BUDGET);
   const initialBudgetStr = await getSetting(SETTINGS_KEYS.INITIAL_BUDGET);
   const needsFullSyncStr = await getSetting(SETTINGS_KEYS.NEEDS_FULL_SYNC);
+  const totalEventCount = await prisma.budgetEvent.count();
+
+  let needsFullSync = needsFullSyncStr === 'true';
+  if (totalEventCount > 0 && needsFullSync) {
+    await setNeedsFullSync(false);
+    needsFullSync = false;
+  }
 
   return {
     defaultMonthlyBudget: defaultBudgetStr ? parseFloat(defaultBudgetStr) : 0,
     initialBudget: initialBudgetStr ? parseFloat(initialBudgetStr) : 0,
-    needsFullSync: needsFullSyncStr === 'true',
+    needsFullSync,
   };
 }
 

@@ -5,9 +5,7 @@ import { settingsApi } from '../api';
 import { settingsService } from './settingsService';
 
 const isSystemMonthlyBudgetEvent = (event: BudgetEvent) =>
-  event.eventType === 'BUDGET_IN' &&
-  event.authorName === BUDGET_EVENT_CONSTANTS.SYSTEM_AUTHOR &&
-  event.description === BUDGET_EVENT_CONSTANTS.MONTHLY_BUDGET_DESCRIPTION;
+  event.eventType === 'BUDGET_IN' && event.authorName === BUDGET_EVENT_CONSTANTS.SYSTEM_AUTHOR;
 
 const ensureMonthlyBudgetTasks = new Map<string, Promise<boolean>>();
 

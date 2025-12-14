@@ -152,3 +152,20 @@ export function useIgnoreFullSync() {
     },
   });
 }
+
+/**
+ * 로컬 데이터 초기화 (IndexedDB만 삭제 후 서버 데이터로 재동기화)
+ */
+export function useResetLocalData() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await settingsService.resetAll();
+      await syncService.sync();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    },
+  });
+}

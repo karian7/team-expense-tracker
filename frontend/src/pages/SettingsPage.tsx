@@ -7,6 +7,7 @@ import {
   useNeedsFullSync,
   useFullSync,
   useIgnoreFullSync,
+  useResetLocalData,
 } from '../hooks/useSettings';
 import { useCurrentBudget, useAdjustCurrentBudget } from '../hooks/useBudget';
 import { formatCurrency } from '../utils/format';
@@ -22,6 +23,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const updateMutation = useUpdateDefaultMonthlyBudget();
   const resetMutation = useResetAllData();
   const adjustBudgetMutation = useAdjustCurrentBudget();
+  const resetLocalDataMutation = useResetLocalData();
 
   // Full Sync
   const needsFullSyncQuery = useNeedsFullSync();
@@ -156,6 +158,24 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     } catch (error) {
       console.error('Ignore full sync error:', error);
       alert('Full Sync 무시에 실패했습니다.');
+    }
+  };
+
+  const handleResetLocalData = async () => {
+    if (
+      !window.confirm(
+        '로컬 데이터베이스를 모두 삭제하고 서버 데이터로 다시 동기화할까요? 진행 중에는 앱을 닫지 마세요.'
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await resetLocalDataMutation.mutateAsync();
+      alert('로컬 데이터가 삭제되고 서버 데이터로 재동기화되었습니다.');
+    } catch (error) {
+      console.error('Reset local data error:', error);
+      alert('로컬 데이터 초기화에 실패했습니다.');
     }
   };
 
@@ -294,6 +314,22 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 data-testid="reset-all-data-button"
               >
                 🚨 모든 데이터 삭제 및 초기 예산 설정
+              </button>
+            </div>
+
+            <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+              <h3 className="font-bold text-yellow-800 mb-1">로컬 데이터만 초기화</h3>
+              <p className="text-sm text-yellow-700 mb-4">
+                IndexedDB를 비우고 서버에서 다시 내려받아 최신 상태로 복구합니다. 서버 데이터는
+                변경되지 않습니다.
+              </p>
+              <button
+                onClick={handleResetLocalData}
+                className="w-full py-2 bg-white border border-yellow-200 text-yellow-700 rounded-lg hover:bg-yellow-100 font-medium transition-colors"
+                disabled={resetLocalDataMutation.isPending}
+                data-testid="reset-local-data-button"
+              >
+                {resetLocalDataMutation.isPending ? '초기화 중...' : '🧹 로컬 데이터만 삭제'}
               </button>
             </div>
           </section>

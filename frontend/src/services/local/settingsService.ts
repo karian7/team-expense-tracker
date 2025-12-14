@@ -44,8 +44,11 @@ export const settingsService = {
   },
 
   async resetAll(): Promise<void> {
-    await db.budgetEvents.clear();
-    await db.settings.clear();
-    await db.syncMetadata.clear();
+    await Promise.all([
+      db.budgetEvents.clear(),
+      db.settings.clear(),
+      db.syncMetadata.clear(),
+      db.pendingEvents.clear(),
+    ]);
   },
 };
