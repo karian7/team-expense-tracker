@@ -4,6 +4,7 @@ const SETTINGS_KEYS = {
   INITIAL_BUDGET: 'initial_budget',
   DEFAULT_MONTHLY_BUDGET: 'default_monthly_budget',
   NEEDS_FULL_SYNC: 'needsFullSync',
+  INITIAL_SYNC_COMPLETED: 'initial_sync_completed',
 } as const;
 
 export const settingsService = {
@@ -31,6 +32,15 @@ export const settingsService = {
 
   async setNeedsFullSync(needsSync: boolean): Promise<void> {
     await this.setSetting(SETTINGS_KEYS.NEEDS_FULL_SYNC, needsSync.toString());
+  },
+
+  async isInitialSyncCompleted(): Promise<boolean> {
+    const value = await this.getSetting(SETTINGS_KEYS.INITIAL_SYNC_COMPLETED);
+    return value === 'true';
+  },
+
+  async setInitialSyncCompleted(completed: boolean): Promise<void> {
+    await this.setSetting(SETTINGS_KEYS.INITIAL_SYNC_COMPLETED, completed.toString());
   },
 
   async resetAll(): Promise<void> {

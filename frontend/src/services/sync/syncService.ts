@@ -192,6 +192,7 @@ export const syncService = {
       }
 
       console.log(`Synced ${events.length} new events`);
+      await settingsService.setInitialSyncCompleted(true);
       return { newEvents: events.length, pushedEvents, lastSequence: serverSequence };
     } catch (error) {
       console.error('Sync failed:', error);

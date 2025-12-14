@@ -4,27 +4,45 @@ import { budgetService } from '../services/local/budgetService';
 import { eventService } from '../services/local/eventService';
 import { syncService } from '../services/sync/syncService';
 import { BUDGET_EVENT_CONSTANTS } from '../constants/budgetEvents';
+import { useInitialSyncStatus } from './useInitialSyncStatus';
 
 export function useCurrentBudget() {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
+  const { isInitialSyncCompleted, waitForInitialSync } = useInitialSyncStatus();
+
   useEffect(() => {
-    budgetService.ensureMonthlyBudget(year, month).catch((error) => {
+    const ensureBudget = async () => {
+      if (!isInitialSyncCompleted) {
+        await waitForInitialSync();
+      }
+      await budgetService.ensureMonthlyBudget(year, month);
+    };
+
+    ensureBudget().catch((error) => {
       console.error('Failed to ensure monthly budget', error);
     });
-  }, [year, month]);
+  }, [year, month, isInitialSyncCompleted, waitForInitialSync]);
 
   return useLiveQuery(() => budgetService.getMonthlyBudget(year, month), [year, month]);
 }
 
 export function useBudgetByMonth(year: number, month: number) {
+  const { isInitialSyncCompleted, waitForInitialSync } = useInitialSyncStatus();
   useEffect(() => {
     if (!year || !month) return;
-    budgetService.ensureMonthlyBudget(year, month).catch((error) => {
+    const ensureBudget = async () => {
+      if (!isInitialSyncCompleted) {
+        await waitForInitialSync();
+      }
+      await budgetService.ensureMonthlyBudget(year, month);
+    };
+
+    ensureBudget().catch((error) => {
       console.error('Failed to ensure monthly budget for period', error);
     });
-  }, [year, month]);
+  }, [year, month, isInitialSyncCompleted, waitForInitialSync]);
 
   return useLiveQuery(() => {
     if (!year || !month) return undefined;

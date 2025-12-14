@@ -2,6 +2,7 @@ import { eventService } from './eventService';
 import { BUDGET_EVENT_CONSTANTS } from '../../constants/budgetEvents';
 import type { BudgetEvent, MonthlyBudget } from '../../types';
 import { settingsApi } from '../api';
+import { settingsService } from './settingsService';
 
 const isSystemMonthlyBudgetEvent = (event: BudgetEvent) =>
   event.eventType === 'BUDGET_IN' &&
@@ -19,6 +20,15 @@ async function ensureMonthlyBudgetEvent(year: number, month: number): Promise<bo
   }
 
   const task = (async () => {
+    const initialSyncCompleted = await settingsService.isInitialSyncCompleted();
+
+    if (!initialSyncCompleted) {
+      console.warn(
+        `[BudgetService] Skip monthly budget creation for ${year}-${month} until initial sync completes.`
+      );
+      return false;
+    }
+
     const events = await eventService.getEventsByMonth(year, month);
     const hasMonthlyBudget = events.some(isSystemMonthlyBudgetEvent);
 
