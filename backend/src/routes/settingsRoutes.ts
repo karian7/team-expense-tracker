@@ -3,7 +3,6 @@ import {
   getSettings,
   updateSettings,
   setInitialBudgetController,
-  updateNeedsFullSyncController,
 } from '../controllers/settingsController';
 
 const router: Router = Router();
@@ -16,8 +15,5 @@ router.put('/', updateSettings);
 
 // POST /api/settings/initial-budget
 router.post('/initial-budget', setInitialBudgetController);
-
-// PATCH /api/settings/needsFullSync
-router.patch('/needsFullSync', updateNeedsFullSyncController);
 
 export default router;

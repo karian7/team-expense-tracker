@@ -3,7 +3,6 @@ import {
   getAppSettings,
   setDefaultMonthlyBudget,
   setInitialBudget,
-  setNeedsFullSync,
 } from '../services/settingsService';
 import { ApiResponse, UpdateSettingsRequest } from '../types';
 import { AppError } from '../middleware/errorHandler';
@@ -81,34 +80,6 @@ export async function setInitialBudgetController(
       success: true,
       data: settings,
       message: 'Initial budget set successfully. All data has been reset.',
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-/**
- * PATCH /api/settings/needsFullSync
- * Full Sync 필요 플래그 업데이트
- */
-export async function updateNeedsFullSyncController(
-  req: Request<Record<string, never>, ApiResponse, { needsFullSync: boolean }>,
-  res: Response<ApiResponse>,
-  next: NextFunction
-) {
-  try {
-    const { needsFullSync } = req.body;
-
-    if (typeof needsFullSync !== 'boolean') {
-      throw new AppError('needsFullSync must be a boolean', 400);
-    }
-
-    await setNeedsFullSync(needsFullSync);
-
-    res.json({
-      success: true,
-      data: { needsFullSync },
-      message: 'Full sync flag updated successfully',
     });
   } catch (error) {
     next(error);

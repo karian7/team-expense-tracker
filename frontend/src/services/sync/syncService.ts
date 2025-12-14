@@ -78,22 +78,16 @@ export const syncService = {
     try {
       const pushedEvents = await pushPendingEvents();
       const lastSequence = await eventService.getLatestSequence();
-      const { events, lastSequence: serverSequence } = await eventApi.sync(lastSequence);
+      const {
+        events,
+        lastSequence: serverSequence,
+        needsFullSync,
+      } = await eventApi.sync(lastSequence);
 
-      // DB 리셋 감지: 서버에 데이터가 없고, 로컬에 이벤트가 있으면
-      if (serverSequence === 0 && events.length === 0) {
-        const localEventCount = await db.budgetEvents.count();
-        if (localEventCount > 0) {
-          console.log('[Sync] Server DB reset detected, setting needsFullSync flag');
-          // 로컬 플래그 설정
-          await settingsService.setNeedsFullSync(true);
-          // 서버 플래그 설정
-          try {
-            await settingsApi.updateNeedsFullSync(true);
-          } catch (error) {
-            console.error('[Sync] Failed to set remote needsFullSync flag', error);
-          }
-        }
+      // 서버에서 DB 리셋 감지한 경우 로컬 플래그 업데이트
+      if (needsFullSync) {
+        console.log('[Sync] Server DB reset detected (from server response)');
+        await settingsService.setNeedsFullSync(true);
       }
 
       if (events.length === 0) {
@@ -260,9 +254,8 @@ export const syncService = {
         );
       }
 
-      // 동기화 완료 후 플래그 제거
+      // 동기화 완료 후 로컬 플래그 제거 (서버는 bulk-sync 성공 시 자동 제거)
       await settingsService.setNeedsFullSync(false);
-      await settingsApi.updateNeedsFullSync(false);
 
       console.log(`[FullSync] Completed! Total synced: ${totalSynced} events`);
       return { totalSynced, success: true };
@@ -274,10 +267,9 @@ export const syncService = {
   },
 
   /**
-   * Full Sync 무시: 플래그만 제거
+   * Full Sync 무시: 로컬 플래그만 제거
    */
   async ignoreFullSync(): Promise<void> {
     await settingsService.setNeedsFullSync(false);
-    await settingsApi.updateNeedsFullSync(false);
   },
 };

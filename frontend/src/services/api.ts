@@ -26,7 +26,7 @@ const apiClient = axios.create({
 export const eventApi = {
   sync: async (sinceSequence: number = 0) => {
     const { data } = await apiClient.get(`/events/sync?since=${sinceSequence}`);
-    return data.data as { lastSequence: number; events: BudgetEvent[] };
+    return data.data as { lastSequence: number; events: BudgetEvent[]; needsFullSync: boolean };
   },
 
   createEvent: async (event: CreateBudgetEventPayload) => {
@@ -88,10 +88,6 @@ export const settingsApi = {
       initialBudget,
     });
     return data.data!;
-  },
-
-  updateNeedsFullSync: async (needsFullSync: boolean): Promise<void> => {
-    await apiClient.patch('/settings/needsFullSync', { needsFullSync });
   },
 };
 

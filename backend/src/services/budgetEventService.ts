@@ -9,6 +9,7 @@ import {
   MonthlyBudgetResponse,
 } from '../types';
 import { BUDGET_EVENT_CONSTANTS } from '../constants/budgetEvents';
+import { setNeedsFullSync } from './settingsService';
 
 const INCOMING_EVENT_TYPES = new Set(['BUDGET_IN', 'BUDGET_ADJUSTMENT_INCREASE']);
 
@@ -160,9 +161,20 @@ export async function syncEvents(sinceSequence: number = 0): Promise<SyncEventsR
       ? events[events.length - 1].sequence
       : Math.max(effectiveSince, lastResetSequence);
 
+  // DB 리셋 감지: 전체 이벤트 개수 확인
+  const totalEventCount = await prisma.budgetEvent.count();
+  let needsFullSync = false;
+
+  if (totalEventCount === 0) {
+    // 서버 DB가 리셋됨 → needsFullSync 플래그 설정
+    await setNeedsFullSync(true);
+    needsFullSync = true;
+  }
+
   return {
     lastSequence,
     events: events.map(toBudgetEventResponse),
+    needsFullSync,
   };
 }
 
@@ -347,9 +359,9 @@ export async function getEventByReferenceSequence(
 export async function bulkCreateEvents(
   events: CreateBudgetEventRequest[]
 ): Promise<BudgetEventResponse[]> {
-  return prisma.$transaction(
+  const createdEvents = await prisma.$transaction(
     async (tx) => {
-      const createdEvents: BudgetEventResponse[] = [];
+      const results: BudgetEventResponse[] = [];
 
       for (const data of events) {
         const eventDate = new Date(data.eventDate);
@@ -370,11 +382,16 @@ export async function bulkCreateEvents(
           },
         });
 
-        createdEvents.push(toBudgetEventResponse(event));
+        results.push(toBudgetEventResponse(event));
       }
 
-      return createdEvents;
+      return results;
     },
     { timeout: 30000 } // 30초 타임아웃
   );
+
+  // Full Sync 완료 → needsFullSync 플래그 제거
+  await setNeedsFullSync(false);
+
+  return createdEvents;
 }

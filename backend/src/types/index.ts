@@ -51,6 +51,7 @@ export interface CreateBudgetEventRequest {
 export interface SyncEventsResponse {
   lastSequence: number;
   events: BudgetEventResponse[];
+  needsFullSync: boolean;
 }
 
 // Computed Monthly Budget (client-side calculation result)
