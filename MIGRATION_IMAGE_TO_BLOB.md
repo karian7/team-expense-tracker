@@ -53,8 +53,8 @@ model Expense {
 #### 6. Types (`backend/src/types/index.ts`)
 
 ```typescript
-interface ExpenseResponse {
-  receiptImageUrl: string | null; // deprecated
+interface BudgetEventResponse {
+  // ...
   receiptImage: string | null; // base64 encoded
 }
 

@@ -49,14 +49,16 @@ model BudgetEvent {
 ### 2. Try-Catch + 재조회 패턴
 
 ```typescript
+import { eventService } from '../frontend/src/services/local/eventService';
+
 export async function getOrCreateMonthlyBudget(
   year: number,
   month: number
 ): Promise<MonthlyBudgetResponse> {
   // 1단계: 기존 이벤트 확인
-  const events = await getEventsByMonth(year, month);
+  const events = await eventService.getEventsByMonth(year, month);
   if (events.length > 0) {
-    return calculateMonthlyBudget(year, month);
+    return eventService.calculateMonthlyBudget(year, month);
   }
 
   // 2단계: 이벤트 생성 시도
@@ -76,7 +78,7 @@ export async function getOrCreateMonthlyBudget(
   }
 
   // 4단계: 항상 재조회 (최신 상태 보장)
-  return calculateMonthlyBudget(year, month);
+  return eventService.calculateMonthlyBudget(year, month);
 }
 ```
 
@@ -86,20 +88,20 @@ export async function getOrCreateMonthlyBudget(
 
 ```
 User A:
-  1. getEventsByMonth() → 0개
+  1. eventService.getEventsByMonth() → 0개
   2. createBudgetEvent() → 성공 ✅
-  3. calculateMonthlyBudget() → budgetIn: 300,000원
+  3. eventService.calculateMonthlyBudget() → budgetIn: 300,000원
 ```
 
 ### Race Condition 케이스
 
 ```
 User A:
-  1. getEventsByMonth() → 0개
+  1. eventService.getEventsByMonth() → 0개
   2. createBudgetEvent() 시작...
 
 User B (동시):
-  1. getEventsByMonth() → 0개 (User A가 아직 저장 안함)
+  1. eventService.getEventsByMonth() → 0개 (User A가 아직 저장 안함)
   2. createBudgetEvent() 시작...
 
 User A:
@@ -108,7 +110,7 @@ User A:
 User B:
   3. DB INSERT → Unique constraint 위반! ❌
   4. catch (error) → 에러 무시
-  5. calculateMonthlyBudget() → budgetIn: 300,000원 ✅
+  5. eventService.calculateMonthlyBudget() → budgetIn: 300,000원 ✅
 
 결과: 모두 올바른 값 반환!
 ```
@@ -236,11 +238,11 @@ async function getOrCreateMonthlyBudget(year, month) {
   const lock = await redis.lock(lockKey, 5000); // 5초 TTL
 
   try {
-    const events = await getEventsByMonth(year, month);
+    const events = await eventService.getEventsByMonth(year, month);
     if (events.length === 0) {
       await createBudgetEvent(...);
     }
-    return calculateMonthlyBudget(year, month);
+    return eventService.calculateMonthlyBudget(year, month);
   } finally {
     await lock.release();
   }

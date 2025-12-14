@@ -1,5 +1,3 @@
-import type { Decimal } from '@prisma/client/runtime/client';
-
 export type BudgetEventType =
   | 'BUDGET_IN'
   | 'EXPENSE'
@@ -54,21 +52,6 @@ export interface SyncEventsResponse {
   needsFullSync: boolean;
 }
 
-// Computed Monthly Budget (client-side calculation result)
-export interface MonthlyBudgetResponse {
-  year: number;
-  month: number;
-  budgetIn: number; // 이번 달 예산 유입 (BASE_BUDGET)
-  previousBalance: number; // 이전 달 잔액 (계산된 값, 이벤트 아님!)
-  totalBudget: number; // previousBalance + budgetIn
-  totalSpent: number; // 이번 달 지출
-  balance: number; // totalBudget - totalSpent
-  eventCount: number;
-}
-
-// Expense Types (now derived from BudgetEvent)
-export type ExpenseResponse = BudgetEventResponse;
-
 // OCR Types
 export interface OcrResult {
   amount: number | null;
@@ -94,8 +77,3 @@ export interface AppSettings {
 export interface UpdateSettingsRequest {
   defaultMonthlyBudget?: number;
 }
-
-// Utility type to convert Decimal to number
-export type DecimalToNumber<T> = {
-  [K in keyof T]: T[K] extends Decimal ? number : T[K];
-};

@@ -145,50 +145,64 @@ balance = 650,000 - 0 = 650,000원
 
 ## 💻 계산 로직
 
-### Backend (budgetEventService.ts)
+### Frontend (eventService.ts - Dexie 기반)
 
 ```typescript
-export async function calculateMonthlyBudget(
-  year: number,
-  month: number
-): Promise<MonthlyBudgetResponse> {
-  const events = await getEventsByMonth(year, month);
+export const eventService = {
+  async getEventsByMonth(year: number, month: number): Promise<BudgetEvent[]> {
+    return db.budgetEvents.where('[year+month]').equals([year, month]).sortBy('sequence');
+  },
 
-  let budgetIn = 0;
-  let totalSpent = 0;
+  async calculateMonthlyBudget(year: number, month: number) {
+    const resetSequence = await this.getLatestResetSequence();
+    let events = await this.getEventsByMonth(year, month);
 
-  events.forEach((event) => {
-    if (event.eventType === 'BUDGET_IN') {
-      budgetIn += event.amount;
-    } else if (event.eventType === 'EXPENSE') {
-      totalSpent += event.amount;
+    if (resetSequence > 0) {
+      events = events.filter((e) => e.sequence > resetSequence);
     }
-  });
 
-  // 재귀적으로 이전 달 잔액 계산
-  let previousBalance = 0;
-  if (year > 2000) {
+    let budgetIn = 0;
+    let totalSpent = 0;
+
+    events.forEach((event) => {
+      if (INCOMING_EVENT_TYPES.has(event.eventType)) {
+        budgetIn += event.amount;
+      } else if (OUTGOING_EVENT_TYPES.has(event.eventType)) {
+        totalSpent += event.amount;
+      } else if (event.eventType === 'EXPENSE_REVERSAL') {
+        totalSpent -= event.amount;
+      }
+    });
+
+    if (totalSpent < 0) {
+      totalSpent = 0;
+    }
+
+    let previousBalance = 0;
     const prevMonth = month === 1 ? 12 : month - 1;
     const prevYear = month === 1 ? year - 1 : year;
 
-    const prevEvents = await getEventsByMonth(prevYear, prevMonth);
-    if (prevEvents.length > 0) {
-      const prevBudget = await calculateMonthlyBudget(prevYear, prevMonth);
+    const prevEvents = await this.getEventsByMonth(prevYear, prevMonth);
+    const prevEventsAfterReset =
+      resetSequence > 0 ? prevEvents.filter((e) => e.sequence > resetSequence) : prevEvents;
+
+    if (prevEventsAfterReset.length > 0) {
+      const prevBudget = await this.calculateMonthlyBudget(prevYear, prevMonth);
       previousBalance = prevBudget.balance;
     }
-  }
 
-  return {
-    year,
-    month,
-    budgetIn, // 이번 달 예산 유입
-    previousBalance, // 이전 달 잔액 (계산됨!)
-    totalBudget: previousBalance + budgetIn,
-    totalSpent,
-    balance: previousBalance + budgetIn - totalSpent,
-    eventCount: events.length,
-  };
-}
+    return {
+      year,
+      month,
+      budgetIn,
+      previousBalance,
+      totalBudget: previousBalance + budgetIn,
+      totalSpent,
+      balance: previousBalance + budgetIn - totalSpent,
+      eventCount: events.length,
+    };
+  },
+};
 ```
 
 ## 🔄 동기화

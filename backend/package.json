@@ -1,6 +1,7 @@
 {
   "name": "team-expense-tracker-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Team meal expense tracker backend API",
   "main": "dist/server.js",
   "scripts": {

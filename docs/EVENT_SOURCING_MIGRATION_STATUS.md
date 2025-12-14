@@ -126,20 +126,14 @@ export interface MonthlyBudgetResponse {
 // 이벤트 생성 (Append-Only)
 export async function createBudgetEvent(data: CreateBudgetEventRequest);
 
-// 특정 월 이벤트 조회
-export async function getEventsByMonth(year: number, month: number);
-
-// 월별 예산 계산 (재귀적 이월 계산)
-export async function calculateMonthlyBudget(year: number, month: number) {
-  // 1. 이번 달 이벤트 조회
-  // 2. budgetIn, totalSpent 계산
-  // 3. 이전 달 잔액 재귀 계산
-  // 4. 복식부기 공식 적용
-}
-
 // 동기화 API
-export async function getEventsForSync(sinceSequence: number);
+export async function syncEvents(sinceSequence: number);
+
+// Full Sync용 일괄 생성
+export async function bulkCreateEvents(events: CreateBudgetEventRequest[]);
 ```
+
+> 월별 예산 계산이나 특정 월 이벤트 조회는 이제 **프론트 Dexie 서비스** (`frontend/src/services/local/eventService.ts`)가 담당합니다. 서버는 Append-Only 이벤트 스트림만 제공합니다.
 
 ### ✅ 4. Race Condition 방지
 
@@ -147,9 +141,9 @@ export async function getEventsForSync(sinceSequence: number);
 
 ```typescript
 async function getOrCreateMonthlyBudget(year: number, month: number) {
-  const events = await getEventsByMonth(year, month);
+  const events = await eventService.getEventsByMonth(year, month);
   if (events.length > 0) {
-    return calculateMonthlyBudget(year, month);
+    return eventService.calculateMonthlyBudget(year, month);
   }
 
   try {
@@ -163,7 +157,7 @@ async function getOrCreateMonthlyBudget(year: number, month: number) {
     // 에러 무시하고 재조회
   }
 
-  return calculateMonthlyBudget(year, month);
+  return eventService.calculateMonthlyBudget(year, month);
 }
 ```
 
