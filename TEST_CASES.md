@@ -221,7 +221,6 @@ catch (error) {
 **관련 파일**:
 
 - 수정 일자: 2025-12-07
-- Backend: `src/services/legacyBudgetService.ts` (Prisma 에러 처리)
 - Frontend: `src/pages/SettingsPage.tsx` (에러 메시지 표시)
 - Constants: `src/constants/budgetEvents.ts` (양쪽 모두)
 
@@ -797,7 +796,7 @@ ID,작성자,금액,사용날짜,상호명
 
 - [ ] **TC-002-3: 중복 조정 내용 방지**
   - 수정 일자: 2025-12-07
-  - 관련 파일: `backend/src/services/legacyBudgetService.ts`, `frontend/src/pages/SettingsPage.tsx`, `src/constants/budgetEvents.ts`
+  - 관련 파일: `frontend/src/pages/SettingsPage.tsx`, `src/constants/budgetEvents.ts`
   - 증상: 같은 조정 내용으로 중복 등록 시 에러 메시지 불명확
 
 ---

@@ -84,17 +84,6 @@ export interface ReceiptUploadResponse {
   ocrResult: OcrResult;
 }
 
-// Query Parameters
-export interface ExpenseQueryParams {
-  year?: string;
-  month?: string;
-  authorName?: string;
-  startDate?: string;
-  endDate?: string;
-  limit?: string;
-  offset?: string;
-}
-
 // Settings Types
 export interface AppSettings {
   defaultMonthlyBudget: number;
@@ -105,37 +94,7 @@ export interface UpdateSettingsRequest {
   defaultMonthlyBudget?: number;
 }
 
-// Budget Adjustment Types
-export interface AdjustCurrentBudgetRequest {
-  targetBalance: number;
-  description: string;
-}
-
 // Utility type to convert Decimal to number
 export type DecimalToNumber<T> = {
   [K in keyof T]: T[K] extends Decimal ? number : T[K];
 };
-
-// Monthly Report Types
-export interface DailyBreakdown {
-  date: string;
-  amount: number;
-  count: number;
-}
-
-export interface AuthorBreakdown {
-  authorName: string;
-  amount: number;
-  count: number;
-}
-
-export interface MonthlyReportResponse {
-  budget: MonthlyBudgetResponse;
-  statistics: {
-    totalExpenses: number;
-    expenseCount: number;
-    dailyBreakdown: DailyBreakdown[];
-    authorBreakdown: AuthorBreakdown[];
-    topExpenses: ExpenseResponse[];
-  };
-}
