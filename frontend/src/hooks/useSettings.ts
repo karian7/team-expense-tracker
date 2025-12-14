@@ -3,7 +3,6 @@ import { settingsService } from '../services/local/settingsService';
 import { budgetService } from '../services/local/budgetService';
 import { settingsApi } from '../services/api';
 import { syncService } from '../services/sync/syncService';
-import { pendingEventService } from '../services/local/pendingEventService';
 import { eventService } from '../services/local/eventService';
 
 /**
@@ -70,15 +69,11 @@ export function useResetAllData() {
       // 1. 서버에 settings만 저장
       await settingsApi.setInitialBudget(initialBudget);
 
-      // 2. 로컬 DB 완전 초기화
-      await settingsService.resetAll();
-      await pendingEventService.clearAll();
-
-      // 3. 로컬 settings 저장
+      // 2. 로컬 settings 저장
       await settingsService.setInitialBudget(initialBudget);
       await settingsService.setDefaultMonthlyBudget(initialBudget);
 
-      // 4. 로컬에서 BUDGET_RESET 이벤트 생성 (pendingEvents에 추가)
+      // 3. 로컬에서 BUDGET_RESET 이벤트 생성 (pendingEvents에 추가)
       await eventService.createLocalEvent({
         eventType: 'BUDGET_RESET',
         eventDate: now.toISOString(),
@@ -89,7 +84,7 @@ export function useResetAllData() {
         description: `데이터 초기화 (${now.toISOString()})`,
       });
 
-      // 5. 로컬에서 BUDGET_IN 이벤트 생성 (pendingEvents에 추가)
+      // 4. 로컬에서 BUDGET_IN 이벤트 생성 (pendingEvents에 추가)
       await eventService.createLocalEvent({
         eventType: 'BUDGET_IN',
         eventDate: monthStart.toISOString(),
