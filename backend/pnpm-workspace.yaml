@@ -1,8 +1,9 @@
-allowScripts: '["sharp"]'
+allowScripts: '["sharp","better-sqlite3"]'
 
 onlyBuiltDependencies:
   - '@prisma/client'
   - '@prisma/engines'
+  - better-sqlite3
   - esbuild
   - prisma
   - protobufjs

@@ -66,7 +66,7 @@ OCR_PROVIDER = openai | google | dummy;
 budget.baseAmount + 1000;
 
 // ✅ 올바른 방법
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/client';
 budget.baseAmount.plus(new Decimal(1000));
 
 // API 응답 시 number로 변환 필수

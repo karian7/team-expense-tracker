@@ -114,6 +114,11 @@ npm run dev
 2. 만약 `database disk image is malformed` 와 같은 손상 오류가 발생하면 `rm backend/prisma/dev.db` 로 파일을 제거한 뒤 `pnpm --filter team-expense-tracker-backend exec prisma migrate deploy` 로 새 DB를 만들고 마이그레이션을 재적용합니다.
 3. 위 과정을 마치면 DB는 최신 마이그레이션 기준의 깨끗한 상태가 되며, 필요 시 초기 예산 설정을 다시 진행하면 됩니다.
 
+### Prisma 7 구성
+
+- Prisma CLI는 `backend/prisma.config.ts`를 통해 스키마 경로, 마이그레이션 경로, datasource URL을 단일 소스로 관리합니다. 루트 `pnpm db:reset` 스크립트와 백엔드 내 `prisma:*` 스크립트 모두 이 구성을 자동으로 사용합니다.
+- 런타임 PrismaClient는 `@prisma/adapter-better-sqlite3` 기반 커넥터를 통해 SQLite 파일에 직접 연결합니다. `DATABASE_URL` 은 `file:./dev.db` 형식을 유지하며, 필요하면 `SHADOW_DATABASE_URL` 로 마이그레이션용 shadow DB 경로를 덮어쓸 수 있습니다.
+
 ## 프로젝트 구조
 
 ```
@@ -202,7 +207,6 @@ pnpm test:e2e:ui
 
 ## TODO
 
-- Prisma 7.x 마이그레이션: `prisma.config.ts` 도입과 adapter 기반 연결 설정으로 이전하고, Client 생성 방식과 마이그레이션 파이프라인을 새 구조에 맞춥니다.
 - Tailwind CSS 4.x 도입 검토: 새 preset 및 atomic 스타일링 흐름에 맞춰 디자인 시스템/빌드 구성을 재정비합니다.
 
 ```bash

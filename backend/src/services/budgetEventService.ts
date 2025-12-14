@@ -1,6 +1,6 @@
 import prisma from '../utils/prisma';
 import { Prisma } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/client';
 import { convertDecimalsToNumbers } from '../utils/decimal';
 import {
   BudgetEventResponse,
