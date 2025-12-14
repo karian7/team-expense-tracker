@@ -57,13 +57,6 @@ export const receiptApi = {
     );
     return data.data!;
   },
-
-  parse: async (imageBlob: string): Promise<ReceiptUploadResponse> => {
-    const { data } = await apiClient.post<ApiResponse<ReceiptUploadResponse>>('/receipts/parse', {
-      imageBlob,
-    });
-    return data.data!;
-  },
 };
 
 // Settings API

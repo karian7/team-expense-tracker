@@ -6,9 +6,3 @@ export function useUploadReceipt() {
     mutationFn: (file: File) => receiptApi.upload(file),
   });
 }
-
-export function useParseReceipt() {
-  return useMutation({
-    mutationFn: (imageUrl: string) => receiptApi.parse(imageUrl),
-  });
-}

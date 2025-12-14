@@ -167,7 +167,6 @@ team-expense-tracker/
 ### 영수증 OCR
 
 - `POST /api/receipts/upload` - 영수증 업로드 및 OCR 분석
-- `POST /api/receipts/parse` - 저장된 이미지 재분석
 
 ### 설정
 

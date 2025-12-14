@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import sharp from 'sharp';
 import heicConvert from 'heic-convert';
 import { randomUUID } from 'crypto';
-import { analyzeReceiptWithBuffer, reanalyzeReceiptFromBlob } from '../services/ocrService';
+import { analyzeReceiptWithBuffer } from '../services/ocrService';
 import { ApiResponse, ReceiptUploadResponse } from '../types';
 import { AppError } from '../middleware/errorHandler';
 
@@ -140,43 +140,6 @@ export async function uploadReceipt(
         ocrResult,
       },
       message: 'Receipt processed successfully',
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-/**
- * POST /api/receipts/parse
- * 이미 업로드된 영수증 재분석
- *
- * 저장된 이미지를 OCR 최적화하여 재분석
- */
-export async function parseReceipt(
-  req: Request<Record<string, never>, ApiResponse, { imageBlob: string }>,
-  res: Response<ApiResponse>,
-  next: NextFunction
-) {
-  try {
-    const { imageBlob } = req.body;
-
-    if (!imageBlob) {
-      throw new AppError('Image blob is required', 400);
-    }
-
-    // 저장된 이미지를 OCR용으로 최적화
-    const storageBuffer = Buffer.from(imageBlob, 'base64');
-    const ocrBuffer = await createOcrImage(storageBuffer);
-
-    // OCR 분석 (최적화된 이미지 사용)
-    const ocrResult = await reanalyzeReceiptFromBlob(ocrBuffer);
-
-    res.json({
-      success: true,
-      data: {
-        ocrResult,
-      },
-      message: 'Receipt re-analyzed successfully',
     });
   } catch (error) {
     next(error);

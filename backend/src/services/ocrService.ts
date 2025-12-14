@@ -25,11 +25,3 @@ export async function analyzeReceiptWithBuffer(imageBuffer: Buffer): Promise<Ocr
   const provider = getOcrProvider();
   return provider.analyzeReceiptFromBuffer(imageBuffer);
 }
-
-/**
- * 영수증 재분석 (Blob 기반)
- */
-export async function reanalyzeReceiptFromBlob(imageBuffer: Buffer): Promise<OcrResult> {
-  const provider = getOcrProvider();
-  return provider.analyzeReceiptFromBuffer(imageBuffer);
-}

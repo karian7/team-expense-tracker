@@ -84,7 +84,7 @@ interface Expense {
 
 #### 3. API Service (`frontend/src/services/api.ts`)
 
-- `receiptApi.parse()`: `imageBlob` 파라미터 사용
+- `receiptApi.upload()`: base64 이미지 버퍼 반환
 
 #### 4. Components
 
