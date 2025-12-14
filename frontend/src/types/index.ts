@@ -32,7 +32,7 @@ export interface BudgetEvent {
   /** 로컬에서만 존재하는 임시 이벤트 여부 */
   isLocalOnly?: boolean;
   /** 동기화 대기 상태 */
-  syncState?: 'pending' | 'failed';
+  syncState?: 'pending' | 'syncing' | 'synced' | 'failed';
   /** 대기 큐 식별자 */
   pendingId?: string;
 }

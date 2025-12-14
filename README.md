@@ -154,37 +154,21 @@ team-expense-tracker/
 
 ## API 엔드포인트
 
-### 영수증
+### 이벤트 & 동기화
 
-- `GET /api/receipts/ocr-provider` - 현재 OCR 프로바이더 정보 조회
+- `POST /api/events` - 모든 예산/지출/BUDGET_RESET 이벤트 생성
+- `GET /api/events/sync?since=:sequence` - 특정 sequence 이후 이벤트 동기화
+
+### 영수증 OCR
+
 - `POST /api/receipts/upload` - 영수증 업로드 및 OCR 분석
-- `POST /api/receipts/parse` - 재분석
-
-### 사용 내역
-
-- `GET /api/expenses` - 사용 내역 목록 조회
-- `POST /api/expenses` - 사용 내역 생성
-- `GET /api/expenses/:id` - 특정 내역 조회
-- `PUT /api/expenses/:id` - 내역 수정
-- `DELETE /api/expenses/:id` - 내역 삭제
-
-### 월별 예산
-
-- `GET /api/monthly-budgets/current` - 현재 월 예산 조회
-- `GET /api/monthly-budgets/:year/:month` - 특정 월 예산 조회
-- `PUT /api/monthly-budgets/:year/:month` - 예산 설정
-- `POST /api/monthly-budgets/rollover` - 월 이월
+- `POST /api/receipts/parse` - 저장된 이미지 재분석
 
 ### 설정
 
 - `GET /api/settings` - 앱 설정 조회
 - `PUT /api/settings` - 기본 월별 예산 설정
 - `POST /api/settings/initial-budget` - 초기 예산 설정 (데이터 리셋)
-
-### CSV 백업/복원
-
-- `GET /api/export/csv` - 전체 데이터 CSV 백업
-- `POST /api/export/import` - CSV 파일로 데이터 복원
 
 ## 사용 시나리오
 

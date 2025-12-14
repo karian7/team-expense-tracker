@@ -3,7 +3,6 @@ import {
   getAppSettings,
   setDefaultMonthlyBudget,
   setInitialBudget,
-  resetAllData,
 } from '../services/settingsService';
 import { ApiResponse, UpdateSettingsRequest } from '../types';
 import { AppError } from '../middleware/errorHandler';
@@ -81,27 +80,6 @@ export async function setInitialBudgetController(
       success: true,
       data: settings,
       message: 'Initial budget set successfully. All data has been reset.',
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-/**
- * DELETE /api/settings/reset
- * 모든 데이터 초기화 (테스트용)
- */
-export async function resetAllDataController(
-  req: Request,
-  res: Response<ApiResponse>,
-  next: NextFunction
-) {
-  try {
-    await resetAllData();
-
-    res.json({
-      success: true,
-      message: 'All data has been reset',
     });
   } catch (error) {
     next(error);

@@ -1,4 +1,4 @@
-import { db, now, type BudgetEvent } from '../db/database';
+import { db, now, type BudgetEvent, type SyncState } from '../db/database';
 import type { CreateBudgetEventPayload } from '../../types';
 import { pendingEventService } from './pendingEventService';
 
@@ -89,6 +89,7 @@ export const eventService = {
 
   async createLocalEvent(payload: CreateBudgetEventPayload): Promise<BudgetEvent> {
     const tempSequence = createTempSequence();
+    console.log('[EventService] Creating local event with temp sequence:', tempSequence);
     const pending = await pendingEventService.enqueue(payload, tempSequence);
     const event: BudgetEvent = {
       sequence: tempSequence,
@@ -113,7 +114,7 @@ export const eventService = {
     return event;
   },
 
-  async markEventSyncState(sequence: number, state: 'pending' | 'failed'): Promise<void> {
+  async markEventSyncState(sequence: number, state: SyncState): Promise<void> {
     await db.budgetEvents.update(sequence, { syncState: state });
   },
 

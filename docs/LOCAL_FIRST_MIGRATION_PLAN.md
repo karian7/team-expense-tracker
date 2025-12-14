@@ -1,5 +1,7 @@
 # Local-First 아키텍처 마이그레이션 계획
 
+> **업데이트:** 계획 작성 시점에 사용하던 `/api/sync/*`, `/api/monthly-budgets/*` 등의 REST 엔드포인트는 2025.02 기준 모두 제거되었으며, 서버는 `POST /api/events` + `GET /api/events/sync` 중심으로 단순화되었습니다. 아래 문서의 절차는 히스토리 보관용으로 유지합니다.
+
 ## 개요
 
 현재 전통적인 Client-Server 아키텍처를 **Local-First 아키텍처**로 전환하여 오프라인 우선 동작, 빠른 응답성, 향상된 사용자 경험을 제공합니다.
@@ -421,6 +423,7 @@ frontend/src/services/
    - `useBudget.ts`: `budgetApi` → `budgetService` (로컬)
    - `useExpenses.ts`: `expenseApi` → `expenseService` (로컬)
    - `useSettings.ts`: `settingsApi` → `settingsService` (로컬)
+   - ✅ 2025.02 기준 `budgetApi`/`expenseApi`는 코드베이스에서 완전히 제거됨
 
 2. Dexie-React-Hooks 통합
 
@@ -630,10 +633,11 @@ frontend/src/services/
    - ❌ `settingsService.ts` 삭제
 
 2. API 엔드포인트 최소화
-   - ✅ 유지: `/api/sync/pull`, `/api/sync/push`
+   - ✅ (과거 계획) `/api/sync/pull`, `/api/sync/push`
    - ✅ 유지: `/api/ocr/analyze`
    - ✅ 유지: `/health`
    - ❌ 삭제: 기존 25개 CRUD 엔드포인트
+   - 📌 현재 구현에서는 `/api/sync/*` 대신 `/api/events` / `/api/events/sync` 만 노출
 
 3. Prisma 스키마 유지
    - 동기화용 DB로 계속 사용

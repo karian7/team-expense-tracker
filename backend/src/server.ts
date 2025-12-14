@@ -2,11 +2,8 @@ import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import budgetRoutes from './routes/budgetRoutes';
-import expenseRoutes from './routes/expenseRoutes';
 import receiptRoutes from './routes/receiptRoutes';
 import settingsRoutes from './routes/settingsRoutes';
-import syncRoutes from './routes/syncRoutes';
 import eventRoutes from './routes/eventRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -81,11 +78,8 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 // API Routes
 app.use('/api/events', eventRoutes);
-app.use('/api/monthly-budgets', budgetRoutes);
-app.use('/api/expenses', expenseRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/sync', syncRoutes);
 
 // 404 handler
 app.use((req, res) => {

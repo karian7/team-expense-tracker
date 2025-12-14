@@ -82,24 +82,7 @@ OCR_PROVIDER=google
 
 ## 현재 OCR 프로바이더 확인
 
-API를 통해 현재 사용 중인 OCR 프로바이더를 확인할 수 있습니다:
-
-```bash
-GET /api/receipts/ocr-provider
-```
-
-**응답 예시:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "name": "OpenAI",
-    "type": "openai"
-  },
-  "message": "OCR provider info retrieved successfully"
-}
-```
+이벤트 소싱 이후 불필요한 엔드포인트를 정리하면서 `/api/receipts/ocr-provider` 역시 제거되었습니다. 현재 사용 중인 프로바이더는 서버 로그(부팅 시 `OCR Provider initialized: ...`) 또는 `.env` 값을 직접 확인해주세요.
 
 ## OCR 결과 형식
 

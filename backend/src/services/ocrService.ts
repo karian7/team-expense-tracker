@@ -33,14 +33,3 @@ export async function reanalyzeReceiptFromBlob(imageBuffer: Buffer): Promise<Ocr
   const provider = getOcrProvider();
   return provider.analyzeReceiptFromBuffer(imageBuffer);
 }
-
-/**
- * 현재 사용 중인 OCR 프로바이더 정보 반환
- */
-export function getOcrProviderInfo(): { name: string; type: string } {
-  const provider = getOcrProvider();
-  return {
-    name: provider.providerName,
-    type: process.env.OCR_PROVIDER || 'openai',
-  };
-}

@@ -1,6 +1,9 @@
 import Dexie, { type Table } from 'dexie';
 import type { BudgetEventType, CreateBudgetEventPayload } from '../../types';
 
+// 동기화 상태 머신
+export type SyncState = 'pending' | 'syncing' | 'synced' | 'failed';
+
 // Budget Event (Event Sourcing)
 export interface BudgetEvent {
   sequence: number; // Primary Key
@@ -17,7 +20,7 @@ export interface BudgetEvent {
   referenceSequence: number | null;
   createdAt: string;
   isLocalOnly?: boolean;
-  syncState?: 'pending' | 'failed';
+  syncState?: SyncState;
   pendingId?: string;
 }
 
@@ -33,9 +36,6 @@ export interface SyncMetadata {
   value: number; // 마지막으로 동기화한 sequence 번호
   lastSyncTime: string;
 }
-
-// 동기화 상태 머신
-export type SyncState = 'pending' | 'syncing' | 'synced' | 'failed';
 
 export interface PendingEvent {
   id: string;

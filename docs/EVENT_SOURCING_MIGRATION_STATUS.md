@@ -169,21 +169,14 @@ async function getOrCreateMonthlyBudget(year: number, month: number) {
 
 ### ✅ 5. API 엔드포인트
 
-**새로운 엔드포인트**:
+이벤트 소싱 전환 완료에 따라 서버에서 노출하는 엔드포인트가 대폭 단순화되었습니다.
 
 ```
-POST   /api/events                    # 이벤트 생성
-GET    /api/events/sync?since=0       # 동기화
-GET    /api/events/month/:year/:month # 월별 이벤트
-GET    /api/events/budget/:year/:month # 월별 예산 계산
+POST   /api/events              # 이벤트 생성 (지출/예산/BUDGET_RESET 등)
+GET    /api/events/sync?since=0 # 지정 sequence 이후 이벤트 풀
 ```
 
-**레거시 호환**:
-
-```
-GET    /api/monthly-budgets/current
-GET    /api/monthly-budgets/:year/:month
-```
+기존 `/api/monthly-budgets/*`, `/api/events/month/*`, `/api/events/budget/*` 등 레거시 조회용 엔드포인트는 모두 제거되었습니다. 월별 집계는 프론트 Dexie가 이벤트 스트림을 재생하여 계산합니다.
 
 ### ✅ 6. 테스트 결과
 
@@ -200,9 +193,9 @@ curl -X POST http://localhost:3001/api/events \
     "description": "1월 기본 예산"
   }'
 
-# 1월 예산 조회
-curl http://localhost:3001/api/events/budget/2025/1
-# → budgetIn: 300000, balance: 300000 ✅
+# 1월 이벤트 스트림 확인
+curl "http://localhost:3001/api/events/sync?since=0" | jq '.data.events'
+# → BUDGET_IN 이벤트 1건 + 기타 이벤트 확인 가능
 
 # 1월 지출 추가
 curl -X POST http://localhost:3001/api/events \
@@ -216,9 +209,9 @@ curl -X POST http://localhost:3001/api/events \
     "storeName": "카페"
   }'
 
-# 1월 최종 예산
-curl http://localhost:3001/api/events/budget/2025/1
-# → totalSpent: 50000, balance: 250000 ✅
+# 최신 이벤트까지 재동기화
+curl "http://localhost:3001/api/events/sync?since=0" | jq '.data.events | length'
+# → 전체 이벤트 수와 최신 sequence 확인
 
 # 2월 예산 생성
 curl -X POST http://localhost:3001/api/events \
@@ -385,12 +378,33 @@ export function useExpenses(params?: { year?: number; month?: number }) {
 export function useCreateExpense() {
   return {
     mutateAsync: async (data: ExpenseFormData) => {
-      const now = new Date();
-      return expenseApi.create({
-        ...data,
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
-      });
+      const eventDate = new Date(data.expenseDate);
+      if (Number.isNaN(eventDate.getTime())) {
+        throw new Error('유효하지 않은 지출 일자입니다.');
+      }
+
+      const payload = {
+        eventType: 'EXPENSE' as const,
+        eventDate: eventDate.toISOString(),
+        year: eventDate.getFullYear(),
+        month: eventDate.getMonth() + 1,
+        authorName: data.authorName.trim(),
+        amount: data.amount,
+        storeName: data.storeName?.trim(),
+        description: data.description?.trim(),
+        receiptImage: data.receiptImage,
+        ocrRawData: data.ocrRawData,
+      };
+
+      const localEvent = await eventService.createLocalEvent(payload);
+
+      try {
+        await syncService.sync();
+      } catch (error) {
+        console.warn('Sync after creating expense failed:', error);
+      }
+
+      return localEvent;
     },
   };
 }
