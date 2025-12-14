@@ -1,5 +1,6 @@
 import { db } from '../db/database';
 import type { Expense } from '../../types';
+import { eventService } from './eventService';
 
 const getDeletedExpenseSequences = (events: Expense[]): Set<number> => {
   return new Set(
@@ -11,15 +12,14 @@ const getDeletedExpenseSequences = (events: Expense[]): Set<number> => {
 
 export const expenseService = {
   async getExpensesByMonth(year: number, month: number): Promise<Expense[]> {
-    const events = await db.budgetEvents
-      .where('[year+month]')
-      .equals([year, month])
-      .sortBy('eventDate');
-
+    const events = await eventService.getEventsByMonth(year, month);
     const deletedSequences = getDeletedExpenseSequences(events as Expense[]);
-    return events.filter(
-      (event) => event.eventType === 'EXPENSE' && !deletedSequences.has(event.sequence)
-    ) as Expense[];
+
+    return events
+      .filter((event) => event.eventType === 'EXPENSE' && !deletedSequences.has(event.sequence))
+      .sort(
+        (a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()
+      ) as Expense[];
   },
 
   async getExpenseById(sequence: number): Promise<Expense | undefined> {

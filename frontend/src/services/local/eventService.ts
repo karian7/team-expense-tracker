@@ -39,10 +39,71 @@ const OUTGOING_EVENT_TYPES = new Set<BudgetEvent['eventType']>([
  */
 export const eventService = {
   /**
+   * 가장 최근의 BUDGET_RESET 이벤트 조회
+   */
+  async getLatestResetEvent(): Promise<BudgetEvent | null> {
+    const resetEvents = await db.budgetEvents.where('eventType').equals('BUDGET_RESET').toArray();
+
+    if (resetEvents.length === 0) {
+      return null;
+    }
+
+    resetEvents.sort((a, b) => {
+      const createdDiff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (createdDiff !== 0) {
+        return createdDiff;
+      }
+
+      const eventDateDiff = new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
+      if (eventDateDiff !== 0) {
+        return eventDateDiff;
+      }
+
+      return a.sequence - b.sequence;
+    });
+
+    return resetEvents[resetEvents.length - 1];
+  },
+
+  /**
    * 특정 월의 모든 이벤트 조회
    */
   async getEventsByMonth(year: number, month: number): Promise<BudgetEvent[]> {
-    return db.budgetEvents.where('[year+month]').equals([year, month]).sortBy('sequence');
+    const [events, resetEvent] = await Promise.all([
+      db.budgetEvents.where('[year+month]').equals([year, month]).sortBy('sequence'),
+      this.getLatestResetEvent(),
+    ]);
+
+    if (!resetEvent) {
+      return events;
+    }
+
+    const resetSequence = resetEvent.sequence;
+    const resetCreatedAt = new Date(resetEvent.createdAt).getTime();
+    const resetEventDate = new Date(resetEvent.eventDate).getTime();
+
+    return events.filter((event) => {
+      const eventCreatedAt = new Date(event.createdAt).getTime();
+      const eventDate = new Date(event.eventDate).getTime();
+
+      if (resetSequence >= 0 && event.sequence > resetSequence) {
+        return true;
+      }
+
+      if (!Number.isNaN(eventCreatedAt) && eventCreatedAt > resetCreatedAt) {
+        return true;
+      }
+
+      if (eventDate > resetEventDate) {
+        return true;
+      }
+
+      if (eventDate === resetEventDate && event.sequence > resetSequence) {
+        return true;
+      }
+
+      return false;
+    });
   },
 
   /**
@@ -64,13 +125,8 @@ export const eventService = {
    * 가장 최근의 BUDGET_RESET 이벤트 sequence 조회
    */
   async getLatestResetSequence(): Promise<number> {
-    const resetEvents = await db.budgetEvents
-      .where('eventType')
-      .equals('BUDGET_RESET')
-      .reverse()
-      .sortBy('sequence');
-
-    return resetEvents.length > 0 ? resetEvents[resetEvents.length - 1].sequence : 0;
+    const latestReset = await this.getLatestResetEvent();
+    return latestReset ? latestReset.sequence : 0;
   },
 
   /**
@@ -138,16 +194,8 @@ export const eventService = {
    * BUDGET_RESET 이벤트 이후의 데이터만 계산합니다.
    */
   async calculateMonthlyBudget(year: number, month: number) {
-    // 1. 가장 최근의 BUDGET_RESET sequence 조회
-    const resetSequence = await this.getLatestResetSequence();
-
-    // 2. 해당 월의 이벤트 조회
-    let events = await this.getEventsByMonth(year, month);
-
-    // 3. BUDGET_RESET 이후의 이벤트만 필터링
-    if (resetSequence > 0) {
-      events = events.filter((e) => e.sequence > resetSequence);
-    }
+    // BUDGET_RESET 이후 이벤트만 포함된 월별 데이터 조회
+    const events = await this.getEventsByMonth(year, month);
 
     let budgetIn = 0;
     let totalSpent = 0;
@@ -172,11 +220,8 @@ export const eventService = {
     const prevYear = month === 1 ? year - 1 : year;
 
     const prevEvents = await this.getEventsByMonth(prevYear, prevMonth);
-    // BUDGET_RESET 이후의 이전 달 이벤트가 있는지 확인
-    const prevEventsAfterReset =
-      resetSequence > 0 ? prevEvents.filter((e) => e.sequence > resetSequence) : prevEvents;
 
-    if (prevEventsAfterReset.length > 0) {
+    if (prevEvents.length > 0) {
       const prevBudget = await this.calculateMonthlyBudget(prevYear, prevMonth);
       previousBalance = prevBudget.balance;
     }
