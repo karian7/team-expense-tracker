@@ -54,14 +54,17 @@ deploy-backend: build-backend
 	@echo "🚀 Backend SSH 배포 중..."
 	@echo "📦 원격 디렉토리 생성..."
 	ssh $(SSH_HOST) "mkdir -p $(REMOTE_PATH)"
-	@echo "📤 파일 전송 중..."
+	@echo "📤 필수 파일 전송 중..."
 	rsync -avz --progress \
-		--exclude 'node_modules' \
-		--exclude '.env' \
-		--exclude 'dev.db' \
-		--exclude 'uploads' \
-		$(BACKEND_DIR)/ \
+		$(BACKEND_DIR)/dist/ \
+		$(SSH_HOST):$(REMOTE_PATH)/dist/
+	rsync -avz --progress \
+		$(BACKEND_DIR)/package.json \
+		$(BACKEND_DIR)/pnpm-lock.yaml \
 		$(SSH_HOST):$(REMOTE_PATH)/
+	rsync -avz --progress \
+		$(BACKEND_DIR)/prisma/ \
+		$(SSH_HOST):$(REMOTE_PATH)/prisma/
 	@echo "✅ Backend SSH 배포 완료"
 	@echo ""
 	@echo "⚠️  서버에서 추가 작업이 필요합니다:"
@@ -156,12 +159,8 @@ quick-deploy-frontend:
 quick-deploy-backend:
 	@echo "⚡ Backend 빠른 배포..."
 	rsync -avz --progress \
-		--exclude 'node_modules' \
-		--exclude '.env' \
-		--exclude 'dev.db' \
-		--exclude 'uploads' \
-		$(BACKEND_DIR)/ \
-		$(SSH_HOST):$(REMOTE_PATH)/
+		$(BACKEND_DIR)/dist/ \
+		$(SSH_HOST):$(REMOTE_PATH)/dist/
 	ssh $(SSH_HOST) 'export NVM_DIR="$$HOME/.nvm" && [ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh" && cd $(REMOTE_PATH) && pm2 restart team-expense-tracker'
 
 # 코드 품질 검사
