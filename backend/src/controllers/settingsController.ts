@@ -3,7 +3,6 @@ import {
   getAppSettings,
   setDefaultMonthlyBudget,
   setInitialBudget,
-  getNeedsFullSync,
   setNeedsFullSync,
 } from '../services/settingsService';
 import { ApiResponse, UpdateSettingsRequest } from '../types';
@@ -82,27 +81,6 @@ export async function setInitialBudgetController(
       success: true,
       data: settings,
       message: 'Initial budget set successfully. All data has been reset.',
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-/**
- * GET /api/settings/needsFullSync
- * Full Sync 필요 플래그 조회
- */
-export async function getNeedsFullSyncController(
-  req: Request,
-  res: Response<ApiResponse>,
-  next: NextFunction
-) {
-  try {
-    const needsFullSync = await getNeedsFullSync();
-
-    res.json({
-      success: true,
-      data: { needsFullSync },
     });
   } catch (error) {
     next(error);

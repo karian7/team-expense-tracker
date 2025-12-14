@@ -104,6 +104,7 @@ export interface ExpenseFormData {
 export interface AppSettings {
   defaultMonthlyBudget: number;
   initialBudget: number;
+  needsFullSync: boolean;
 }
 
 // Monthly Report

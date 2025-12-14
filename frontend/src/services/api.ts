@@ -90,12 +90,6 @@ export const settingsApi = {
     return data.data!;
   },
 
-  getNeedsFullSync: async (): Promise<boolean> => {
-    const { data } =
-      await apiClient.get<ApiResponse<{ needsFullSync: boolean }>>('/settings/needsFullSync');
-    return data.data?.needsFullSync ?? false;
-  },
-
   updateNeedsFullSync: async (needsFullSync: boolean): Promise<void> => {
     await apiClient.patch('/settings/needsFullSync', { needsFullSync });
   },

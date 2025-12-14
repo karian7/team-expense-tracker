@@ -3,6 +3,7 @@ import prisma from '../utils/prisma';
 export interface AppSettings {
   defaultMonthlyBudget: number;
   initialBudget: number;
+  needsFullSync: boolean;
 }
 
 const SETTINGS_KEYS = {
@@ -46,10 +47,12 @@ export async function setSetting(key: string, value: string, description?: strin
 export async function getAppSettings(): Promise<AppSettings> {
   const defaultBudgetStr = await getSetting(SETTINGS_KEYS.DEFAULT_MONTHLY_BUDGET);
   const initialBudgetStr = await getSetting(SETTINGS_KEYS.INITIAL_BUDGET);
+  const needsFullSyncStr = await getSetting(SETTINGS_KEYS.NEEDS_FULL_SYNC);
 
   return {
     defaultMonthlyBudget: defaultBudgetStr ? parseFloat(defaultBudgetStr) : 0,
     initialBudget: initialBudgetStr ? parseFloat(initialBudgetStr) : 0,
+    needsFullSync: needsFullSyncStr === 'true',
   };
 }
 
@@ -107,14 +110,6 @@ export async function setInitialBudget(amount: number): Promise<void> {
     },
     { timeout: 15000 }
   );
-}
-
-/**
- * Full Sync 필요 플래그 가져오기
- */
-export async function getNeedsFullSync(): Promise<boolean> {
-  const value = await getSetting(SETTINGS_KEYS.NEEDS_FULL_SYNC);
-  return value === 'true';
 }
 
 /**

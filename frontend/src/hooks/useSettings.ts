@@ -117,7 +117,8 @@ export function useNeedsFullSync() {
   return useQuery({
     queryKey: ['settings', 'needsFullSync'],
     queryFn: async () => {
-      return settingsApi.getNeedsFullSync();
+      const settings = await settingsApi.get();
+      return settings.needsFullSync;
     },
     staleTime: 0, // 항상 최신 상태 확인
   });
