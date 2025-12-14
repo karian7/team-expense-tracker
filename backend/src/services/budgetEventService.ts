@@ -181,11 +181,17 @@ export async function createBudgetEvent(
       error.code === 'P2002' &&
       isDefaultMonthlyBudgetPayload(data)
     ) {
-      console.info(
-        `[BudgetEvent] Default monthly budget already exists for ${data.year}-${data.month}. Skipping duplicate.`
-      );
       const existingEvent = await findExistingDefaultMonthlyBudgetEvent(data);
       if (existingEvent) {
+        console.warn(`[BudgetEvent] ⚠️ Duplicate detected - returning existing event:`, {
+          eventType: data.eventType,
+          year: data.year,
+          month: data.month,
+          description: data.description,
+          existingSequence: existingEvent.sequence,
+          requestedAmount: data.amount,
+          existingAmount: existingEvent.amount.toString(),
+        });
         return toBudgetEventResponse(existingEvent);
       }
     }

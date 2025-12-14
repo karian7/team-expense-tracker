@@ -92,7 +92,7 @@ export function useResetAllData() {
         month,
         authorName: 'SYSTEM',
         amount: initialBudget,
-        description: '기본 월별 예산',
+        description: `기본 월별 예산 (리셋: ${now.toISOString()})`, // 고유한 description으로 중복 체크 우회
       });
 
       // 6. 동기화 (로컬 이벤트를 서버로 전송)
