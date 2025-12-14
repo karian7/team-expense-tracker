@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { settingsService } from '../services/local/settingsService';
 import { budgetService } from '../services/local/budgetService';
 import { settingsApi } from '../services/api';
+import { syncService } from '../services/sync/syncService';
+import { pendingEventService } from '../services/local/pendingEventService';
+import { eventService } from '../services/local/eventService';
 
 /**
  * 앱 설정 조회 (서버에서 가져오기)
@@ -59,10 +62,6 @@ export function useResetAllData() {
 
   return useMutation({
     mutationFn: async (initialBudget: number) => {
-      const { syncService } = await import('../services/sync/syncService');
-      const { pendingEventService } = await import('../services/local/pendingEventService');
-      const { eventService } = await import('../services/local/eventService');
-
       const now = new Date();
       const year = now.getFullYear();
       const month = now.getMonth() + 1;

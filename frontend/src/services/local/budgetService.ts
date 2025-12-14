@@ -1,6 +1,7 @@
 import { eventService } from './eventService';
 import { BUDGET_EVENT_CONSTANTS } from '../../constants/budgetEvents';
 import type { BudgetEvent, MonthlyBudget } from '../../types';
+import { settingsApi } from '../api';
 
 const isSystemMonthlyBudgetEvent = (event: BudgetEvent) =>
   event.eventType === 'BUDGET_IN' &&
@@ -28,7 +29,6 @@ async function ensureMonthlyBudgetEvent(year: number, month: number): Promise<bo
     // 🔄 서버에서 default_monthly_budget 가져오기 (정합성 보장)
     let defaultBudget = 0;
     try {
-      const { settingsApi } = await import('../api');
       defaultBudget = await settingsApi.getDefaultMonthlyBudget();
     } catch (error) {
       console.warn('[BudgetService] Failed to fetch default monthly budget from server:', error);

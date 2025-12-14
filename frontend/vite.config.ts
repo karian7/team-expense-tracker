@@ -8,4 +8,15 @@ export default defineConfig({
     host: '0.0.0.0',
     allowedHosts: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', '@tanstack/react-query', 'react-hook-form', 'date-fns'],
+          charts: ['recharts'],
+          db: ['dexie', 'dexie-react-hooks'],
+        },
+      },
+    },
+  },
 });

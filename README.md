@@ -198,7 +198,14 @@ pnpm test:e2e
 
 # UI 모드로 실행 (추천)
 pnpm test:e2e:ui
+```
 
+## TODO
+
+- Prisma 7.x 마이그레이션: `prisma.config.ts` 도입과 adapter 기반 연결 설정으로 이전하고, Client 생성 방식과 마이그레이션 파이프라인을 새 구조에 맞춥니다.
+- Tailwind CSS 4.x 도입 검토: 새 preset 및 atomic 스타일링 흐름에 맞춰 디자인 시스템/빌드 구성을 재정비합니다.
+
+```bash
 # 브라우저를 보면서 실행
 pnpm test:e2e:headed
 
