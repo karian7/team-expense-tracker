@@ -1,7 +1,6 @@
 import express, { type Express, type Request, type Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import path from 'path';
 import receiptRoutes from './routes/receiptRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import eventRoutes from './routes/eventRoutes';
@@ -70,9 +69,6 @@ app.use(
 
 app.use(express.json({ limit: jsonBodyLimit }));
 app.use(express.urlencoded({ extended: true, limit: urlEncodedBodyLimit }));
-
-// Static file serving for uploads
-app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {
