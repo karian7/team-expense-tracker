@@ -8,6 +8,7 @@ export interface AppSettings {
 const SETTINGS_KEYS = {
   DEFAULT_MONTHLY_BUDGET: 'default_monthly_budget',
   INITIAL_BUDGET: 'initial_budget',
+  NEEDS_FULL_SYNC: 'needsFullSync',
 };
 
 /**
@@ -106,4 +107,37 @@ export async function setInitialBudget(amount: number): Promise<void> {
     },
     { timeout: 15000 }
   );
+}
+
+/**
+ * Full Sync 필요 플래그 가져오기
+ */
+export async function getNeedsFullSync(): Promise<boolean> {
+  const value = await getSetting(SETTINGS_KEYS.NEEDS_FULL_SYNC);
+  return value === 'true';
+}
+
+/**
+ * Full Sync 필요 플래그 설정
+ */
+export async function setNeedsFullSync(needsSync: boolean): Promise<void> {
+  await setSetting(
+    SETTINGS_KEYS.NEEDS_FULL_SYNC,
+    needsSync.toString(),
+    '서버 DB 리셋 후 Full Sync 필요 여부'
+  );
+}
+
+/**
+ * 모든 설정 가져오기 (key-value 쌍)
+ */
+export async function getAllSettings(): Promise<Record<string, string>> {
+  const settings = await prisma.settings.findMany();
+  const result: Record<string, string> = {};
+
+  for (const setting of settings) {
+    result[setting.key] = setting.value;
+  }
+
+  return result;
 }

@@ -80,6 +80,22 @@ export const syncService = {
       const lastSequence = await eventService.getLatestSequence();
       const { events, lastSequence: serverSequence } = await eventApi.sync(lastSequence);
 
+      // DB 리셋 감지: 서버에 데이터가 없고, 로컬에 이벤트가 있으면
+      if (serverSequence === 0 && events.length === 0) {
+        const localEventCount = await db.budgetEvents.count();
+        if (localEventCount > 0) {
+          console.log('[Sync] Server DB reset detected, setting needsFullSync flag');
+          // 로컬 플래그 설정
+          await settingsService.setNeedsFullSync(true);
+          // 서버 플래그 설정
+          try {
+            await settingsApi.updateNeedsFullSync(true);
+          } catch (error) {
+            console.error('[Sync] Failed to set remote needsFullSync flag', error);
+          }
+        }
+      }
+
       if (events.length === 0) {
         return { newEvents: 0, pushedEvents, lastSequence };
       }
@@ -197,5 +213,71 @@ export const syncService = {
 
   stopAutoSync(timerId: ReturnType<typeof setInterval>): void {
     clearInterval(timerId);
+  },
+
+  /**
+   * Full Sync: 로컬 이벤트를 모두 서버에 전송
+   * 페이징 방식으로 100건씩 전송
+   */
+  async fullSync(): Promise<{ totalSynced: number; success: boolean; error?: string }> {
+    try {
+      const BATCH_SIZE = 100;
+
+      // 모든 로컬 이벤트 가져오기 (sequence 순서대로)
+      const allEvents = await db.budgetEvents.orderBy('sequence').toArray();
+
+      if (allEvents.length === 0) {
+        return { totalSynced: 0, success: true };
+      }
+
+      let totalSynced = 0;
+
+      // 페이징 처리
+      for (let i = 0; i < allEvents.length; i += BATCH_SIZE) {
+        const batch = allEvents.slice(i, i + BATCH_SIZE);
+
+        // BudgetEvent → CreateBudgetEventPayload 변환
+        const payloads = batch.map((event) => ({
+          eventType: event.eventType,
+          eventDate: event.eventDate,
+          year: event.year,
+          month: event.month,
+          authorName: event.authorName,
+          amount: event.amount,
+          storeName: event.storeName ?? undefined,
+          description: event.description ?? undefined,
+          receiptImage: event.receiptImage ?? undefined,
+          ocrRawData: event.ocrRawData ? JSON.parse(event.ocrRawData) : undefined,
+          referenceSequence: event.referenceSequence ?? undefined,
+        }));
+
+        // 서버로 전송
+        const result = await eventApi.bulkSync(payloads);
+        totalSynced += result.count;
+
+        console.log(
+          `[FullSync] Synced batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(allEvents.length / BATCH_SIZE)}: ${result.count} events`
+        );
+      }
+
+      // 동기화 완료 후 플래그 제거
+      await settingsService.setNeedsFullSync(false);
+      await settingsApi.updateNeedsFullSync(false);
+
+      console.log(`[FullSync] Completed! Total synced: ${totalSynced} events`);
+      return { totalSynced, success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[FullSync] Failed:', error);
+      return { totalSynced: 0, success: false, error: message };
+    }
+  },
+
+  /**
+   * Full Sync 무시: 플래그만 제거
+   */
+  async ignoreFullSync(): Promise<void> {
+    await settingsService.setNeedsFullSync(false);
+    await settingsApi.updateNeedsFullSync(false);
   },
 };

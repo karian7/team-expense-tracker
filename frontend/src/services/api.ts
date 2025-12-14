@@ -33,6 +33,11 @@ export const eventApi = {
     const { data } = await apiClient.post('/events', event);
     return data.data;
   },
+
+  bulkSync: async (events: CreateBudgetEventPayload[]) => {
+    const { data } = await apiClient.post('/events/bulk-sync', events);
+    return data.data as { count: number; events: BudgetEvent[] };
+  },
 };
 
 // Receipt API
@@ -83,6 +88,21 @@ export const settingsApi = {
       initialBudget,
     });
     return data.data!;
+  },
+
+  getAll: async (): Promise<Record<string, string>> => {
+    const { data } = await apiClient.get<ApiResponse<Record<string, string>>>('/settings/all');
+    return data.data!;
+  },
+
+  getNeedsFullSync: async (): Promise<boolean> => {
+    const { data } =
+      await apiClient.get<ApiResponse<{ needsFullSync: boolean }>>('/settings/needsFullSync');
+    return data.data?.needsFullSync ?? false;
+  },
+
+  updateNeedsFullSync: async (needsFullSync: boolean): Promise<void> => {
+    await apiClient.patch('/settings/needsFullSync', { needsFullSync });
   },
 };
 

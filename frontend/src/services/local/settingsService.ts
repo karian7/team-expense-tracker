@@ -3,6 +3,7 @@ import { db } from '../db/database';
 const SETTINGS_KEYS = {
   INITIAL_BUDGET: 'initial_budget',
   DEFAULT_MONTHLY_BUDGET: 'default_monthly_budget',
+  NEEDS_FULL_SYNC: 'needsFullSync',
 } as const;
 
 export const settingsService = {
@@ -26,6 +27,15 @@ export const settingsService = {
 
   async setDefaultMonthlyBudget(amount: number): Promise<void> {
     await this.setSetting(SETTINGS_KEYS.DEFAULT_MONTHLY_BUDGET, amount.toString());
+  },
+
+  async getNeedsFullSync(): Promise<boolean> {
+    const value = await this.getSetting(SETTINGS_KEYS.NEEDS_FULL_SYNC);
+    return value === 'true';
+  },
+
+  async setNeedsFullSync(needsSync: boolean): Promise<void> {
+    await this.setSetting(SETTINGS_KEYS.NEEDS_FULL_SYNC, needsSync.toString());
   },
 
   async resetAll(): Promise<void> {

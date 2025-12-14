@@ -1,11 +1,16 @@
 import { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import {
   useAppSettings,
   useUpdateDefaultMonthlyBudget,
   useResetAllData,
+  useNeedsFullSync,
+  useFullSync,
+  useIgnoreFullSync,
 } from '../hooks/useSettings';
 import { useCurrentBudget, useAdjustCurrentBudget } from '../hooks/useBudget';
 import { formatCurrency } from '../utils/format';
+import { db } from '../services/db/database';
 
 interface SettingsPageProps {
   onClose: () => void;
@@ -17,6 +22,11 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const updateMutation = useUpdateDefaultMonthlyBudget();
   const resetMutation = useResetAllData();
   const adjustBudgetMutation = useAdjustCurrentBudget();
+
+  // Full Sync
+  const needsFullSyncQuery = useNeedsFullSync();
+  const fullSyncMutation = useFullSync();
+  const ignoreFullSyncMutation = useIgnoreFullSync();
 
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
@@ -30,6 +40,14 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // 로컬 이벤트 통계 (Full Sync용)
+  const localEventCount = useLiveQuery(() => db.budgetEvents.count(), []);
+  const latestEvents = useLiveQuery(
+    () => db.budgetEvents.orderBy('sequence').reverse().limit(10).toArray(),
+    []
+  );
 
   const handleUpdateBudget = async () => {
     try {
@@ -102,6 +120,42 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       alert('초기화에 실패했습니다.');
     } finally {
       setIsResetting(false);
+    }
+  };
+
+  const handleFullSync = async () => {
+    if (!window.confirm('로컬 데이터를 서버에 동기화하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      setIsSyncing(true);
+      const result = await fullSyncMutation.mutateAsync();
+
+      if (result.success) {
+        alert(`동기화 완료! ${result.totalSynced}개 이벤트가 서버에 저장되었습니다.`);
+      } else {
+        alert(`동기화 실패: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Full sync error:', error);
+      alert('동기화에 실패했습니다.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleIgnoreFullSync = async () => {
+    if (!window.confirm('Full Sync를 무시하시겠습니까? (서버에 데이터가 전송되지 않습니다)')) {
+      return;
+    }
+
+    try {
+      await ignoreFullSyncMutation.mutateAsync();
+      alert('Full Sync가 무시되었습니다.');
+    } catch (error) {
+      console.error('Ignore full sync error:', error);
+      alert('Full Sync 무시에 실패했습니다.');
     }
   };
 
@@ -243,6 +297,77 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
               </button>
             </div>
           </section>
+
+          {/* Full Sync Section */}
+          {needsFullSyncQuery.data && (
+            <section className="bg-white rounded-xl p-6 shadow-sm border border-orange-200">
+              <h2 className="text-lg font-bold text-orange-600 mb-4 flex items-center gap-2">
+                <span className="text-xl">🔄</span> 서버 동기화 필요
+              </h2>
+
+              <div className="p-4 bg-orange-50 rounded-lg border border-orange-100 mb-4">
+                <h3 className="font-bold text-orange-800 mb-2">
+                  리모트 데이터베이스가 리셋되었습니다
+                </h3>
+                <p className="text-sm text-orange-600 mb-4">
+                  로컬에 저장된 데이터를 서버에 동기화하시겠습니까?
+                </p>
+
+                {/* 로컬 이벤트 통계 */}
+                <div className="bg-white rounded-lg p-4 mb-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">로컬 이벤트 통계</p>
+                  <p className="text-2xl font-bold text-orange-600">총 {localEventCount ?? 0}건</p>
+                </div>
+
+                {/* 최신 이벤트 10건 */}
+                {latestEvents && latestEvents.length > 0 && (
+                  <div className="bg-white rounded-lg p-4 mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">최신 이벤트 10건</p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {latestEvents.map((event) => (
+                        <div
+                          key={event.sequence}
+                          className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-800">
+                              {event.eventType === 'EXPENSE'
+                                ? `💸 ${event.storeName || '지출'}`
+                                : `💰 ${event.description || '예산'}`}
+                            </p>
+                            <p className="text-gray-500">
+                              {new Date(event.eventDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <p className="font-bold text-gray-900">
+                            {formatCurrency(event.amount)}원
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 액션 버튼 */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleIgnoreFullSync}
+                    className="flex-1 py-2 bg-white border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 font-medium transition-colors"
+                    disabled={isSyncing || ignoreFullSyncMutation.isPending}
+                  >
+                    무시
+                  </button>
+                  <button
+                    onClick={handleFullSync}
+                    className="flex-1 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+                    disabled={isSyncing || fullSyncMutation.isPending}
+                  >
+                    {isSyncing ? '동기화 중...' : '🔄 동기화'}
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
         </main>
 
         {/* Budget Edit Modal */}

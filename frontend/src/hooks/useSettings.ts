@@ -109,3 +109,50 @@ export function useResetAllData() {
     },
   });
 }
+
+/**
+ * Full Sync 필요 플래그 조회 (서버에서 가져오기)
+ */
+export function useNeedsFullSync() {
+  return useQuery({
+    queryKey: ['settings', 'needsFullSync'],
+    queryFn: async () => {
+      return settingsApi.getNeedsFullSync();
+    },
+    staleTime: 0, // 항상 최신 상태 확인
+  });
+}
+
+/**
+ * Full Sync 실행
+ */
+export function useFullSync() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      return syncService.fullSync();
+    },
+    onSuccess: () => {
+      // needsFullSync 플래그 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['settings', 'needsFullSync'] });
+    },
+  });
+}
+
+/**
+ * Full Sync 무시
+ */
+export function useIgnoreFullSync() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await syncService.ignoreFullSync();
+    },
+    onSuccess: () => {
+      // needsFullSync 플래그 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['settings', 'needsFullSync'] });
+    },
+  });
+}

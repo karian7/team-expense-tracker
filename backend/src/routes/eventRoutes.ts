@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { createBudgetEvent, syncEvents } from '../services/budgetEventService';
+import { createBudgetEvent, syncEvents, bulkCreateEvents } from '../services/budgetEventService';
 import { CreateBudgetEventRequest } from '../types';
 
 const router: express.Router = express.Router();
@@ -35,6 +35,39 @@ router.get('/sync', async (req: Request, res: Response) => {
     const sinceSequence = req.query.since ? parseInt(req.query.since as string, 10) : 0;
     const result = await syncEvents(sinceSequence);
     res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * POST /api/events/bulk-sync
+ * Bulk 이벤트 생성 (Full Sync용)
+ * 로컬 이벤트를 배치로 서버에 동기화
+ */
+router.post('/bulk-sync', async (req: Request, res: Response) => {
+  try {
+    const events = req.body as CreateBudgetEventRequest[];
+
+    if (!Array.isArray(events)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Request body must be an array of events',
+      });
+    }
+
+    const createdEvents = await bulkCreateEvents(events);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        count: createdEvents.length,
+        events: createdEvents,
+      },
+    });
   } catch (error) {
     res.status(500).json({
       success: false,

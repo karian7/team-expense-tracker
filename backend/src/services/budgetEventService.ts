@@ -339,3 +339,42 @@ export async function getEventByReferenceSequence(
   });
   return event ? toBudgetEventResponse(event) : null;
 }
+
+/**
+ * Bulk 이벤트 생성 (Full Sync용)
+ * 모든 이벤트를 트랜잭션으로 생성하며, 충돌 발생 시 전체 롤백
+ */
+export async function bulkCreateEvents(
+  events: CreateBudgetEventRequest[]
+): Promise<BudgetEventResponse[]> {
+  return prisma.$transaction(
+    async (tx) => {
+      const createdEvents: BudgetEventResponse[] = [];
+
+      for (const data of events) {
+        const eventDate = new Date(data.eventDate);
+
+        const event = await tx.budgetEvent.create({
+          data: {
+            eventType: data.eventType,
+            eventDate,
+            year: data.year,
+            month: data.month,
+            authorName: data.authorName,
+            amount: new Decimal(data.amount),
+            storeName: data.storeName || null,
+            description: data.description || null,
+            receiptImage: data.receiptImage ? Buffer.from(data.receiptImage, 'base64') : null,
+            ocrRawData: data.ocrRawData ? JSON.stringify(data.ocrRawData) : null,
+            referenceSequence: data.referenceSequence ?? null,
+          },
+        });
+
+        createdEvents.push(toBudgetEventResponse(event));
+      }
+
+      return createdEvents;
+    },
+    { timeout: 30000 } // 30초 타임아웃
+  );
+}
