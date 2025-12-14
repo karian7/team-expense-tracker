@@ -3,7 +3,6 @@ import {
   getSettings,
   updateSettings,
   setInitialBudgetController,
-  getAllSettingsController,
   getNeedsFullSyncController,
   updateNeedsFullSyncController,
 } from '../controllers/settingsController';
@@ -18,9 +17,6 @@ router.put('/', updateSettings);
 
 // POST /api/settings/initial-budget
 router.post('/initial-budget', setInitialBudgetController);
-
-// GET /api/settings/all
-router.get('/all', getAllSettingsController);
 
 // GET /api/settings/needsFullSync
 router.get('/needsFullSync', getNeedsFullSyncController);

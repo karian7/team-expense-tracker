@@ -90,11 +90,6 @@ export const settingsApi = {
     return data.data!;
   },
 
-  getAll: async (): Promise<Record<string, string>> => {
-    const { data } = await apiClient.get<ApiResponse<Record<string, string>>>('/settings/all');
-    return data.data!;
-  },
-
   getNeedsFullSync: async (): Promise<boolean> => {
     const { data } =
       await apiClient.get<ApiResponse<{ needsFullSync: boolean }>>('/settings/needsFullSync');

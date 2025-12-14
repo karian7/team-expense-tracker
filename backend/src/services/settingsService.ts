@@ -127,17 +127,3 @@ export async function setNeedsFullSync(needsSync: boolean): Promise<void> {
     '서버 DB 리셋 후 Full Sync 필요 여부'
   );
 }
-
-/**
- * 모든 설정 가져오기 (key-value 쌍)
- */
-export async function getAllSettings(): Promise<Record<string, string>> {
-  const settings = await prisma.settings.findMany();
-  const result: Record<string, string> = {};
-
-  for (const setting of settings) {
-    result[setting.key] = setting.value;
-  }
-
-  return result;
-}

@@ -3,7 +3,6 @@ import {
   getAppSettings,
   setDefaultMonthlyBudget,
   setInitialBudget,
-  getAllSettings,
   getNeedsFullSync,
   setNeedsFullSync,
 } from '../services/settingsService';
@@ -83,27 +82,6 @@ export async function setInitialBudgetController(
       success: true,
       data: settings,
       message: 'Initial budget set successfully. All data has been reset.',
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-/**
- * GET /api/settings/all
- * 모든 설정 조회 (key-value 쌍)
- */
-export async function getAllSettingsController(
-  req: Request,
-  res: Response<ApiResponse>,
-  next: NextFunction
-) {
-  try {
-    const settings = await getAllSettings();
-
-    res.json({
-      success: true,
-      data: settings,
     });
   } catch (error) {
     next(error);
