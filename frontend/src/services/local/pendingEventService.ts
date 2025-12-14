@@ -25,7 +25,20 @@ export const pendingEventService = {
   },
 
   async getAll(): Promise<PendingEvent[]> {
-    return db.pendingEvents.orderBy('createdAt').toArray();
+    const pending = await db.pendingEvents.orderBy('createdAt').toArray();
+
+    return pending.sort((a, b) => {
+      const createdDiff = a.createdAt.localeCompare(b.createdAt);
+      if (createdDiff !== 0) {
+        return createdDiff;
+      }
+
+      if (a.tempSequence !== b.tempSequence) {
+        return b.tempSequence - a.tempSequence;
+      }
+
+      return a.id.localeCompare(b.id);
+    });
   },
 
   async updateStatus(
