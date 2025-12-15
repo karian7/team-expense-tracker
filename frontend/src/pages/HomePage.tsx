@@ -1,40 +1,75 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import BudgetSummary from '../components/budget/BudgetSummary';
-import ReceiptUploader from '../components/receipt/ReceiptUploader';
 import ExpenseForm from '../components/expense/ExpenseForm';
 import ExpenseList from '../components/expense/ExpenseList';
 import SettingsPage from './SettingsPage';
 import MonthlyReportPage from './MonthlyReportPage';
 import type { ReceiptUploadResponse } from '../types';
+import { useUploadReceipt } from '../hooks/useReceipt';
 
-type Step = 'list' | 'upload' | 'form';
+type Step = 'list' | 'upload' | 'form' | 'processing';
 
 export default function HomePage() {
   const [currentStep, setCurrentStep] = useState<Step>('list');
   const [uploadResult, setUploadResult] = useState<ReceiptUploadResponse | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showReport, setShowReport] = useState(false);
 
+  // Hooks and Refs
+  const uploadMutation = useUploadReceipt();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
   const handleUploadSuccess = (result: ReceiptUploadResponse) => {
     setUploadResult(result);
+    // If we have a local preview, use it? Or use the one from server?
+    // The result from server usually has the image buffer or ID.
+    // For now we trust the result.
     setCurrentStep('form');
   };
 
   const handleFormSuccess = () => {
     setUploadResult(null);
+    setPreviewImage(null);
     setCurrentStep('list');
   };
 
   const handleCancel = () => {
     setUploadResult(null);
+    setPreviewImage(null);
     setCurrentStep('list');
   };
 
-  // Placeholder for handleUploadError, as it's used in the new JSX but not defined in original
   const handleUploadError = (error: Error) => {
     console.error('Upload error:', error);
-    // Optionally, display an error message to the user
-    setCurrentStep('list'); // Go back to list on error
+    alert('영수증 업로드 중 오류가 발생했습니다. 다시 시도해 주세요.');
+    setPreviewImage(null);
+    setCurrentStep('list');
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input value to allow selecting same file again if needed
+    e.target.value = '';
+
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result as string);
+      setCurrentStep('processing');
+    };
+    reader.readAsDataURL(file);
+
+    // Proceed with upload
+    try {
+      const result = await uploadMutation.mutateAsync(file);
+      handleUploadSuccess(result);
+    } catch (error) {
+      handleUploadError(error as Error);
+    }
   };
 
   return (
@@ -108,41 +143,73 @@ export default function HomePage() {
         {/* Main Content Area */}
         <section>
           {currentStep === 'list' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-gray-900">최근 사용 내역</h2>
-                <button
-                  onClick={() => setCurrentStep('upload')}
-                  className="btn-primary flex items-center gap-2 shadow-sm"
-                  data-testid="add-expense-button"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+            <div className="space-y-6">
+              {/* Quick Actions */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <div className="flex flex-col gap-3">
+                  {/* Camera Button (Primary) */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full bg-primary-600 hover:bg-primary-700 text-white rounded-xl py-6 flex flex-col items-center justify-center gap-2 transition-colors shadow-md active:scale-95 transform duration-100"
+                    data-testid="camera-button"
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  지출 등록
-                </button>
+                    <div className="p-3 bg-white/20 rounded-full">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <span className="font-bold text-lg">영수증 촬영</span>
+                  </button>
+
+                  {/* Hidden Inputs */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <input
+                    ref={galleryInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+
+                  {/* Gallery Button (Secondary - Subtle) */}
+                  <button
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="w-full py-2 text-gray-400 hover:text-gray-600 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5"
+                    data-testid="gallery-button"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    앨범에서 선택
+                  </button>
+                </div>
               </div>
-              <ExpenseList />
+
+              {/* Recent List */}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 px-1">최근 사용 내역</h2>
+                <ExpenseList />
+              </div>
             </div>
           )}
 
-          {currentStep === 'upload' && (
+          {(currentStep === 'processing' || currentStep === 'upload') && (
             <div className="card">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900">영수증 업로드</h2>
+                <h2 className="text-lg font-semibold text-gray-900">영수증 분석 중...</h2>
                 <button
                   onClick={handleCancel}
                   className="text-gray-400 hover:text-gray-600"
                   data-testid="cancel-upload-button"
+                  disabled={uploadMutation.isPending}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -160,10 +227,18 @@ export default function HomePage() {
                   </svg>
                 </button>
               </div>
-              <ReceiptUploader
-                onUploadSuccess={handleUploadSuccess}
-                onUploadError={handleUploadError}
-              />
+
+              <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-[3/4] sm:aspect-video w-full">
+                {previewImage && (
+                  <img src={previewImage} alt="Receipt preview" className="w-full h-full object-contain" />
+                )}
+
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-primary-600 mb-4"></div>
+                  <p className="text-primary-700 font-bold text-lg animate-pulse">AI가 영수증을 분석하고 있습니다</p>
+                  <p className="text-gray-500 text-sm mt-2">잠시만 기다려주세요...</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -185,7 +260,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="py-6 text-center text-sm text-gray-400">
-        <p>Team Expense Tracker Service © 2024</p>
+        <p>팀 회식비 © 2026</p>
       </footer>
 
       {/* Modals */}
