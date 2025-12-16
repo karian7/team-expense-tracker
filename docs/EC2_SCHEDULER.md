@@ -20,11 +20,11 @@
 
 ## 스케줄
 
-| 시간 | 동작 | UTC 시간 | 실행 요일 | EventBridge Cron |
-|------|------|---------|----------|------------------|
-| 23:00 KST | EC2 중지 | 14:00 UTC | 월~금 | `cron(0 14 ? * MON-FRI *)` |
-| 09:00 KST | EC2 시작 | 00:00 UTC | 월~금 | `cron(0 0 ? * MON-FRI *)` |
-| 주말 | 중지 상태 유지 | - | 토~일 | Start Lambda가 주말 체크 |
+| 시간      | 동작           | UTC 시간  | 실행 요일 | EventBridge Cron           |
+| --------- | -------------- | --------- | --------- | -------------------------- |
+| 23:00 KST | EC2 중지       | 14:00 UTC | 월~금     | `cron(0 14 ? * MON-FRI *)` |
+| 09:00 KST | EC2 시작       | 00:00 UTC | 월~금     | `cron(0 0 ? * MON-FRI *)`  |
+| 주말      | 중지 상태 유지 | -         | 토~일     | Start Lambda가 주말 체크   |
 
 ## 아키텍처
 
@@ -63,6 +63,7 @@ EventBridge Scheduler
 ## 구축된 AWS 리소스
 
 ### 1. IAM Role
+
 - **이름**: `lambda-ec2-scheduler-role`
 - **ARN**: `arn:aws:iam::637423484158:role/lambda-ec2-scheduler-role`
 - **권한**:
@@ -76,6 +77,7 @@ EventBridge Scheduler
 ### 2. Lambda Functions
 
 #### Stop Lambda
+
 - **함수 이름**: `stop-ec2-scheduler`
 - **ARN**: `arn:aws:lambda:ap-northeast-2:637423484158:function:stop-ec2-scheduler`
 - **런타임**: Python 3.12
@@ -86,6 +88,7 @@ EventBridge Scheduler
 - **로그 그룹**: `/aws/lambda/stop-ec2-scheduler`
 
 #### Start Lambda
+
 - **함수 이름**: `start-ec2-scheduler`
 - **ARN**: `arn:aws:lambda:ap-northeast-2:637423484158:function:start-ec2-scheduler`
 - **런타임**: Python 3.12
@@ -99,6 +102,7 @@ EventBridge Scheduler
 ### 3. EventBridge Rules
 
 #### Stop Rule
+
 - **규칙 이름**: `stop-ec2-weekday-rule`
 - **ARN**: `arn:aws:events:ap-northeast-2:637423484158:rule/stop-ec2-weekday-rule`
 - **스케줄**: `cron(0 14 ? * MON-FRI *)`
@@ -106,6 +110,7 @@ EventBridge Scheduler
 - **타겟**: stop-ec2-scheduler Lambda
 
 #### Start Rule
+
 - **규칙 이름**: `start-ec2-weekday-rule`
 - **ARN**: `arn:aws:events:ap-northeast-2:637423484158:rule/start-ec2-weekday-rule`
 - **스케줄**: `cron(0 0 ? * MON-FRI *)`
@@ -634,16 +639,19 @@ echo "✅ 롤백 완료!"
 ### Lambda 비용
 
 **사용량**:
+
 - 월 호출: ~40회 (평일 20일 × 2회/일)
 - 실행 시간: ~100ms/호출
 - 메모리: 128MB
 - 컴퓨팅: 128MB × 0.1초 × 40회 = 0.5 GB-초
 
 **가격** (서울 리전):
+
 - $0.20 / 100만 요청
 - $0.0000166667 / GB-초
 
 **계산**:
+
 - 요청 비용: (40 / 1,000,000) × $0.20 = $0.000008
 - 컴퓨팅 비용: 0.5 × $0.0000166667 = $0.000008
 - **월 총 비용: $0.000016 ≈ $0**
@@ -657,14 +665,17 @@ echo "✅ 롤백 완료!"
 ### CloudWatch Logs 비용
 
 **사용량**:
+
 - 로그 수집: ~5KB/호출 × 40회 = 200KB/월
 - 로그 저장: ~200KB
 
 **가격**:
+
 - $0.76 / GB 수집
 - $0.033 / GB 저장
 
 **계산**:
+
 - 수집: (0.0002 GB) × $0.76 = $0.00015
 - 저장: (0.0002 GB) × $0.033 = $0.000007
 - **월 총 비용: $0.00016 ≈ $0**
@@ -676,23 +687,25 @@ echo "✅ 롤백 완료!"
 **t4g.nano 서울 리전**: $0.0042/시간
 
 **절감 시간**:
+
 - 평일: 14시간/일 × 20일 = 280시간
 - 주말: 48시간/주 × 4주 = 192시간
 - **총**: 472시간/월
 
 **절감액**:
+
 - **월**: 472 × $0.0042 = **$1.98**
 - **연**: $1.98 × 12 = **$23.76**
 
 ### 총 비용 요약
 
-| 항목 | 월 비용 | 비고 |
-|------|---------|------|
-| Lambda | $0 | Free Tier |
-| EventBridge | $0 | 무료 |
-| CloudWatch Logs | $0 | Free Tier |
-| **운영 비용 합계** | **$0** | |
-| **EC2 절감액** | **-$1.98** | 순 절감 |
+| 항목               | 월 비용    | 비고      |
+| ------------------ | ---------- | --------- |
+| Lambda             | $0         | Free Tier |
+| EventBridge        | $0         | 무료      |
+| CloudWatch Logs    | $0         | Free Tier |
+| **운영 비용 합계** | **$0**     |           |
+| **EC2 절감액**     | **-$1.98** | 순 절감   |
 
 ## 문제 해결
 
@@ -731,6 +744,7 @@ aws lambda get-policy \
 **증상**: CloudWatch Logs에 `AccessDeniedException` 에러
 
 **해결**:
+
 ```bash
 # IAM 정책 확인
 aws iam get-role-policy \
@@ -747,6 +761,7 @@ aws iam get-role-policy \
 **원인**: Start Lambda의 pytz 의존성 누락
 
 **해결**:
+
 ```bash
 # Start Lambda 로그 확인
 aws logs tail /aws/lambda/start-ec2-scheduler \

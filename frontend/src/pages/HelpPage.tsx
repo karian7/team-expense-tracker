@@ -13,8 +13,19 @@ export default function HelpPage({ onClose }: HelpPageProps) {
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -28,27 +39,52 @@ export default function HelpPage({ onClose }: HelpPageProps) {
             </h3>
             <ol className="text-sm text-gray-600 space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
               <li className="flex gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">1</span>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">
+                  1
+                </span>
                 <span>
-                  Safari 하단의 <span className="inline-flex items-center justify-center px-1.5 py-0.5 bg-gray-200 rounded text-blue-600 mx-1 align-middle">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v9m0 0l4-4m-4 4l-4-4" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12v6a2 2 0 002 2h8a2 2 0 002-2v-6" />
+                  Safari 하단의{' '}
+                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 bg-gray-200 rounded text-blue-600 mx-1 align-middle">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v9m0 0l4-4m-4 4l-4-4"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 12v6a2 2 0 002 2h8a2 2 0 002-2v-6"
+                      />
                     </svg>
                   </span>
                   공유 버튼을 누르세요.
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">2</span>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">
+                  2
+                </span>
                 <span>
-                  메뉴를 아래로 스크롤하여 <span className="font-bold text-gray-900">'홈 화면에 추가'</span>를 선택하세요.
+                  메뉴를 아래로 스크롤하여{' '}
+                  <span className="font-bold text-gray-900">'홈 화면에 추가'</span>를 선택하세요.
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">3</span>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">
+                  3
+                </span>
                 <span>
-                  우측 상단의 <span className="font-bold text-blue-600">'추가'</span> 버튼을 누르세요.
+                  우측 상단의 <span className="font-bold text-blue-600">'추가'</span> 버튼을
+                  누르세요.
                 </span>
               </li>
             </ol>
@@ -61,22 +97,31 @@ export default function HelpPage({ onClose }: HelpPageProps) {
             </h3>
             <ol className="text-sm text-gray-600 space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
               <li className="flex gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">1</span>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">
+                  1
+                </span>
                 <span>
-                  Chrome 상단의 <span className="inline-flex items-center justify-center px-1.5 py-0.5 bg-gray-200 rounded text-gray-600 mx-1 align-middle font-bold text-xs">⋮</span> 메뉴 버튼을 누르세요.
+                  Chrome 상단의{' '}
+                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 bg-gray-200 rounded text-gray-600 mx-1 align-middle font-bold text-xs">
+                    ⋮
+                  </span>{' '}
+                  메뉴 버튼을 누르세요.
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">2</span>
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">
+                  2
+                </span>
                 <span>
-                  <span className="font-bold text-gray-900">'앱 설치'</span> 또는 <span className="font-bold text-gray-900">'홈 화면에 추가'</span>를 선택하세요.
+                  <span className="font-bold text-gray-900">'앱 설치'</span> 또는{' '}
+                  <span className="font-bold text-gray-900">'홈 화면에 추가'</span>를 선택하세요.
                 </span>
               </li>
               <li className="flex gap-2">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">3</span>
-                <span>
-                  안내에 따라 설치를 완료하세요.
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xs font-bold text-gray-900 shadow-sm">
+                  3
                 </span>
+                <span>안내에 따라 설치를 완료하세요.</span>
               </li>
             </ol>
           </div>

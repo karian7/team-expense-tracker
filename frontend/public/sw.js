@@ -95,6 +95,7 @@ self.addEventListener('push', (event) => {
     body: data.body,
     icon: data.icon,
     badge: data.badge,
+    image: data.image,
     tag: data.tag,
     data: data.data,
     requireInteraction: false,

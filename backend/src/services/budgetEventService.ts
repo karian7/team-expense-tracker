@@ -6,6 +6,7 @@ import { BudgetEventResponse, CreateBudgetEventRequest, SyncEventsResponse } fro
 import { BUDGET_EVENT_CONSTANTS } from '../constants/budgetEvents';
 import { setNeedsFullSync } from './settingsService';
 import { pushService } from './pushService';
+import { resizeBase64Image } from '../utils/imageUtils';
 
 // 중복 알림 방지용 캐시 (메모리 기반)
 // key: "YYYY-MM", value: 마지막 알림 임계값 (80 | 90 | 100)
@@ -96,11 +97,22 @@ async function sendPushNotificationForEvent(
 ): Promise<void> {
   // 1. 새 지출 등록 시
   if (data.eventType === 'EXPENSE') {
+    // receiptImage가 있으면 썸네일 생성
+    let thumbnail: string | undefined;
+    if (data.receiptImage) {
+      try {
+        thumbnail = await resizeBase64Image(data.receiptImage);
+      } catch (error) {
+        console.error('Failed to create notification thumbnail:', error);
+      }
+    }
+
     await pushService.sendToAll({
       title: '새로운 지출 등록',
       body: `${data.authorName}님이 ${data.storeName || '지출'} ${data.amount.toLocaleString('ko-KR')}원`,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
+      image: thumbnail,
       tag: 'new-expense',
       data: { url: '/' },
     });
