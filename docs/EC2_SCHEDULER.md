@@ -4,6 +4,8 @@
 
 평일 야간 시간(23:00-09:00 KST)에 EC2 인스턴스를 자동으로 중지하여 비용을 절감하는 Lambda 스케줄러입니다.
 
+**⚡ 새 기능**: EC2 시작 시 CloudFront Origin을 새 Public DNS로 자동 업데이트
+
 ### 비용 절감 효과
 
 - **월 절감액**: $1.98 (472시간 중지)
@@ -53,12 +55,33 @@ EventBridge Scheduler
         │ start-ec2-   │
         │ scheduler    │ ← Lambda (Python 3.12 + pytz)
         └──────────────┘   주말 체크 로직 포함
+               │              + CloudFront Origin 자동 업데이트 ⚡
+               │              
+               ├─────────────→ CloudFront Distribution
+               │              (Origin DNS 업데이트)
                ↑
 ┌──────────────┴──────────────────┐
 │ start-ec2-weekday-rule          │
 │ cron(0 0 ? * MON-FRI *)         │  ← 평일 00:00 UTC (09:00 KST)
 └─────────────────────────────────┘
 ```
+
+## 핵심 기능
+
+### 1. 자동 스케줄링
+- 평일 23:00 KST: EC2 자동 중지
+- 평일 09:00 KST: EC2 자동 시작
+- 주말: 중지 상태 유지
+
+### 2. CloudFront Origin 자동 업데이트 ⚡
+EC2 인스턴스는 재시작 시 새로운 Public IP/DNS가 할당되므로, Lambda가 자동으로:
+1. EC2 인스턴스가 running 상태가 될 때까지 대기
+2. 새로운 Public DNS 조회
+3. CloudFront Distribution의 Origin 도메인 업데이트
+
+**Elastic IP를 사용하지 않는 이유**: 
+- Elastic IP는 EC2 중지 시에도 비용 발생 (~$0.005/시간 × 10시간/일 = $1.5/월)
+- 자동 업데이트 방식은 추가 비용 $0
 
 ## 구축된 AWS 리소스
 
@@ -73,6 +96,10 @@ EventBridge Scheduler
     - `ec2:StopInstances`
     - `ec2:StartInstances`
     - 조건: 서울 리전만 허용
+  - `cloudfront-update-policy` (인라인 정책) ⚡
+    - `cloudfront:GetDistribution`
+    - `cloudfront:GetDistributionConfig`
+    - `cloudfront:UpdateDistribution`
 
 ### 2. Lambda Functions
 
@@ -94,9 +121,12 @@ EventBridge Scheduler
 - **런타임**: Python 3.12
 - **핸들러**: `start_instance.lambda_handler`
 - **메모리**: 128MB
-- **타임아웃**: 10초
+- **타임아웃**: 60초 (CloudFront 업데이트 시간 포함) ⚡
 - **의존성**: pytz (timezone 처리)
-- **환경 변수**: `INSTANCE_ID=i-02e27c45dc05f5c03`
+- **환경 변수**: ⚡
+  - `INSTANCE_ID=i-02e27c45dc05f5c03`
+  - `CLOUDFRONT_DISTRIBUTION_ID=E2FU12DEM4MJNW`
+  - `CLOUDFRONT_ORIGIN_ID=EC2-team-expense-tracker-be`
 - **로그 그룹**: `/aws/lambda/start-ec2-scheduler`
 
 ### 3. EventBridge Rules
