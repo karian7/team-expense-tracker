@@ -1,8 +1,8 @@
 import type { PushSubscriptionData } from '../types';
 import apiClient from './api';
 
-// VAPID public key - should be provided by backend
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
+// VAPID 키 캐시 (한 번 가져오면 재사용)
+let cachedVapidPublicKey: string | null = null;
 
 // Convert VAPID public key from base64 to Uint8Array
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -34,14 +34,29 @@ function subscriptionToData(subscription: PushSubscription): PushSubscriptionDat
 }
 
 export const pushNotificationService = {
+  // Get VAPID public key from backend (with caching)
+  async getVapidPublicKey(): Promise<string> {
+    if (cachedVapidPublicKey) {
+      return cachedVapidPublicKey;
+    }
+
+    try {
+      const response = await apiClient.get('/push/public-key');
+      if (response.data?.success && response.data?.data?.publicKey) {
+        const publicKey = response.data.data.publicKey as string;
+        cachedVapidPublicKey = publicKey;
+        return publicKey;
+      }
+      throw new Error('Invalid response from server');
+    } catch (error) {
+      console.error('Failed to fetch VAPID public key:', error);
+      throw new Error('Failed to get VAPID public key from server');
+    }
+  },
+
   // Check if push notifications are supported
   isSupported(): boolean {
-    return (
-      'serviceWorker' in navigator &&
-      'PushManager' in window &&
-      'Notification' in window &&
-      Boolean(VAPID_PUBLIC_KEY)
-    );
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   },
 
   // Get current permission status
@@ -78,13 +93,16 @@ export const pushNotificationService = {
       }
     }
 
+    // Get VAPID public key from backend
+    const vapidPublicKey = await this.getVapidPublicKey();
+
     // Get service worker registration
     const registration = await navigator.serviceWorker.ready;
 
     // Subscribe to push notifications
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
     });
 
     const subscriptionData = subscriptionToData(subscription);

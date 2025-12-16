@@ -1,15 +1,8 @@
- 
 // Service Worker for Team Expense Tracker PWA
 // Handles push notifications, caching, and offline functionality
 
 const CACHE_NAME = 'team-expense-tracker-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-];
+const urlsToCache = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 // Install event - cache essential resources
 self.addEventListener('install', (event) => {
@@ -47,9 +40,25 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache when offline
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // API 요청은 항상 네트워크 우선 (캐시하지 않음)
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/push/')) {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        // 오프라인 시 에러 응답
+        return new Response(JSON.stringify({ error: 'Offline' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      })
+    );
+    return;
+  }
+
+  // 정적 자원은 캐시 우선
   event.respondWith(
     caches.match(event.request).then((response) => {
-      // Return cached response if found, otherwise fetch from network
       return response || fetch(event.request);
     })
   );
@@ -122,15 +131,4 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Background sync event (for future offline-to-online sync)
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-expenses') {
-    event.waitUntil(
-      // Trigger sync with backend
-      self.registration.showNotification('동기화 완료', {
-        body: '오프라인 데이터가 서버와 동기화되었습니다.',
-        icon: '/icon-192.png',
-      })
-    );
-  }
-});
+// removed Background sync event - will be implemented when actual sync logic is ready

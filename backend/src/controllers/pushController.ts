@@ -1,16 +1,6 @@
 import type { Request, Response } from 'express';
 import type { PushSubscriptionRequest, PushNotificationPayload, ApiResponse } from '../types';
-import webpush from 'web-push';
-import prisma from '../utils/prisma';
-
-// Configure web-push with VAPID keys
-const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
-const vapidEmail = process.env.VAPID_EMAIL || 'mailto:admin@example.com';
-
-if (vapidPublicKey && vapidPrivateKey) {
-  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
-}
+import { pushService } from '../services/pushService';
 
 export const pushController = {
   // Subscribe to push notifications
@@ -25,21 +15,12 @@ export const pushController = {
         } as ApiResponse);
       }
 
-      // Upsert subscription (update if exists, create if not)
-      const subscription = await prisma.pushSubscription.upsert({
-        where: { endpoint },
-        update: {
-          p256dhKey: keys.p256dh,
-          authKey: keys.auth,
-          userAgent,
-        },
-        create: {
-          endpoint,
-          p256dhKey: keys.p256dh,
-          authKey: keys.auth,
-          userAgent,
-        },
-      });
+      const subscription = await pushService.createOrUpdateSubscription(
+        endpoint,
+        keys.p256dh,
+        keys.auth,
+        userAgent
+      );
 
       return res.json({
         success: true,
@@ -67,16 +48,13 @@ export const pushController = {
         } as ApiResponse);
       }
 
-      await prisma.pushSubscription.delete({
-        where: { endpoint },
-      });
+      await pushService.deleteSubscription(endpoint);
 
       return res.json({
         success: true,
         message: 'Successfully unsubscribed from push notifications',
       } as ApiResponse);
     } catch {
-      // Subscription might not exist
       return res.json({
         success: true,
         message: 'Unsubscribed',
@@ -96,9 +74,7 @@ export const pushController = {
         } as ApiResponse);
       }
 
-      const subscription = await prisma.pushSubscription.findUnique({
-        where: { endpoint },
-      });
+      const subscription = await pushService.findSubscription(endpoint);
 
       if (!subscription) {
         return res.status(404).json({
@@ -113,21 +89,25 @@ export const pushController = {
         icon: '/icon-192.png',
         badge: '/icon-192.png',
         tag: 'test',
-        data: {
-          url: '/',
-        },
+        data: { url: '/' },
       };
 
-      await webpush.sendNotification(
-        {
-          endpoint: subscription.endpoint,
-          keys: {
-            p256dh: subscription.p256dhKey,
-            auth: subscription.authKey,
-          },
-        },
-        JSON.stringify(payload)
+      const result = await pushService.sendNotification(
+        subscription.endpoint,
+        subscription.p256dhKey,
+        subscription.authKey,
+        payload
       );
+
+      if (!result.success) {
+        if (result.shouldRemove) {
+          await pushService.deleteSubscription(endpoint);
+        }
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to send test notification',
+        } as ApiResponse);
+      }
 
       return res.json({
         success: true,
@@ -142,45 +122,12 @@ export const pushController = {
     }
   },
 
-  // Send notification to all subscribers
-  sendToAll: async (payload: PushNotificationPayload) => {
-    try {
-      const subscriptions = await prisma.pushSubscription.findMany();
-
-      const notifications = subscriptions.map(async (subscription) => {
-        try {
-          await webpush.sendNotification(
-            {
-              endpoint: subscription.endpoint,
-              keys: {
-                p256dh: subscription.p256dhKey,
-                auth: subscription.authKey,
-              },
-            },
-            JSON.stringify(payload)
-          );
-        } catch (error) {
-          console.error(`Failed to send notification to ${subscription.endpoint}:`, error);
-
-          // If subscription is invalid (410 Gone), remove it
-          if ((error as { statusCode?: number }).statusCode === 410) {
-            await prisma.pushSubscription.delete({
-              where: { endpoint: subscription.endpoint },
-            });
-          }
-        }
-      });
-
-      await Promise.allSettled(notifications);
-    } catch (error) {
-      console.error('Error sending notifications to all:', error);
-    }
-  },
-
   // Get VAPID public key
   getPublicKey: async (_req: Request, res: Response) => {
     try {
-      if (!vapidPublicKey) {
+      const publicKey = pushService.getVapidPublicKey();
+
+      if (!publicKey) {
         return res.status(500).json({
           success: false,
           error: 'VAPID public key not configured',
@@ -189,7 +136,7 @@ export const pushController = {
 
       return res.json({
         success: true,
-        data: { publicKey: vapidPublicKey },
+        data: { publicKey },
       } as ApiResponse);
     } catch (error) {
       console.error('Error getting public key:', error);
