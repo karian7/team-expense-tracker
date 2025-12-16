@@ -5,6 +5,11 @@ import { convertDecimalsToNumbers } from '../utils/decimal';
 import { BudgetEventResponse, CreateBudgetEventRequest, SyncEventsResponse } from '../types';
 import { BUDGET_EVENT_CONSTANTS } from '../constants/budgetEvents';
 import { setNeedsFullSync } from './settingsService';
+import { pushService } from './pushService';
+
+// 중복 알림 방지용 캐시 (메모리 기반)
+// key: "YYYY-MM", value: 마지막 알림 임계값 (80 | 90 | 100)
+const notificationCache = new Map<string, number>();
 
 const isDefaultMonthlyBudgetPayload = (data: CreateBudgetEventRequest) =>
   data.eventType === 'BUDGET_IN' &&
@@ -40,6 +45,124 @@ async function getLastResetSequence(): Promise<number> {
   });
 
   return resetEvent?.sequence ?? 0;
+}
+
+/**
+ * 월별 잔액 계산 (푸시 알림 임계값 체크용)
+ */
+async function calculateMonthlyBalance(year: number, month: number): Promise<{
+  totalBudget: number;
+  spent: number;
+  balance: number;
+  spentPercentage: number;
+}> {
+  const events = await prisma.budgetEvent.findMany({
+    where: { year, month },
+    orderBy: { sequence: 'asc' },
+  });
+
+  let totalBudget = 0;
+  let spent = 0;
+
+  for (const event of events) {
+    const amount = event.amount.toNumber();
+
+    if (event.eventType === 'BUDGET_IN') {
+      totalBudget += amount;
+    } else if (event.eventType === 'EXPENSE') {
+      spent += amount;
+    } else if (event.eventType === 'BUDGET_ADJUSTMENT_INCREASE') {
+      totalBudget += amount;
+    } else if (event.eventType === 'BUDGET_ADJUSTMENT_DECREASE') {
+      totalBudget -= amount;
+    }
+  }
+
+  const balance = totalBudget - spent;
+  const spentPercentage = totalBudget > 0 ? (spent / totalBudget) * 100 : 0;
+
+  return { totalBudget, spent, balance, spentPercentage };
+}
+
+/**
+ * 이벤트 타입에 따라 푸시 알림 전송
+ */
+async function sendPushNotificationForEvent(
+  data: CreateBudgetEventRequest,
+  event: BudgetEventResponse
+): Promise<void> {
+  // 1. 새 지출 등록 시
+  if (data.eventType === 'EXPENSE') {
+    await pushService.sendToAll({
+      title: '새로운 지출 등록',
+      body: `${data.authorName}님이 ${data.storeName || '지출'} ${data.amount.toLocaleString('ko-KR')}원`,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'new-expense',
+      data: { url: '/' },
+    });
+
+    // 지출 후 예산 임계값 체크
+    await checkBudgetThreshold(data.year, data.month);
+  }
+
+  // 2. 예산 리셋 시
+  if (data.eventType === 'BUDGET_RESET') {
+    await pushService.sendToAll({
+      title: '예산 초기화',
+      body: '모든 예산 데이터가 초기화되었습니다.',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'budget-reset',
+      data: { url: '/' },
+    });
+  }
+}
+
+/**
+ * 예산 임계값 체크 (80%, 100%)
+ */
+async function checkBudgetThreshold(year: number, month: number): Promise<void> {
+  const { totalBudget, balance, spentPercentage } = await calculateMonthlyBalance(year, month);
+  const cacheKey = `${year}-${String(month).padStart(2, '0')}`;
+  const lastNotifiedThreshold = notificationCache.get(cacheKey) || 0;
+
+  // 100% 초과 (적자)
+  if (spentPercentage >= 100 && lastNotifiedThreshold < 100) {
+    await pushService.sendToAll({
+      title: '⚠️ 예산 초과',
+      body: `이번 달 예산을 모두 소진했습니다. 현재 ${Math.abs(balance).toLocaleString('ko-KR')}원 적자입니다.`,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'budget-exceeded',
+      data: { url: '/' },
+    });
+    notificationCache.set(cacheKey, 100);
+  }
+  // 90% 이상 100% 미만
+  else if (spentPercentage >= 90 && spentPercentage < 100 && lastNotifiedThreshold < 90) {
+    await pushService.sendToAll({
+      title: '🚨 예산 위험',
+      body: `이번 달 예산의 ${Math.round(spentPercentage)}%가 소진되었습니다. 남은 예산: ${balance.toLocaleString('ko-KR')}원`,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'budget-warning-90',
+      data: { url: '/' },
+    });
+    notificationCache.set(cacheKey, 90);
+  }
+  // 80% 이상 90% 미만
+  else if (spentPercentage >= 80 && spentPercentage < 90 && lastNotifiedThreshold < 80) {
+    await pushService.sendToAll({
+      title: '⚠️ 예산 경고',
+      body: `이번 달 예산의 ${Math.round(spentPercentage)}%가 소진되었습니다. 남은 예산: ${balance.toLocaleString('ko-KR')}원`,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'budget-warning-80',
+      data: { url: '/' },
+    });
+    notificationCache.set(cacheKey, 80);
+  }
 }
 
 type PrismaBytes = Uint8Array<ArrayBuffer>;
@@ -174,7 +297,14 @@ export async function createBudgetEvent(
       },
     });
 
-    return toBudgetEventResponse(event);
+    const eventResponse = toBudgetEventResponse(event);
+
+    // 푸시 알림 전송 (비동기, 에러 무시)
+    sendPushNotificationForEvent(data, eventResponse).catch((error) => {
+      console.error('Failed to send push notification:', error);
+    });
+
+    return eventResponse;
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
