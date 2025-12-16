@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   useAppSettings,
@@ -12,6 +12,7 @@ import {
 import { useCurrentBudget, useAdjustCurrentBudget } from '../hooks/useBudget';
 import { formatCurrency } from '../utils/format';
 import { db } from '../services/db/database';
+import { pushNotificationService } from '../services/pushNotificationService';
 
 interface SettingsPageProps {
   onClose: () => void;
@@ -43,6 +44,26 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Push notification states
+  const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const [isPushSupported, setIsPushSupported] = useState(false);
+  const [isPushLoading, setIsPushLoading] = useState(false);
+
+  // Check push notification support and subscription status
+  useEffect(() => {
+    const checkPushStatus = async () => {
+      const supported = pushNotificationService.isSupported();
+      setIsPushSupported(supported);
+
+      if (supported) {
+        const isSubscribed = await pushNotificationService.isSubscribed();
+        setIsPushEnabled(isSubscribed);
+      }
+    };
+
+    checkPushStatus();
+  }, []);
 
   // 로컬 이벤트 통계 (Full Sync용)
   const localEventCount = useLiveQuery(() => db.budgetEvents.count(), []);
@@ -179,6 +200,56 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     }
   };
 
+  const handleTogglePushNotifications = async () => {
+    if (!isPushSupported) {
+      alert('이 브라우저는 푸시 알림을 지원하지 않습니다.');
+      return;
+    }
+
+    setIsPushLoading(true);
+
+    try {
+      if (isPushEnabled) {
+        // Unsubscribe
+        await pushNotificationService.unsubscribe();
+        setIsPushEnabled(false);
+        alert('푸시 알림이 비활성화되었습니다.');
+      } else {
+        // Subscribe
+        const permission = pushNotificationService.getPermission();
+
+        if (permission === 'denied') {
+          alert('푸시 알림 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.');
+          return;
+        }
+
+        await pushNotificationService.subscribe();
+        setIsPushEnabled(true);
+        alert('푸시 알림이 활성화되었습니다!');
+      }
+    } catch (error) {
+      console.error('Push notification toggle error:', error);
+      alert('푸시 알림 설정에 실패했습니다.');
+    } finally {
+      setIsPushLoading(false);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    if (!isPushEnabled) {
+      alert('먼저 푸시 알림을 활성화해주세요.');
+      return;
+    }
+
+    try {
+      await pushNotificationService.sendTestNotification();
+      alert('테스트 알림이 전송되었습니다!');
+    } catch (error) {
+      console.error('Test notification error:', error);
+      alert('테스트 알림 전송에 실패했습니다.');
+    }
+  };
+
   // useQuery returns { data, isLoading, error }
   if (settings.isLoading || currentBudget === undefined) {
     return (
@@ -290,6 +361,81 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 예산 변경 시 다음 달부터 적용됩니다.
               </div>
             </div>
+          </section>
+
+          {/* Push Notifications */}
+          <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="text-xl">🔔</span> 푸시 알림
+            </h2>
+
+            {!isPushSupported ? (
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600">
+                  현재 브라우저는 푸시 알림을 지원하지 않습니다.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900">푸시 알림</p>
+                    <p className="text-sm text-gray-500">
+                      {isPushEnabled
+                        ? '새로운 지출 및 예산 알림을 받습니다'
+                        : '알림을 활성화하여 업데이트를 받으세요'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleTogglePushNotifications}
+                    disabled={isPushLoading}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      isPushEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                    } ${isPushLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    data-testid="push-notification-toggle"
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        isPushEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {isPushEnabled && (
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <p className="text-sm text-blue-700 mb-3">
+                      푸시 알림이 활성화되었습니다. 테스트 알림을 보내보세요!
+                    </p>
+                    <button
+                      onClick={handleTestNotification}
+                      className="btn-secondary text-sm py-1.5 px-3"
+                      data-testid="test-notification-button"
+                    >
+                      테스트 알림 전송
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 text-sm bg-gray-50 p-3 rounded-lg text-gray-600">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  PWA로 설치 후 사용하면 백그라운드에서도 알림을 받을 수 있습니다.
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Reset Data */}

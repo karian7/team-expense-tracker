@@ -77,3 +77,25 @@ export interface AppSettings {
 export interface UpdateSettingsRequest {
   defaultMonthlyBudget?: number;
 }
+
+// Push Notification Types
+export interface PushSubscriptionRequest {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  userAgent?: string;
+}
+
+export interface PushNotificationPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  tag?: string;
+  data?: {
+    url?: string;
+    [key: string]: unknown;
+  };
+}

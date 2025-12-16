@@ -52,3 +52,15 @@ model Settings {
 
   @@map("settings")
 }
+
+model PushSubscription {
+  id                   String   @id @default(uuid())
+  endpoint             String   @unique
+  p256dhKey            String   // Public key for encryption
+  authKey              String   // Authentication secret
+  userAgent            String?  // Optional browser info
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("push_subscriptions")
+}

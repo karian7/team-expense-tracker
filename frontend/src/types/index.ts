@@ -132,3 +132,25 @@ export interface MonthlyReport {
   budget: MonthlyBudget;
   statistics: MonthlyReportStatistics;
 }
+
+// Push Notification
+export interface PushSubscriptionData {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  userAgent?: string;
+}
+
+export interface PushNotificationPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  tag?: string;
+  data?: {
+    url?: string;
+    [key: string]: unknown;
+  };
+}

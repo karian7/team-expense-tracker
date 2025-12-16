@@ -11,6 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "generate:vapid": "tsx scripts/generate-vapid-keys.ts",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write \"src/**/*.{ts,js,json}\"",
@@ -37,7 +38,8 @@
     "heic-convert": "^2.1.0",
     "multer": "^2.0.2",
     "openai": "^6.10.0",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -45,6 +47,7 @@
     "@types/express": "^5.0.6",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.0.2",
+    "@types/web-push": "^3.6.4",
     "@typescript-eslint/eslint-plugin": "^8.49.0",
     "@typescript-eslint/parser": "^8.49.0",
     "eslint": "^9.39.2",

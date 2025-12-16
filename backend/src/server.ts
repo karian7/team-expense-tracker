@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import receiptRoutes from './routes/receiptRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import eventRoutes from './routes/eventRoutes';
+import pushRoutes from './routes/pushRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 // Load environment variables
@@ -79,6 +80,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.use('/api/events', eventRoutes);
 app.use('/api/receipts', receiptRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/push', pushRoutes);
 
 // 404 handler
 app.use((req, res) => {
