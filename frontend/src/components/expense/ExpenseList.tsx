@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
 import { useCurrentBudget } from '../../hooks/useBudget';
 import { syncService } from '../../services/sync/syncService';
@@ -113,6 +113,18 @@ const normalizeReceiptImage = (image: unknown): string | null => {
 export default function ExpenseList() {
   const budget = useCurrentBudget();
   const expenses = useExpenses(budget ? { year: budget.year, month: budget.month } : undefined);
+  const sortedExpenses = useMemo(() => {
+    if (!expenses) {
+      return [];
+    }
+    return [...expenses].sort((a, b) => {
+      const dateDiff = new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime();
+      if (dateDiff !== 0) {
+        return dateDiff;
+      }
+      return (b.sequence ?? 0) - (a.sequence ?? 0);
+    });
+  }, [expenses]);
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -203,13 +215,13 @@ export default function ExpenseList() {
     <div className="space-y-6">
       {/* List */}
       <div className="space-y-3">
-        {expenses.length === 0 ? (
+        {sortedExpenses.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
             <p className="text-lg font-medium text-gray-900">등록된 지출 내역이 없습니다.</p>
             <p className="mt-1 text-sm text-gray-500">새로운 지출을 추가해보세요.</p>
           </div>
         ) : (
-          expenses.map((expense: Expense) => (
+          sortedExpenses.map((expense: Expense) => (
             <div
               key={expense.sequence}
               className="group bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer"
