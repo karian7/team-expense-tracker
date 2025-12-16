@@ -1,232 +1,212 @@
 # 팀 회식비 관리 서비스
 
-영수증 사진 업로드만으로 회식비 사용 내역과 월별 잔액을 자동으로 관리하는 웹 서비스입니다.
+영수증 사진 업로드 한 번으로 회식비 예산을 자동 집계하고, 복식부기 기반 이벤트 소싱으로 감사 추적이 가능한 로컬 퍼스트 웹·모바일(PWA) 서비스입니다. React 19/Dexie 프론트와 Express 5/Prisma 7 백엔드가 pnpm 모노 레포에서 함께 동작합니다.
 
-## 주요 기능
+## 주요 특징
 
-- 영수증 사진 업로드 및 자동 OCR (OpenAI / Google Vision API 지원)
-- 월별 회식비 예산 관리
-- 사용 내역 자동 집계 및 잔액 계산
-- 월별 자동 이월
-- CSV 백업/복원 기능
-- 초기 예산 설정 및 데이터 리셋
-- 모바일 최적화 (iOS 카메라 지원)
+- **자동 OCR 파이프라인**: OpenAI Vision 또는 Google Cloud Vision 중 선택해 영수증 이미지를 분석하고 금액·일자·상호를 자동 추출
+- **복식부기 이벤트 소싱**: `BUDGET_IN`, `EXPENSE`, `EXPENSE_REVERSAL`, `BUDGET_ADJUSTMENT_*`, `BUDGET_RESET` 이벤트만 Append-Only로 기록하여 잔액 = ∑유입−∑지출 공식을 항상 보장
+- **로컬 퍼스트 UX**: Dexie 기반 IndexedDB, pending 이벤트 큐, 서비스 워커 캐시로 오프라인에서도 즉시 작성 및 동기화 재시도 지원
+- **이미지 BLOB 저장**: HEIC/JPEG → 480px 리사이즈 후 base64(BLOB)로 SQLite에 저장해 파일 시스템 의존 제거 및 백업 단순화
+- **PWA + Web Push**: `/sw.js` 서비스 워커, VAPID 기반 푸시 알림, 캐시 전략, 오프라인 라우팅 지원
+- **DevOps 친화성**: Docker Compose, Makefile 기반 S3 + CloudFront + PM2 배포, Playwright/Vitest 테스트 및 상세 TEST_CASES 문서 제공
 
 ## 기술 스택
 
 ### 프론트엔드
 
-- React 18 + TypeScript
-- Vite
-- Tailwind CSS
-- React Query
-- React Hook Form
+- React 19 + TypeScript, Vite 7, Tailwind CSS 4
+- Dexie + dexie-react-hooks (IndexedDB), React Query, React Hook Form, Recharts
+- Vitest + Testing Library, ESLint 9 + Prettier 3
 
 ### 백엔드
 
-- Node.js + Express + TypeScript
-- Prisma ORM
-- SQLite
-- OCR: OpenAI Vision API / Google Cloud Vision API (선택 가능)
-- Multer (파일 업로드)
+- Node.js 20 / Express 5 / TypeScript
+- Prisma 7 (`prisma.config.ts`) + Better-SQLite3, Multer memoryStorage, Sharp, Decimal.js
+- OCR Provider: OpenAI Vision API 또는 Google Cloud Vision (환경 변수로 선택)
+- Web Push (VAPID), tsx/tsup 기반 번들
+
+### 공통 & 인프라
+
+- pnpm 10.x 스크립트, Docker Compose, Makefile 배포 플로우
+- Playwright 1.57 E2E (`playwright.config.ts`), ESLint/Prettier/Format 스크립트, 독립형 CI 대응
+- Docs: `docs/*.md`
+
+## 아키텍처 개요
+
+### 이벤트 소싱 & 복식부기
+
+- 모든 금액 변화는 Append-Only `BudgetEvent` 로 기록되며 Prisma 모델은 `sequence`(PK), `eventType`, `year/month`, `amount`, `authorName` 등을 포함합니다.
+- 허용 이벤트 타입: `BUDGET_IN`, `EXPENSE`, `EXPENSE_REVERSAL`, `BUDGET_ADJUSTMENT_INCREASE`, `BUDGET_ADJUSTMENT_DECREASE`, `BUDGET_RESET`.
+- `previousBalance + budgetIn − totalSpent = balance` 공식이 프론트 Dexie 계산(`eventService.calculateMonthlyBudget`)으로 재귀 적용됩니다.
+- 중복 예산 방지를 위해 `(year, month, eventType, authorName, description)` Unique Index와 낙관적 잠금 패턴을 사용합니다. 자세한 내용은 `docs/DOUBLE_ENTRY_ACCOUNTING.md`, `docs/RACE_CONDITION_PREVENTION.md` 참고.
+
+### 로컬 퍼스트 & 동기화
+
+- `frontend/src/services/db/database.ts`에서 Dexie 스키마(이벤트/설정/동기화 메타)를 정의하고, `eventService`가 BUDGET_RESET 이후 이벤트만 필터링하여 월별 잔액을 계산합니다.
+- `pendingEventService`가 로컬 음수 sequence를 발급해 임시 이벤트를 기록하고 UI에 바로 반영합니다.
+- `syncService`는 `eventApi.sync`/`bulk-sync`와 pending 큐를 사용해 서버 sequence를 따라잡고 `ReturnType<typeof setInterval>` 기반 주기로 오프라인에서도 안전하게 재시도합니다.
+- 서비스 워커(`/frontend/public/sw.js`)가 정적 자원을 캐시하고 push 이벤트를 처리하며, offline fetch 시 보호 응답을 제공합니다.
+
+### 영수증 & OCR 파이프라인
+
+- Multer memoryStorage + Sharp로 모든 영수증을 480px JPEG로 압축 후 base64로 Prisma `Bytes` 필드에 저장합니다. 상세 절차는 `MIGRATION_IMAGE_TO_BLOB.md` 참고.
+- `receiptApi.upload` 응답은 `{ imageBuffer, ocrResult }`를 반환하며, 폼은 이를 즉시 미리보기 및 이벤트 payload에 포함합니다.
+- OCR Provider는 `OCR_PROVIDER=openai|google` 또는 기본 `dummy` 설정으로 제어하며, 키 설정은 `docs/OCR_CONFIGURATION.md`에 정리되어 있습니다.
+
+### 알림 & 설정
+
+- `/api/push/*` 라우트가 구독/해제/테스트/VAPID 키 발급을 담당하고, 프론트는 `pushNotificationService`로 구독 상태를 관리합니다.
+- `/api/settings` 는 기본 월 예산 및 초기화 API(`/settings/initial-budget`)를 제공하며, `AppSettings`는 Dexie에도 캐시됩니다.
+
+### API 빠른 참고
+
+| Method    | Path                           | 설명                                     |
+| --------- | ------------------------------ | ---------------------------------------- |
+| `GET`     | `/api/health`                  | 서버 상태 확인                           |
+| `POST`    | `/api/events`                  | 예산/지출/조정 이벤트 생성 (Append-Only) |
+| `POST`    | `/api/events/bulk-sync`        | 로컬 큐 일괄 전송                        |
+| `GET`     | `/api/events/sync?since=<seq>` | 특정 sequence 이후 이벤트 동기화         |
+| `POST`    | `/api/receipts/upload`         | 영수증 업로드 + OCR                      |
+| `GET/PUT` | `/api/settings`                | 기본 예산 조회/수정                      |
+| `POST`    | `/api/settings/initial-budget` | 초기 예산 세팅 및 데이터 리셋            |
+| `POST`    | `/api/push/subscribe`          | 푸시 구독 등록                           |
+| `POST`    | `/api/push/unsubscribe`        | 푸시 구독 해제                           |
+| `POST`    | `/api/push/test`               | 테스트 알림 발송                         |
+| `GET`     | `/api/push/public-key`         | VAPID Public Key 제공                    |
+
+## 프로젝트 구조
+
+```
+team-expense-tracker/
+├── backend/                 # Express + Prisma API
+│   ├── prisma/              # 스키마 및 마이그레이션
+│   ├── src/                 # controllers/routes/services/types
+│   ├── scripts/             # 이미지 마이그레이션, VAPID 키 생성 등
+│   ├── Dockerfile
+│   └── package.json
+├── frontend/                # React + Vite 앱
+│   ├── public/sw.js         # PWA 서비스 워커
+│   ├── src/components|hooks|services
+│   └── package.json
+├── docs/                    # 아키텍처/운영 문서
+├── docker-compose.yml       # 백/프론트 동시 실행 (개발/테스트)
+├── Makefile                 # 빌드·배포·서버 제어 명령어
+├── playwright.config.ts     # Playwright 테스트 설정
+└── README.md
+```
 
 ## 시작하기
 
-### 사전 요구사항
+### 요구사항
 
-- Node.js 20+
-- npm 또는 yarn
-- OCR API 키 (둘 중 하나):
-  - OpenAI API Key (권장) 또는
-  - Google Cloud Vision API 인증 정보
+- Node.js 20+ / pnpm 10+ (루트·frontend·backend 각각 설치 필요)
+- SQLite (better-sqlite3에 포함) 및 libvips(Sharp 변환용) 설치
+- Docker & Docker Compose (선택)
+- OCR 자격 증명: OpenAI API Key 또는 Google 서비스 계정 JSON
+- (선택) Web Push: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
 
-> **OCR 설정 방법**: 자세한 내용은 [OCR 설정 가이드](docs/OCR_CONFIGURATION.md)를 참고하세요.
-
-### 설치 및 실행
-
-#### 1. 저장소 클론
+### 1. 저장소 클론
 
 ```bash
 git clone <repository-url>
 cd team-expense-tracker
 ```
 
-#### 2. 환경 변수 설정
+### 2. 의존성 설치
 
-**백엔드:**
+```bash
+pnpm install                # 루트 dev 스크립트/Playwright 등
+pnpm --dir backend install  # 백엔드 전용
+pnpm --dir frontend install # 프론트엔드 전용
+```
+
+### 3. 환경 변수 준비
+
+백엔드 `.env` 예시:
+
+```bash
+PORT=3001
+DATABASE_URL="file:./dev.db"
+# SHADOW_DATABASE_URL=...
+OCR_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+# 또는 GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+ALLOWED_ORIGINS=http://localhost:5173
+JSON_BODY_LIMIT=15mb
+MAX_FILE_SIZE=10485760
+VAPID_PUBLIC_KEY=<base64>
+VAPID_PRIVATE_KEY=<base64>
+VAPID_EMAIL=mailto:ops@example.com
+```
+
+프론트엔드 `.env` 예시:
+
+```bash
+VITE_API_URL=http://localhost:3001
+VITE_PUSH_PUBLIC_KEY=<동일한 VAPID Public Key>
+```
+
+> 자세한 키 발급/설정은 `docs/OCR_CONFIGURATION.md` 및 `backend/src/scripts/generate-vapid-keys.ts` 참고.
+
+### 4. 데이터베이스 준비
 
 ```bash
 cd backend
-cp .env.example .env
-# .env 파일을 열어 OCR 프로바이더와 API 키를 설정하세요
-# OCR_PROVIDER=openai (기본값)
-# OPENAI_API_KEY=your_api_key_here
+pnpm prisma generate
+pnpm prisma migrate dev
 ```
 
-> **참고**: Google Vision API를 사용하려면 [OCR 설정 가이드](docs/OCR_CONFIGURATION.md)를 참고하세요.
+또는 루트에서 `pnpm db:reset` 으로 `backend/prisma/dev.db` 를 초기화 후 모든 마이그레이션을 다시 적용할 수 있습니다.
 
-**프론트엔드:**
+## 실행 방법
+
+### pnpm 스크립트
+
+- `pnpm dev` : `frontend`(Vite 5173) + `backend`(Express 3001) 동시 실행
+- `pnpm dev:frontend`, `pnpm dev:backend` : 개별 실행
+- `pnpm lint`, `pnpm lint:fix`, `pnpm format`, `pnpm format:check` : 코드 품질 관리
+- `pnpm db:reset` : Prisma dev DB 초기화 및 마이그레이션 재실행
+
+### Docker Compose (선택)
 
 ```bash
-cd frontend
-cp .env.example .env
+docker-compose up --build
 ```
 
-#### 3. 패키지 설치 및 실행
+- `frontend` 는 `VITE_API_URL=http://backend:3001` 으로 빌드되며 SQLite 파일은 볼륨에 저장됩니다.
 
-**Option A: Docker 사용 (권장)**
+### 로컬 SQLite 초기화 플로우
 
-```bash
-# 프로젝트 루트에서
-docker-compose up
-```
+1. `pnpm db:reset` (또는 `pnpm --filter team-expense-tracker-backend exec prisma migrate reset --force`)
+2. 손상 시 `rm backend/prisma/dev.db` 후 `pnpm --filter team-expense-tracker-backend exec prisma migrate deploy`
+3. UI 또는 `POST /api/settings/initial-budget` 로 초기 예산 재설정
 
-**Option B: 로컬 실행**
+## 테스트 & QA
 
-터미널 1 - 백엔드:
+| 범위                 | 명령어                              | 비고                                             |
+| -------------------- | ----------------------------------- | ------------------------------------------------ |
+| Frontend 단위 테스트 | `cd frontend && pnpm test`          | Vitest + jsdom                                   |
+| Frontend TDD         | `pnpm test:watch`, `pnpm test:ui`   | 실시간/브라우저 UI                               |
+| End-to-End           | `pnpm test:e2e`                     | `playwright.config.ts` 가 서버 두 개를 자동 기동 |
+| E2E UI 모드          | `pnpm test:e2e:ui`                  | 시나리오 디버깅                                  |
+| E2E 리포트           | `pnpm test:e2e:report`              | `playwright-report/index.html` 생성              |
+| 린트                 | `pnpm lint`                         | 프론트/백엔드 동시 검증                          |
+| 포맷                 | `pnpm format` / `pnpm format:check` | Prettier 3                                       |
 
-```bash
-cd backend
-npm install
-npx prisma generate
-npx prisma migrate dev
-npm run dev
-```
+## 배포
 
-터미널 2 - 프론트엔드:
+- **Makefile**: `make build`, `make deploy-frontend`(S3 + CloudFront 무효화), `make deploy-backend`(SSH + PM2), `make provision-server`, `make setup-server` 등 운영 명령을 제공합니다.
+- **CloudFront 설정**: `cloudfront-*.json` 은 최신 배포 구성 백업이며 `update-cloudfront.py` 로 변경분을 계산합니다.
+- **환경 파일 배포**: `make deploy-env` 로 `backend/.env` 를 원격에 전달 (민감 정보 주의).
+- **서버 제어**: `make server-start|stop|restart|logs|status` 로 PM2 프로세스를 관리합니다.
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## 문서 & 참고 자료
 
-#### 4. 접속
-
-- 프론트엔드: http://localhost:5173
-- 백엔드 API: http://localhost:3001
-
-### 로컬 SQLite 초기화
-
-로컬 개발 중 DB를 초기값으로 되돌리거나 SQLite 파일이 손상된 경우 아래 절차를 그대로 수행하세요.
-
-1. 루트 디렉터리에서 `pnpm --filter team-expense-tracker-backend exec prisma migrate reset --force` 를 실행하면 `backend/prisma/dev.db` 가 삭제되고 모든 마이그레이션이 다시 적용됩니다.
-2. 만약 `database disk image is malformed` 와 같은 손상 오류가 발생하면 `rm backend/prisma/dev.db` 로 파일을 제거한 뒤 `pnpm --filter team-expense-tracker-backend exec prisma migrate deploy` 로 새 DB를 만들고 마이그레이션을 재적용합니다.
-3. 위 과정을 마치면 DB는 최신 마이그레이션 기준의 깨끗한 상태가 되며, 필요 시 초기 예산 설정을 다시 진행하면 됩니다.
-
-### Prisma 7 구성
-
-- Prisma CLI는 `backend/prisma.config.ts`를 통해 스키마 경로, 마이그레이션 경로, datasource URL을 단일 소스로 관리합니다. 루트 `pnpm db:reset` 스크립트와 백엔드 내 `prisma:*` 스크립트 모두 이 구성을 자동으로 사용합니다.
-- 런타임 PrismaClient는 `@prisma/adapter-better-sqlite3` 기반 커넥터를 통해 SQLite 파일에 직접 연결합니다. `DATABASE_URL` 은 `file:./dev.db` 형식을 유지하며, 필요하면 `SHADOW_DATABASE_URL` 로 마이그레이션용 shadow DB 경로를 덮어쓸 수 있습니다.
-
-## 프로젝트 구조
-
-```
-team-expense-tracker/
-├── frontend/          # React 프론트엔드
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── hooks/
-│   │   ├── services/
-│   │   └── types/
-│   └── package.json
-├── backend/           # Express 백엔드
-│   ├── src/
-│   │   ├── controllers/
-│   │   ├── services/
-│   │   ├── routes/
-│   │   ├── middleware/
-│   │   └── types/
-│   ├── prisma/
-│   │   └── schema.prisma
-│   └── package.json
-└── docker-compose.yml
-```
-
-## 로컬 퍼스트 & 이벤트 소싱 아키텍처
-
-이 서비스는 **로컬 퍼스트(Local-First)** 전략과 **이벤트 소싱(Event Sourcing)** 을 조합해 오프라인에서도 동일한 UX를 제공합니다.
-
-- **단일 이벤트 스트림**: 모든 예산/지출 변경은 `BudgetEvent` 로 기록되며, 프론트엔드 Dexie DB가 서버 이벤트 로그를 그대로 캐싱합니다.
-- **로컬 우선 쓰기**: 사용자가 지출을 등록하거나 예산을 조정하면 `eventService.createLocalEvent` 가 즉시 Dexie에 임시 이벤트를 추가하고 `pendingEvents` 큐에 동기화 페이로드를 저장합니다. UI는 이 데이터를 바로 렌더링하므로 네트워크 상태와 무관하게 즉시 반영됩니다.
-- **동기화 루프**: `syncService` 는 앱 초기화 및 주기적 타이머(기본 60초)로 실행됩니다.
-  1. `pendingEvents` 큐를 비우며 서버에 이벤트를 푸시하고, 성공 시 임시 이벤트를 서버 응답으로 교체합니다.
-  2. 가장 최근 sequence 이후의 서버 이벤트를 풀링하여 Dexie `budgetEvents` 와 `syncMetadata` 를 갱신합니다.
-- **상태 표시**: 아직 서버에 반영되지 않은 이벤트는 `syncState` 가 `pending/failed` 로 표시되며, 사용자에게 재시도 버튼이 노출됩니다.
-
-> **TIP:** 새로운 변형을 추가할 때도 “로컬에 먼저 이벤트를 적재하고, 큐에 넣은 뒤 syncService 로 전파” 패턴을 지키면 일관성을 유지할 수 있습니다.
-
-## API 엔드포인트
-
-### 이벤트 & 동기화
-
-- `POST /api/events` - 모든 예산/지출/BUDGET_RESET 이벤트 생성
-- `GET /api/events/sync?since=:sequence` - 특정 sequence 이후 이벤트 동기화
-
-### 영수증 OCR
-
-- `POST /api/receipts/upload` - 영수증 업로드 및 OCR 분석
-
-### 설정
-
-- `GET /api/settings` - 앱 설정 조회
-- `PUT /api/settings` - 기본 월별 예산 설정
-- `POST /api/settings/initial-budget` - 초기 예산 설정 (데이터 리셋)
-
-## 사용 시나리오
-
-### 회식 후 기록하기
-
-1. 메인 페이지 접속
-2. 본인 이름 입력
-3. 영수증 사진 촬영 또는 업로드
-4. 자동 인식된 금액/날짜/상호명 확인
-5. 필요시 수정 후 저장
-
-### 잔액 확인하기
-
-- 메인 대시보드에서 현재 월 잔액 즉시 확인
-- 사용 내역 목록에서 상세 내역 확인
-- 날짜 또는 작성자로 필터링
-
-## 테스트
-
-### E2E 테스트
-
-Playwright를 사용한 End-to-End 테스트가 포함되어 있습니다.
-
-```bash
-# E2E 테스트 실행 (헤드리스 모드)
-pnpm test:e2e
-
-# UI 모드로 실행 (추천)
-pnpm test:e2e:ui
-```
-
-## TODO
-
-- Tailwind CSS 4.x 도입 검토: 새 preset 및 atomic 스타일링 흐름에 맞춰 디자인 시스템/빌드 구성을 재정비합니다.
-
-```bash
-# 브라우저를 보면서 실행
-pnpm test:e2e:headed
-
-# 테스트 리포트 보기
-pnpm test:e2e:report
-```
-
-**테스트 범위**:
-
-- ✅ 초기 설정 및 예산 관리 (TC-001~002-3)
-- ✅ 사용 내역 CRUD 및 필터링 (TC-009~012)
-- ✅ 자동 잔액 계산 및 경고 (TC-018~020)
-- ✅ CSV 백업/복원 (TC-013~017)
-- ✅ UI/UX 반응형 (TC-021~023)
-- ✅ 통합 시나리오 (TC-024)
-- ✅ 보안 (SQL Injection, XSS) (TC-027~030)
-
-자세한 내용은 [E2E 테스트 가이드](e2e/README.md) 및 [TEST_CASES.md](TEST_CASES.md)를 참고하세요.
+- `docs/DOUBLE_ENTRY_ACCOUNTING.md`: 복식부기 이벤트 모델, 공식, 예시
+- `docs/OCR_CONFIGURATION.md`: OpenAI/Google OCR 설정 가이드
+- `docs/RACE_CONDITION_PREVENTION.md`: Unique 제약 기반 동시성 제어 패턴
+- `docs/MIGRATION_IMAGE_TO_BLOB.md`: 이미지 BLOB 전환 절차 및 스크립트
 
 ## 라이선스
 

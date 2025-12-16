@@ -10,7 +10,7 @@
 
 **이월은 이벤트가 아닌 계산된 값입니다!**
 
-## 🎯 이벤트 타입 (2가지만)
+## 🎯 이벤트 타입 (6가지)
 
 ### 1. BUDGET_IN (예산 유입)
 
@@ -39,6 +39,61 @@
 
 - 실제 지출
 - 영수증 기반 기록
+
+### 3. EXPENSE_REVERSAL (지출 취소/환불)
+
+```json
+{
+  "eventType": "EXPENSE_REVERSAL",
+  "amount": 50000, // 원본 지출 금액
+  "referenceSequence": 42, // 원본 EXPENSE의 sequence
+  "description": "지출 취소"
+}
+```
+
+- 잘못 입력된 지출 취소
+- 환불 처리
+- 원본 이벤트는 유지하고 상쇄 이벤트 추가
+
+### 4. BUDGET_ADJUSTMENT_INCREASE (예산 증액)
+
+```json
+{
+  "eventType": "BUDGET_ADJUSTMENT_INCREASE",
+  "amount": 100000,
+  "description": "임시 예산 증액"
+}
+```
+
+- 임시 예산 증액
+- 특별 이벤트 대응
+
+### 5. BUDGET_ADJUSTMENT_DECREASE (예산 감액)
+
+```json
+{
+  "eventType": "BUDGET_ADJUSTMENT_DECREASE",
+  "amount": 50000,
+  "description": "예산 조정"
+}
+```
+
+- 예산 감액
+- 불필요한 예산 회수
+
+### 6. BUDGET_RESET (전체 데이터 초기화)
+
+```json
+{
+  "eventType": "BUDGET_RESET",
+  "amount": 0,
+  "description": "전체 데이터 초기화"
+}
+```
+
+- 전체 예산 및 지출 내역 초기화
+- 새로운 회계 주기 시작
+- **중요**: BUDGET_RESET 이후의 이벤트만 계산에 포함
 
 ## 📝 실제 예시
 
@@ -154,6 +209,7 @@ export const eventService = {
   },
 
   async calculateMonthlyBudget(year: number, month: number) {
+    // BUDGET_RESET 이후의 이벤트만 계산
     const resetSequence = await this.getLatestResetSequence();
     let events = await this.getEventsByMonth(year, month);
 
@@ -166,10 +222,13 @@ export const eventService = {
 
     events.forEach((event) => {
       if (INCOMING_EVENT_TYPES.has(event.eventType)) {
+        // BUDGET_IN, BUDGET_ADJUSTMENT_INCREASE
         budgetIn += event.amount;
       } else if (OUTGOING_EVENT_TYPES.has(event.eventType)) {
+        // EXPENSE, BUDGET_ADJUSTMENT_DECREASE
         totalSpent += event.amount;
       } else if (event.eventType === 'EXPENSE_REVERSAL') {
+        // 지출 취소 = 지출 감소
         totalSpent -= event.amount;
       }
     });
@@ -201,6 +260,15 @@ export const eventService = {
       balance: previousBalance + budgetIn - totalSpent,
       eventCount: events.length,
     };
+  },
+
+  async getLatestResetSequence(): Promise<number> {
+    const resetEvent = await db.budgetEvents
+      .where('eventType')
+      .equals('BUDGET_RESET')
+      .reverse()
+      .first();
+    return resetEvent?.sequence ?? 0;
   },
 };
 ```
@@ -263,12 +331,28 @@ function BudgetSummary({ budget }) {
 2. **수정 불가**: 잘못된 이벤트는 상쇄 이벤트 추가
 3. **삭제 불가**: Append-Only 방식
 
+## 🔄 BUDGET_RESET 처리
+
+### 동작 방식
+
+1. **로컬 우선 생성**: 클라이언트가 BUDGET_RESET 이벤트를 로컬 DB에 먼저 기록
+2. **로컬 DB 초기화**: BUDGET_RESET 이전 이벤트를 모두 삭제
+3. **서버 동기화**: BUDGET_RESET 이벤트를 서버에 전송
+4. **서버 검증**: 서버에서 BUDGET_RESET 이벤트 생성
+5. **동기화 재개**: 이후 새로운 이벤트부터 정상 동기화
+
+### 주의사항
+
+- BUDGET_RESET은 되돌릴 수 없음
+- 모든 이벤트 히스토리가 삭제됨
+- 백업 권장
+
 ## 🔐 취소/수정 처리
 
-잘못된 지출을 취소하려면:
+### 지출 취소 (EXPENSE_REVERSAL 사용)
 
 ```typescript
-// 1. 원본 이벤트 (수정 불가)
+// 1. 원본 지출 이벤트 (수정 불가)
 {
   sequence: 5,
   eventType: "EXPENSE",
@@ -276,11 +360,12 @@ function BudgetSummary({ budget }) {
   description: "잘못 입력됨"
 }
 
-// 2. 상쇄 이벤트 (음수 지출 = 환불)
+// 2. 취소 이벤트 (EXPENSE_REVERSAL)
 {
   sequence: 6,
-  eventType: "BUDGET_IN",  // 환불 = 예산 유입
+  eventType: "EXPENSE_REVERSAL",
   amount: 50000,
+  referenceSequence: 5,
   description: "seq#5 취소"
 }
 
@@ -290,6 +375,26 @@ function BudgetSummary({ budget }) {
   eventType: "EXPENSE",
   amount: 30000,
   description: "수정됨"
+}
+```
+
+### 예산 조정
+
+```typescript
+// 예산 증액
+{
+  sequence: 8,
+  eventType: "BUDGET_ADJUSTMENT_INCREASE",
+  amount: 100000,
+  description: "임시 예산 추가"
+}
+
+// 예산 감액
+{
+  sequence: 9,
+  eventType: "BUDGET_ADJUSTMENT_DECREASE",
+  amount: 50000,
+  description: "불필요한 예산 회수"
 }
 ```
 

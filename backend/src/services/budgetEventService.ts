@@ -50,7 +50,10 @@ async function getLastResetSequence(): Promise<number> {
 /**
  * 월별 잔액 계산 (푸시 알림 임계값 체크용)
  */
-async function calculateMonthlyBalance(year: number, month: number): Promise<{
+async function calculateMonthlyBalance(
+  year: number,
+  month: number
+): Promise<{
   totalBudget: number;
   spent: number;
   balance: number;
@@ -89,7 +92,7 @@ async function calculateMonthlyBalance(year: number, month: number): Promise<{
  */
 async function sendPushNotificationForEvent(
   data: CreateBudgetEventRequest,
-  event: BudgetEventResponse
+  _event: BudgetEventResponse
 ): Promise<void> {
   // 1. 새 지출 등록 시
   if (data.eventType === 'EXPENSE') {
@@ -123,7 +126,11 @@ async function sendPushNotificationForEvent(
  * 예산 임계값 체크 (80%, 100%)
  */
 async function checkBudgetThreshold(year: number, month: number): Promise<void> {
-  const { totalBudget, balance, spentPercentage } = await calculateMonthlyBalance(year, month);
+  const {
+    totalBudget: _totalBudget,
+    balance,
+    spentPercentage,
+  } = await calculateMonthlyBalance(year, month);
   const cacheKey = `${year}-${String(month).padStart(2, '0')}`;
   const lastNotifiedThreshold = notificationCache.get(cacheKey) || 0;
 

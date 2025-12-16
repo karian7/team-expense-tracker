@@ -10,8 +10,5 @@ export default defineConfig({
   minify: false,
   shims: true,
   noExternal: [],
-  external: [
-    '@prisma/client',
-    '@prisma/adapter-better-sqlite3',
-  ],
+  external: ['@prisma/client', '@prisma/adapter-better-sqlite3'],
 });

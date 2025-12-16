@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-팀 회식비 관리 서비스 - 영수증 OCR 기반 회식비 예산 관리 시스템
+팀 회식비 관리 서비스 - 영수증 OCR 기반 회식비 예산 관리 시스템 (PWA)
 
 **📚 상세 정보**: [README.md](README.md), [OCR 설정](docs/OCR_CONFIGURATION.md)
 
@@ -23,6 +23,10 @@ cd backend
 npx prisma migrate dev           # 마이그레이션
 npx prisma studio                # GUI
 npx prisma generate              # Client 재생성
+
+# VAPID 키 생성 (Push Notification)
+cd backend
+pnpm generate:vapid              # VAPID 키 쌍 생성
 ```
 
 ## Core Architecture
@@ -57,6 +61,40 @@ OCR_PROVIDER = openai | google | dummy;
 // 2. OcrProviderFactory에 추가
 ```
 
+### 3. PWA + Web Push Notification
+
+**핵심 기능**: 예산 이벤트 발생 시 실시간 푸시 알림
+
+```typescript
+// 푸시 알림 아키텍처
+서비스 워커 (/frontend/public/sw.js)
+  ↓
+VAPID 인증 (backend/scripts/generate-vapid-keys.ts)
+  ↓
+Push API (/api/push/*)
+  ↓
+web-push 라이브러리
+```
+
+**주요 컴포넌트**:
+
+- `pushNotificationService.ts`: 구독 관리
+- `pushController.ts`: 구독/해제/테스트 API
+- `pushService.ts`: 알림 전송 로직
+- Service Worker: 백그라운드 알림 수신
+
+**환경 변수**:
+
+```bash
+# Backend
+VAPID_PUBLIC_KEY=<base64>
+VAPID_PRIVATE_KEY=<base64>
+VAPID_EMAIL=mailto:ops@example.com
+
+# Frontend
+VITE_PUSH_PUBLIC_KEY=<동일한 VAPID Public Key>
+```
+
 ## Critical Points
 
 ### Decimal 타입 처리
@@ -82,8 +120,8 @@ convertDecimalsToNumbers(budget);
 ### 이미지 처리
 
 1. HEIC → JPEG 자동 변환 (iOS 지원)
-2. 800px 리사이징 (성능 최적화)
-3. `/uploads` 저장 → 프로덕션에서는 S3 권장
+2. 480px 리사이징 (성능 최적화)
+3. DB Blob 저장 (base64) → 배포 간소화
 
 ## Environment Variables
 
@@ -93,8 +131,14 @@ DATABASE_URL="file:./dev.db"
 OCR_PROVIDER=openai
 OPENAI_API_KEY=sk-proj-xxxxx
 
+# Push Notification
+VAPID_PUBLIC_KEY=<base64>
+VAPID_PRIVATE_KEY=<base64>
+VAPID_EMAIL=mailto:ops@example.com
+
 # Frontend
 VITE_API_URL=http://localhost:3001
+VITE_PUSH_PUBLIC_KEY=<동일한 VAPID Public Key>
 ```
 
 ## Quality Assurance
@@ -117,19 +161,26 @@ cd frontend && pnpm build
 
 ## Key Files
 
-- `backend/src/services/budgetService.ts` - 예산 이월 로직
+- `backend/src/services/budgetEventService.ts` - 이벤트 처리 로직
+- `backend/src/services/pushService.ts` - 푸시 알림 전송
 - `backend/src/services/ocr/OcrProviderFactory.ts` - OCR 프로바이더 선택
-- `backend/prisma/schema.prisma` - 데이터베이스 스키마
+- `backend/prisma/schema.prisma` - 데이터베이스 스키마 (BudgetEvent, Settings, PushSubscription)
 - `frontend/src/hooks/` - React Query 기반 API 훅
+- `frontend/src/services/pushNotificationService.ts` - 푸시 구독 관리
+- `frontend/public/sw.js` - PWA 서비스 워커
 
 ## 복식부기 원칙 (중요!)
 
 **이월은 이벤트가 아닌 계산된 값입니다!**
 
-### 이벤트 타입 (2가지만):
+### 이벤트 타입 (6가지):
 
 - `BUDGET_IN`: 예산 유입 (기본 예산, 추가 예산)
 - `EXPENSE`: 지출 (영수증 기반)
+- `EXPENSE_REVERSAL`: 지출 취소/환불
+- `BUDGET_ADJUSTMENT_INCREASE`: 예산 증액
+- `BUDGET_ADJUSTMENT_DECREASE`: 예산 감액
+- `BUDGET_RESET`: 전체 데이터 초기화 (로컬/서버 동기화)
 
 ### 복식부기 공식:
 

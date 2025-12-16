@@ -1,6 +1,6 @@
 # OCR 설정 가이드
 
-팀 회식비 관리 시스템은 영수증 이미지를 자동으로 분석하기 위해 OCR(Optical Character Recognition) 기술을 사용합니다. 두 가지 OCR 프로바이더를 지원하며, 환경 변수를 통해 쉽게 전환할 수 있습니다.
+팀 회식비 관리 시스템은 영수증 이미지를 자동으로 분석하기 위해 OCR(Optical Character Recognition) 기술을 사용합니다. 세 가지 OCR 프로바이더를 지원하며, 환경 변수를 통해 쉽게 전환할 수 있습니다.
 
 ## 지원하는 OCR 프로바이더
 
@@ -15,6 +15,27 @@
 - **장점**: 안정적인 서비스, 다양한 언어 지원
 - **단점**: Google Cloud 계정 및 설정 필요
 - **추천 대상**: Google Cloud 인프라를 이미 사용 중인 경우
+
+### 3. Dummy Provider (테스트용)
+
+- **장점**: API 키 불필요, 개발/테스트 환경에 적합, 비용 없음
+- **단점**: 실제 OCR 기능 없음 (더미 데이터 반환)
+- **추천 대상**:
+  - OCR API 설정 없이 개발 시작하고 싶을 때
+  - 테스트 환경에서 API 비용 절감
+  - OCR 이외의 기능 개발/테스트 시
+
+**Dummy Provider 응답 예시**:
+
+```json
+{
+  "amount": 50000,
+  "date": "2025-01-15",
+  "storeName": "테스트 상점",
+  "confidence": 0.95,
+  "rawText": "Dummy OCR result"
+}
+```
 
 ## 설정 방법
 
@@ -74,8 +95,11 @@ OCR 프로바이더를 전환하려면 `.env` 파일의 `OCR_PROVIDER` 값만 �
 # OpenAI 사용
 OCR_PROVIDER=openai
 
-# 또는 Google Vision 사용
+# Google Vision 사용
 OCR_PROVIDER=google
+
+# Dummy (테스트용)
+OCR_PROVIDER=dummy
 ```
 
 서버를 재시작하면 새로운 설정이 적용됩니다.
