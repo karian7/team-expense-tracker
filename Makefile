@@ -1,4 +1,4 @@
-.PHONY: help build build-frontend build-backend deploy deploy-frontend deploy-backend deploy-all provision-server setup-server clean
+.PHONY: help build build-frontend build-backend deploy deploy-frontend deploy-backend deploy-all provision-server setup-server clean update-ssh-config
 
 # 환경 변수
 S3_BUCKET := team-expense-tracker-fe
@@ -38,6 +38,22 @@ build-backend:
 deploy-all: build deploy-frontend deploy-backend
 	@echo "🎉 전체 배포 완료!"
 
+# SSH config 업데이트 (EC2 Public DNS 자동 반영)
+update-ssh-config:
+	@echo "🔄 SSH config 업데이트 중..."
+	@INSTANCE_ID=i-02e27c45dc05f5c03; \
+	PUBLIC_DNS=$$(aws ec2 describe-instances \
+		--instance-ids $$INSTANCE_ID \
+		--query 'Reservations[0].Instances[0].PublicDnsName' \
+		--output text); \
+	if [ "$$PUBLIC_DNS" = "None" ] || [ -z "$$PUBLIC_DNS" ]; then \
+		echo "❌ 인스턴스 $$INSTANCE_ID의 Public DNS를 가져올 수 없습니다."; \
+		exit 1; \
+	fi; \
+	echo "📍 새로운 Public DNS: $$PUBLIC_DNS"; \
+	sed -i.bak "/^Host tet$$/,/^$$/ s|^\(\s*HostName\s\).*|\1$$PUBLIC_DNS|" ~/.ssh/config; \
+	echo "✅ SSH config 업데이트 완료"
+
 deploy-frontend: build-frontend
 	@echo "☁️  Frontend S3 배포 중..."
 	aws s3 sync $(FRONTEND_DIR)/dist s3://$(S3_BUCKET) --delete
@@ -50,7 +66,7 @@ deploy-frontend: build-frontend
 		--output table
 	@echo "✅ CloudFront 캐시 무효화 완료"
 
-deploy-backend: build-backend
+deploy-backend: build-backend update-ssh-config
 	@echo "🚀 Backend SSH 배포 중..."
 	@echo "📦 원격 디렉토리 생성..."
 	ssh $(SSH_HOST) "mkdir -p $(REMOTE_PATH)"

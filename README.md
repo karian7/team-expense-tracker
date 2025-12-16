@@ -207,6 +207,7 @@ docker-compose up --build
 - `docs/OCR_CONFIGURATION.md`: OpenAI/Google OCR 설정 가이드
 - `docs/RACE_CONDITION_PREVENTION.md`: Unique 제약 기반 동시성 제어 패턴
 - `docs/MIGRATION_IMAGE_TO_BLOB.md`: 이미지 BLOB 전환 절차 및 스크립트
+- `docs/EC2_SCHEDULER.md`: Lambda 기반 EC2 자동 중지/시작 스케줄러 (비용 절감)
 
 ## 라이선스
 
