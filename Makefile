@@ -56,7 +56,13 @@ update-ssh-config:
 
 deploy-frontend: build-frontend
 	@echo "☁️  Frontend S3 배포 중..."
-	aws s3 sync $(FRONTEND_DIR)/dist s3://$(S3_BUCKET) --delete
+	# index.html은 캐시 방지 (항상 최신 버전 제공)
+	aws s3 cp $(FRONTEND_DIR)/dist/index.html s3://$(S3_BUCKET)/index.html \
+		--cache-control "no-cache, no-store, must-revalidate"
+	# 정적 자원은 해싱되므로 장기 캐싱 가능
+	aws s3 sync $(FRONTEND_DIR)/dist s3://$(S3_BUCKET) --delete \
+		--exclude "index.html" \
+		--cache-control "public, max-age=31536000, immutable"
 	@echo "✅ Frontend S3 배포 완료"
 	@echo "🔄 CloudFront 캐시 무효화 중..."
 	aws cloudfront create-invalidation \
