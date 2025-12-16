@@ -1,9 +1,7 @@
 import type { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import type { PushSubscriptionRequest, PushNotificationPayload, ApiResponse } from '../types';
 import webpush from 'web-push';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma';
 
 // Configure web-push with VAPID keys
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
