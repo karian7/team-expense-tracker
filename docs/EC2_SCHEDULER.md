@@ -56,7 +56,7 @@ EventBridge Scheduler
         │ scheduler    │ ← Lambda (Python 3.12 + pytz)
         └──────────────┘   주말 체크 로직 포함
                │              + CloudFront Origin 자동 업데이트 ⚡
-               │              
+               │
                ├─────────────→ CloudFront Distribution
                │              (Origin DNS 업데이트)
                ↑
@@ -69,17 +69,21 @@ EventBridge Scheduler
 ## 핵심 기능
 
 ### 1. 자동 스케줄링
+
 - 평일 23:00 KST: EC2 자동 중지
 - 평일 09:00 KST: EC2 자동 시작
 - 주말: 중지 상태 유지
 
 ### 2. CloudFront Origin 자동 업데이트 ⚡
+
 EC2 인스턴스는 재시작 시 새로운 Public IP/DNS가 할당되므로, Lambda가 자동으로:
+
 1. EC2 인스턴스가 running 상태가 될 때까지 대기
 2. 새로운 Public DNS 조회
 3. CloudFront Distribution의 Origin 도메인 업데이트
 
-**Elastic IP를 사용하지 않는 이유**: 
+**Elastic IP를 사용하지 않는 이유**:
+
 - Elastic IP는 EC2 중지 시에도 비용 발생 (~$0.005/시간 × 10시간/일 = $1.5/월)
 - 자동 업데이트 방식은 추가 비용 $0
 

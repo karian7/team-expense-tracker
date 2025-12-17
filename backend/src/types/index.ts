@@ -93,7 +93,6 @@ export interface PushNotificationPayload {
   body: string;
   icon?: string;
   badge?: string;
-  image?: string; // 큰 이미지 (알림 본문에 표시, data URL 또는 HTTPS URL)
   tag?: string;
   data?: {
     url?: string;
