@@ -102,7 +102,10 @@ async function sendPushNotificationForEvent(
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       tag: 'new-expense',
-      data: { url: '/' },
+      data: {
+        url: `/#expense/${_event.sequence}`,
+        expenseSequence: _event.sequence,
+      },
     });
 
     // 지출 후 예산 임계값 체크

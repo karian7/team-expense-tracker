@@ -242,6 +242,13 @@ export const eventService = {
   },
 
   /**
+   * sequence로 특정 이벤트 조회
+   */
+  async getEventBySequence(sequence: number): Promise<BudgetEvent | undefined> {
+    return await db.budgetEvents.get(sequence);
+  },
+
+  /**
    * 모든 로컬 이벤트 삭제 (초기화)
    */
   async clearAll(): Promise<void> {

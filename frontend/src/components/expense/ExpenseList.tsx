@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
 import { useCurrentBudget } from '../../hooks/useBudget';
 import { syncService } from '../../services/sync/syncService';
@@ -110,7 +110,15 @@ const normalizeReceiptImage = (image: unknown): string | null => {
   return null;
 };
 
-export default function ExpenseList() {
+interface ExpenseListProps {
+  initialSelectedSequence?: number | null;
+  onSequenceHandled?: () => void;
+}
+
+export default function ExpenseList({
+  initialSelectedSequence,
+  onSequenceHandled,
+}: ExpenseListProps = {}) {
   const budget = useCurrentBudget();
   const expenses = useExpenses(budget ? { year: budget.year, month: budget.month } : undefined);
   const sortedExpenses = useMemo(() => {
@@ -134,6 +142,22 @@ export default function ExpenseList() {
   const selectedReceiptImage = selectedExpense
     ? normalizeReceiptImage(selectedExpense.receiptImage as unknown)
     : null;
+
+  // Deep Link 처리: initialSelectedSequence에 해당하는 expense 자동 오픈
+  useEffect(() => {
+    if (initialSelectedSequence && expenses) {
+      const expense = expenses.find((e) => e.sequence === initialSelectedSequence);
+
+      if (expense) {
+        setSelectedExpense(expense);
+
+        // 처리 완료 콜백
+        if (onSequenceHandled) {
+          onSequenceHandled();
+        }
+      }
+    }
+  }, [initialSelectedSequence, expenses, onSequenceHandled]);
 
   const handleRetrySync = async () => {
     try {

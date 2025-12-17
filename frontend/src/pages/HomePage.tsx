@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import BudgetSummary from '../components/budget/BudgetSummary';
 import ExpenseForm from '../components/expense/ExpenseForm';
 import ExpenseList from '../components/expense/ExpenseList';
@@ -7,6 +8,7 @@ import MonthlyReportPage from './MonthlyReportPage';
 import HelpPage from './HelpPage';
 import type { ReceiptUploadResponse } from '../types';
 import { useUploadReceipt } from '../hooks/useReceipt';
+import { eventService } from '../services/local/eventService';
 
 type Step = 'list' | 'upload' | 'form' | 'processing';
 
@@ -17,11 +19,50 @@ export default function HomePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [deepLinkSequence, setDeepLinkSequence] = useState<number | null>(null);
 
   // Hooks and Refs
   const uploadMutation = useUploadReceipt();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  // Deep Link 처리: Push 알림에서 /#expense/123 형식으로 접근 시 자동 오픈
+  useEffect(() => {
+    const handleHashChange = async () => {
+      const hash = window.location.hash;
+
+      // /#expense/123 형식 파싱
+      const match = hash.match(/^#expense\/(\d+)$/);
+      if (match) {
+        const sequence = parseInt(match[1], 10);
+
+        try {
+          // IndexedDB에서 expense 조회
+          const expense = await eventService.getEventBySequence(sequence);
+
+          if (expense && expense.eventType === 'EXPENSE') {
+            setDeepLinkSequence(sequence);
+          } else {
+            toast.error('해당 지출 내역을 찾을 수 없습니다.');
+          }
+        } catch (error) {
+          console.error('Expense lookup failed:', error);
+          toast.error('지출 내역을 불러오는 중 오류가 발생했습니다.');
+        }
+
+        // Hash 제거 (히스토리 오염 방지)
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    };
+
+    // 초기 로딩 시 + Hash 변경 시 실행
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
 
   const handleUploadSuccess = (result: ReceiptUploadResponse) => {
     setUploadResult(result);
@@ -76,6 +117,18 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#333',
+            color: '#fff',
+          },
+        }}
+      />
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -246,7 +299,10 @@ export default function HomePage() {
               {/* Recent List */}
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 px-1">최근 사용 내역</h2>
-                <ExpenseList />
+                <ExpenseList
+                  initialSelectedSequence={deepLinkSequence}
+                  onSequenceHandled={() => setDeepLinkSequence(null)}
+                />
               </div>
             </div>
           )}

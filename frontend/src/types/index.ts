@@ -151,6 +151,7 @@ export interface PushNotificationPayload {
   tag?: string;
   data?: {
     url?: string;
+    expenseSequence?: number;
     [key: string]: unknown;
   };
 }
