@@ -51,7 +51,7 @@ update-ssh-config:
 		exit 1; \
 	fi; \
 	echo "📍 새로운 Public DNS: $$PUBLIC_DNS"; \
-	sed -i.bak "/^Host tet$$/,/^$$/ s|^\(\s*HostName\s\).*|\1$$PUBLIC_DNS|" ~/.ssh/config; \
+	sed -i.bak -E "/^Host[[:space:]]+tet$$/,/^[[:space:]]*$$/ s|^([[:space:]]*HostName[[:space:]]+).*|\1$$PUBLIC_DNS|" ~/.ssh/config; \
 	echo "✅ SSH config 업데이트 완료"
 
 deploy-frontend: build-frontend
