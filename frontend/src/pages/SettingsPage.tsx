@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import toast from 'react-hot-toast';
 import {
   useAppSettings,
   useUpdateDefaultMonthlyBudget,
@@ -77,10 +78,10 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       setIsUpdating(true);
       await updateMutation.mutateAsync(newBudget);
       setIsBudgetModalOpen(false);
-      alert('예산이 변경되었습니다.');
+      toast.success('예산이 변경되었습니다.');
     } catch (error) {
       console.error('Budget update error:', error);
-      alert('예산 변경에 실패했습니다.');
+      toast.error('예산 변경에 실패했습니다.');
     } finally {
       setIsUpdating(false);
     }
@@ -88,12 +89,12 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
   const handleAdjustBudget = async () => {
     if (!adjustDescription.trim()) {
-      alert('조정 내용을 입력해주세요.');
+      toast.error('조정 내용을 입력해주세요.');
       return;
     }
 
     if (targetBalance < 0) {
-      alert('목표 잔액은 0원 이상이어야 합니다.');
+      toast.error('목표 잔액은 0원 이상이어야 합니다.');
       return;
     }
 
@@ -105,7 +106,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       });
       setIsAdjustModalOpen(false);
       setAdjustDescription('');
-      alert('이번달 예산이 조정되었습니다.');
+      toast.success('이번달 예산이 조정되었습니다.');
     } catch (error) {
       console.error('Budget adjustment error:', error);
 
@@ -120,7 +121,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
         errorMessage = error.message;
       }
 
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsAdjusting(false);
     }
@@ -128,7 +129,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
   const handleReset = async () => {
     if (initialBudget < 0) {
-      alert('초기 예산은 0원 이상이어야 합니다.');
+      toast.error('초기 예산은 0원 이상이어야 합니다.');
       return;
     }
 
@@ -137,10 +138,10 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       await resetMutation.mutateAsync(initialBudget);
       setIsResetModalOpen(false);
       setInitialBudget(0);
-      alert('모든 데이터가 초기화되었습니다.');
+      toast.success('모든 데이터가 초기화되었습니다.');
     } catch (error) {
       console.error('Reset error:', error);
-      alert('초기화에 실패했습니다.');
+      toast.error('초기화에 실패했습니다.');
     } finally {
       setIsResetting(false);
     }
@@ -156,13 +157,13 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
       const result = await fullSyncMutation.mutateAsync();
 
       if (result.success) {
-        alert(`동기화 완료! ${result.totalSynced}개 이벤트가 서버에 저장되었습니다.`);
+        toast.success(`동기화 완료! ${result.totalSynced}개 이벤트가 서버에 저장되었습니다.`);
       } else {
-        alert(`동기화 실패: ${result.error}`);
+        toast.error(`동기화 실패: ${result.error}`);
       }
     } catch (error) {
       console.error('Full sync error:', error);
-      alert('동기화에 실패했습니다.');
+      toast.error('동기화에 실패했습니다.');
     } finally {
       setIsSyncing(false);
     }
@@ -175,10 +176,10 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
     try {
       await ignoreFullSyncMutation.mutateAsync();
-      alert('Full Sync가 무시되었습니다.');
+      toast.success('Full Sync가 무시되었습니다.');
     } catch (error) {
       console.error('Ignore full sync error:', error);
-      alert('Full Sync 무시에 실패했습니다.');
+      toast.error('Full Sync 무시에 실패했습니다.');
     }
   };
 
@@ -193,16 +194,16 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
     try {
       await resetLocalDataMutation.mutateAsync();
-      alert('로컬 데이터가 삭제되고 서버 데이터로 재동기화되었습니다.');
+      toast.success('로컬 데이터가 삭제되고 서버 데이터로 재동기화되었습니다.');
     } catch (error) {
       console.error('Reset local data error:', error);
-      alert('로컬 데이터 초기화에 실패했습니다.');
+      toast.error('로컬 데이터 초기화에 실패했습니다.');
     }
   };
 
   const handleTogglePushNotifications = async () => {
     if (!isPushSupported) {
-      alert('이 브라우저는 푸시 알림을 지원하지 않습니다.');
+      toast.error('이 브라우저는 푸시 알림을 지원하지 않습니다.');
       return;
     }
 
@@ -213,23 +214,25 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
         // Unsubscribe
         await pushNotificationService.unsubscribe();
         setIsPushEnabled(false);
-        alert('푸시 알림이 비활성화되었습니다.');
+        toast.success('푸시 알림이 비활성화되었습니다.');
       } else {
         // Subscribe
         const permission = pushNotificationService.getPermission();
 
         if (permission === 'denied') {
-          alert('푸시 알림 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해주세요.');
+          toast.error('푸시 알림 권한이 거부되었습니다.\n브라우저 설정에서 권한을 허용해주세요.', {
+            duration: 4000,
+          });
           return;
         }
 
         await pushNotificationService.subscribe();
         setIsPushEnabled(true);
-        alert('푸시 알림이 활성화되었습니다!');
+        toast.success('푸시 알림이 활성화되었습니다!');
       }
     } catch (error) {
       console.error('Push notification toggle error:', error);
-      alert('푸시 알림 설정에 실패했습니다.');
+      toast.error('푸시 알림 설정에 실패했습니다.');
     } finally {
       setIsPushLoading(false);
     }
@@ -237,16 +240,16 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
   const handleTestNotification = async () => {
     if (!isPushEnabled) {
-      alert('먼저 푸시 알림을 활성화해주세요.');
+      toast.error('먼저 푸시 알림을 활성화해주세요.');
       return;
     }
 
     try {
       await pushNotificationService.sendTestNotification();
-      alert('테스트 알림이 전송되었습니다!');
+      toast.success('테스트 알림이 전송되었습니다!');
     } catch (error) {
       console.error('Test notification error:', error);
-      alert('테스트 알림 전송에 실패했습니다.');
+      toast.error('테스트 알림 전송에 실패했습니다.');
     }
   };
 
