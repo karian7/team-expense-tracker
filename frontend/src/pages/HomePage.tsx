@@ -65,6 +65,20 @@ export default function HomePage() {
   }, []);
 
   const handleUploadSuccess = (result: ReceiptUploadResponse) => {
+    // 영수증이 아닌 이미지를 업로드한 경우
+    if (result.ocrResult.isReceipt === false) {
+      toast.error(
+        '업로드한 이미지가 영수증이 아닌 것 같습니다.\n영수증 사진을 다시 업로드해주세요.',
+        {
+          duration: 4000,
+          icon: '⚠️',
+        }
+      );
+      setPreviewImage(null);
+      setCurrentStep('list');
+      return;
+    }
+
     setUploadResult(result);
     // If we have a local preview, use it? Or use the one from server?
     // The result from server usually has the image buffer or ID.
@@ -86,7 +100,9 @@ export default function HomePage() {
 
   const handleUploadError = (error: Error) => {
     console.error('Upload error:', error);
-    alert('영수증 업로드 중 오류가 발생했습니다. 다시 시도해 주세요.');
+    toast.error('영수증 업로드 중 오류가 발생했습니다.\n다시 시도해 주세요.', {
+      duration: 4000,
+    });
     setPreviewImage(null);
     setCurrentStep('list');
   };
