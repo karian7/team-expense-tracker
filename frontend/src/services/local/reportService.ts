@@ -18,8 +18,17 @@ export const reportService = {
     const events = await eventService.getEventsByMonth(year, month);
     const budget = await eventService.calculateMonthlyBudget(year, month);
 
-    // EXPENSE 타입만 필터링 (지출 통계)
-    const expenseEvents = events.filter((e) => e.eventType === 'EXPENSE');
+    // 삭제된 지출의 sequence 목록 추출
+    const deletedSequences = new Set(
+      events
+        .filter((e) => e.eventType === 'EXPENSE_REVERSAL' && e.referenceSequence)
+        .map((e) => e.referenceSequence as number)
+    );
+
+    // EXPENSE 타입만 필터링하되, 삭제된 지출은 제외 (Event Sourcing 원칙)
+    const expenseEvents = events.filter(
+      (e) => e.eventType === 'EXPENSE' && !deletedSequences.has(e.sequence)
+    );
 
     const statistics = this.calculateStatistics(expenseEvents);
 
