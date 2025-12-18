@@ -132,6 +132,11 @@ export async function uploadReceipt(
     // 4. OCR 분석 (최적화된 이미지 사용)
     const ocrResult = await analyzeReceiptWithBuffer(ocrBuffer);
 
+    // 5. 영수증 여부 검증
+    if (ocrResult.isReceipt === false) {
+      throw new AppError('업로드한 이미지가 영수증이 아닙니다. 영수증 사진을 업로드해주세요.', 400);
+    }
+
     res.json({
       success: true,
       data: {

@@ -58,6 +58,7 @@ export interface OcrResult {
   date: string | null; // ISO datetime string (YYYY-MM-DDTHH:mm:ss.sssZ)
   storeName: string | null;
   confidence: number;
+  isReceipt?: boolean; // 이미지가 영수증인지 여부
   rawText?: string;
   error?: string;
 }
