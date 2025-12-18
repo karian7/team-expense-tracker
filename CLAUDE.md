@@ -153,11 +153,44 @@ pnpm lint && pnpm format:check
 pnpm lint:fix && pnpm format
 
 # 3. TypeScript 컴파일 확인
-cd backend && pnpm build
-cd frontend && pnpm build
+pnpm --filter backend build
+pnpm --filter frontend build
 ```
 
-**검사 통과 없이 작업 완료 보고 금지**
+**검증 통과 없이 작업 완료 보고 금지**
+
+### 검증 절차 상세
+
+#### 1단계: 코드 품질 검사
+```bash
+pnpm lint && pnpm format:check
+```
+- ESLint로 코드 스타일 및 잠재적 오류 검사
+- Prettier로 포맷 일관성 검사
+- ✅ 통과: 다음 단계 진행
+- ❌ 실패: 2단계로 이동
+
+#### 2단계: 자동 수정
+```bash
+pnpm lint:fix && pnpm format
+```
+- ESLint 자동 수정 가능한 문제 해결
+- Prettier로 코드 포맷 자동 정리
+- 수정 후 1단계 재실행 필수
+
+#### 3단계: 타입 검사 및 빌드
+```bash
+# Backend 빌드
+pnpm --filter backend build
+
+# Frontend 빌드  
+pnpm --filter frontend build
+```
+- TypeScript 컴파일 오류 검증
+- 빌드 성공 확인
+- ✅ 모두 통과: 작업 완료
+- ❌ 실패: 타입 에러 수정 후 1단계부터 재실행
+```
 
 ## Key Files
 

@@ -231,8 +231,7 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
                       <XAxis dataKey="date" tickFormatter={formatDate} stroke="#6b7280" />
                       <YAxis stroke="#6b7280" />
                       <Tooltip
-                        formatter={(value: number | undefined) => `₩${formatCurrency(value ?? 0)}`}
-                        labelFormatter={formatDate}
+                        formatter={(value) => `₩${formatCurrency(Number(value) || 0)}`}
                         contentStyle={{
                           backgroundColor: '#fff',
                           borderRadius: '8px',
@@ -271,9 +270,7 @@ export default function MonthlyReportPage({ onClose }: MonthlyReportPageProps) {
                           ))}
                         </Pie>
                         <Tooltip
-                          formatter={(value: number | undefined) =>
-                            `₩${formatCurrency(value ?? 0)}`
-                          }
+                          formatter={(value) => `₩${formatCurrency(Number(value) || 0)}`}
                           contentStyle={{
                             backgroundColor: '#fff',
                             borderRadius: '8px',
