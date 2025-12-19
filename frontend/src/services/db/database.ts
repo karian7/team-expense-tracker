@@ -49,12 +49,31 @@ export interface PendingEvent {
   lastSyncAttempt?: string; // 마지막 동기화 시도 시간
 }
 
+// 마지막 업로드한 영수증 이미지 (재시도용)
+export interface LastReceiptImage {
+  id: 'last'; // 단일 레코드만 유지
+  imageData: string; // base64 encoded image
+  fileName: string;
+  uploadedAt: string;
+}
+
+// 동기화 상태 (UI 표시용)
+export interface SyncStatus {
+  key: 'lastSync'; // 단일 레코드
+  lastSuccessTime: string | null;
+  lastErrorTime: string | null;
+  lastErrorMessage: string | null;
+  isPending: boolean; // 대기 중인 이벤트 존재 여부
+}
+
 // Dexie Database 클래스 (Event Sourcing)
 class ExpenseTrackerDB extends Dexie {
   budgetEvents!: Table<BudgetEvent, number>;
   settings!: Table<Settings, string>;
   syncMetadata!: Table<SyncMetadata, string>;
   pendingEvents!: Table<PendingEvent, string>;
+  lastReceiptImage!: Table<LastReceiptImage, string>;
+  syncStatus!: Table<SyncStatus, string>;
 
   constructor() {
     super('ExpenseTrackerDB');
@@ -84,6 +103,16 @@ class ExpenseTrackerDB extends Dexie {
             }
           });
       });
+
+    // 스키마 버전 6 (lastReceiptImage, syncStatus 테이블 추가)
+    this.version(6).stores({
+      budgetEvents: 'sequence, [year+month], eventType, eventDate, authorName, referenceSequence',
+      settings: 'key',
+      syncMetadata: 'key',
+      pendingEvents: 'id, tempSequence, status, createdAt',
+      lastReceiptImage: 'id', // 마지막 영수증 이미지
+      syncStatus: 'key', // 동기화 상태
+    });
   }
 }
 

@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useUploadReceipt } from '../../hooks/useReceipt';
+import { receiptStorageService } from '../../services/local/receiptStorageService';
 import type { ReceiptUploadResponse } from '../../types';
 
 interface ReceiptUploaderProps {
@@ -10,15 +11,26 @@ interface ReceiptUploaderProps {
 export default function ReceiptUploader({ onUploadSuccess, onUploadError }: ReceiptUploaderProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [hasLastReceipt, setHasLastReceipt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useUploadReceipt();
 
+  // 마지막 영수증 이미지 확인
+  useEffect(() => {
+    receiptStorageService.hasLastReceipt().then(setHasLastReceipt);
+  }, []);
+
   const handleFileSelect = async (file: File) => {
     // 파일 미리보기
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
+    reader.onloadend = async () => {
+      const imageData = reader.result as string;
+      setPreview(imageData);
+
+      // 로컬에 이미지 저장 (재시도용)
+      await receiptStorageService.saveLastReceipt(imageData, file.name);
+      setHasLastReceipt(true);
     };
     reader.readAsDataURL(file);
 
@@ -26,12 +38,46 @@ export default function ReceiptUploader({ onUploadSuccess, onUploadError }: Rece
     try {
       const result = await uploadMutation.mutateAsync(file);
       onUploadSuccess(result);
+      // 성공 시 로컬 이미지 삭제
+      await receiptStorageService.clearLastReceipt();
+      setHasLastReceipt(false);
     } catch (error) {
       console.error('Upload error:', error);
       if (onUploadError) {
         onUploadError(error as Error);
       }
     }
+  };
+
+  const handleRetryUpload = async () => {
+    const lastReceipt = await receiptStorageService.getLastReceipt();
+    if (!lastReceipt) return;
+
+    // base64를 Blob으로 변환
+    const response = await fetch(lastReceipt.imageData);
+    const blob = await response.blob();
+    const file = new File([blob], lastReceipt.fileName, { type: blob.type });
+
+    // 업로드 재시도
+    try {
+      const result = await uploadMutation.mutateAsync(file);
+      onUploadSuccess(result);
+      // 성공 시 로컬 이미지 삭제
+      await receiptStorageService.clearLastReceipt();
+      setHasLastReceipt(false);
+    } catch (error) {
+      console.error('Retry upload error:', error);
+      if (onUploadError) {
+        onUploadError(error as Error);
+      }
+    }
+  };
+
+  const handleLoadLastReceipt = async () => {
+    const lastReceipt = await receiptStorageService.getLastReceipt();
+    if (!lastReceipt) return;
+
+    setPreview(lastReceipt.imageData);
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,15 +106,60 @@ export default function ReceiptUploader({ onUploadSuccess, onUploadError }: Rece
     }
   };
 
-  const handleClearPreview = () => {
+  const handleClearPreview = async () => {
     setPreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
+  const handleClearLastReceipt = async () => {
+    await receiptStorageService.clearLastReceipt();
+    setHasLastReceipt(false);
+    setPreview(null);
+  };
+
   return (
-    <div className="w-full">
+    <div className="w-full space-y-3">
+      {/* 마지막 영수증 복구 버튼 */}
+      {hasLastReceipt && !preview && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 text-blue-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+              />
+            </svg>
+            <p className="text-sm text-blue-700 font-medium">
+              마지막 업로드한 영수증 이미지가 저장되어 있습니다
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleLoadLastReceipt}
+              className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              불러오기
+            </button>
+            <button
+              onClick={handleClearLastReceipt}
+              className="text-sm px-3 py-1.5 bg-white border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+            >
+              삭제
+            </button>
+          </div>
+        </div>
+      )}
+
       {!preview ? (
         <div
           className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
@@ -153,22 +244,44 @@ export default function ReceiptUploader({ onUploadSuccess, onUploadError }: Rece
       )}
 
       {uploadMutation.isError && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 flex-shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2 text-red-600 text-sm mb-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{uploadMutation.error?.message || '업로드 중 오류가 발생했습니다.'}</span>
+          </div>
+          <button
+            onClick={handleRetryUpload}
+            className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          {uploadMutation.error?.message || '업로드 중 오류가 발생했습니다.'}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            다시 시도
+          </button>
         </div>
       )}
     </div>

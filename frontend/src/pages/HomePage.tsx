@@ -6,6 +6,7 @@ import ExpenseList from '../components/expense/ExpenseList';
 import SettingsPage from './SettingsPage';
 import MonthlyReportPage from './MonthlyReportPage';
 import HelpPage from './HelpPage';
+import SyncStatusIndicator from '../components/sync/SyncStatusIndicator';
 import type { ReceiptUploadResponse } from '../types';
 import { useUploadReceipt } from '../hooks/useReceipt';
 import { eventService } from '../services/local/eventService';
@@ -153,6 +154,7 @@ export default function HomePage() {
             Team Expense Tracker
           </h1>
           <div className="flex gap-2">
+            <SyncStatusIndicator />
             <button
               onClick={() => setShowHelp(true)}
               className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"

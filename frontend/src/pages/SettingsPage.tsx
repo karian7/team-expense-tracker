@@ -253,23 +253,6 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     }
   };
 
-  // useQuery returns { data, isLoading, error }
-  if (settings.isLoading || currentBudget === undefined) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  if (!settings.data || !currentBudget) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-red-600">설정을 불러올 수 없습니다.</div>
-      </div>
-    );
-  }
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-50 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -300,56 +283,25 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
           </div>
         </header>
 
-        <main className="px-6 py-6 space-y-6">
-          {/* Budget Settings */}
-          <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-xl">💰</span> 예산 설정
-            </h2>
+        {/* Loading State */}
+        {(settings.isLoading || currentBudget === undefined) && (
+          <main className="px-6 py-6">
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+              <p className="text-gray-600">설정을 불러오는 중...</p>
+            </div>
+          </main>
+        )}
 
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm text-gray-500">현재 월 예산</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {formatCurrency(settings.data.defaultMonthlyBudget)}원
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setNewBudget(settings.data.defaultMonthlyBudget);
-                    setIsBudgetModalOpen(true);
-                  }}
-                  className="btn-secondary text-sm py-1.5 px-3"
-                  data-testid="change-monthly-budget-button"
-                >
-                  변경
-                </button>
-              </div>
-
-              <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <div>
-                  <p className="text-sm text-blue-600 font-medium">이번달 남은 예산</p>
-                  <p className="text-xl font-bold text-blue-900">
-                    {formatCurrency(currentBudget.balance)}원
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setTargetBalance(currentBudget.balance);
-                    setIsAdjustModalOpen(true);
-                  }}
-                  className="btn-primary text-sm py-1.5 px-3"
-                  data-testid="adjust-budget-button"
-                >
-                  조정
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 text-sm bg-blue-50 p-3 rounded-lg text-blue-700">
+        {/* Error State */}
+        {!settings.isLoading &&
+          currentBudget !== undefined &&
+          (!settings.data || !currentBudget) && (
+            <main className="px-6 py-6">
+              <div className="flex flex-col items-center justify-center py-12">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
+                  className="h-16 w-16 text-red-500 mb-4"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -358,69 +310,69 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                예산 변경 시 다음 달부터 적용됩니다.
-              </div>
-            </div>
-          </section>
-
-          {/* Push Notifications */}
-          <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="text-xl">🔔</span> 푸시 알림
-            </h2>
-
-            {!isPushSupported ? (
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm text-gray-600">
-                  현재 브라우저는 푸시 알림을 지원하지 않습니다.
+                <p className="text-red-600 font-medium mb-4">설정을 불러올 수 없습니다.</p>
+                <p className="text-gray-500 text-sm mb-4">
+                  네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.
                 </p>
+                <button onClick={onClose} className="btn-primary">
+                  닫기
+                </button>
               </div>
-            ) : (
+            </main>
+          )}
+
+        {/* Main Content */}
+        {!settings.isLoading && currentBudget !== undefined && settings.data && currentBudget && (
+          <main className="px-6 py-6 space-y-6">
+            {/* Budget Settings */}
+            <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="text-xl">💰</span> 예산 설정
+              </h2>
+
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-medium text-gray-900">푸시 알림</p>
-                    <p className="text-sm text-gray-500">
-                      {isPushEnabled
-                        ? '새로운 지출 및 예산 알림을 받습니다'
-                        : '알림을 활성화하여 업데이트를 받으세요'}
+                    <p className="text-sm text-gray-500">현재 월 예산</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {formatCurrency(settings.data.defaultMonthlyBudget)}원
                     </p>
                   </div>
                   <button
-                    onClick={handleTogglePushNotifications}
-                    disabled={isPushLoading}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      isPushEnabled ? 'bg-blue-600' : 'bg-gray-300'
-                    } ${isPushLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    data-testid="push-notification-toggle"
+                    onClick={() => {
+                      setNewBudget(settings.data.defaultMonthlyBudget);
+                      setIsBudgetModalOpen(true);
+                    }}
+                    className="btn-secondary text-sm py-1.5 px-3"
+                    data-testid="change-monthly-budget-button"
                   >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        isPushEnabled ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
+                    변경
                   </button>
                 </div>
 
-                {isPushEnabled && (
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <p className="text-sm text-blue-700 mb-3">
-                      푸시 알림이 활성화되었습니다. 테스트 알림을 보내보세요!
+                <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg border border-blue-100">
+                  <div>
+                    <p className="text-sm text-blue-600 font-medium">이번달 남은 예산</p>
+                    <p className="text-xl font-bold text-blue-900">
+                      {formatCurrency(currentBudget.balance)}원
                     </p>
-                    <button
-                      onClick={handleTestNotification}
-                      className="btn-secondary text-sm py-1.5 px-3"
-                      data-testid="test-notification-button"
-                    >
-                      테스트 알림 전송
-                    </button>
                   </div>
-                )}
+                  <button
+                    onClick={() => {
+                      setTargetBalance(currentBudget.balance);
+                      setIsAdjustModalOpen(true);
+                    }}
+                    className="btn-primary text-sm py-1.5 px-3"
+                    data-testid="adjust-budget-button"
+                  >
+                    조정
+                  </button>
+                </div>
 
-                <div className="flex items-center gap-2 text-sm bg-gray-50 p-3 rounded-lg text-gray-600">
+                <div className="flex items-center gap-2 text-sm bg-blue-50 p-3 rounded-lg text-blue-700">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-5 w-5"
@@ -435,128 +387,203 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                       d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  PWA로 설치 후 사용하면 백그라운드에서도 알림을 받을 수 있습니다.
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Reset Data */}
-          <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <h2 className="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
-              <span className="text-xl">⚠️</span> 위험 구역
-            </h2>
-
-            <div className="p-4 bg-red-50 rounded-lg border border-red-100">
-              <h3 className="font-bold text-red-800 mb-1">데이터 초기화 및 초기 예산 설정</h3>
-              <p className="text-sm text-red-600 mb-4">
-                모든 지출 내역과 예산이 삭제되고 초기 예산이 설정됩니다. 이 작업은 되돌릴 수
-                없습니다.
-              </p>
-              <button
-                onClick={() => {
-                  setInitialBudget(1000000);
-                  setIsResetModalOpen(true);
-                }}
-                className="w-full py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors"
-                disabled={isResetting}
-                data-testid="reset-all-data-button"
-              >
-                🚨 모든 데이터 삭제 및 초기 예산 설정
-              </button>
-            </div>
-
-            <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-100">
-              <h3 className="font-bold text-yellow-800 mb-1">로컬 데이터만 초기화</h3>
-              <p className="text-sm text-yellow-700 mb-4">
-                IndexedDB를 비우고 서버에서 다시 내려받아 최신 상태로 복구합니다. 서버 데이터는
-                변경되지 않습니다.
-              </p>
-              <button
-                onClick={handleResetLocalData}
-                className="w-full py-2 bg-white border border-yellow-200 text-yellow-700 rounded-lg hover:bg-yellow-100 font-medium transition-colors"
-                disabled={resetLocalDataMutation.isPending}
-                data-testid="reset-local-data-button"
-              >
-                {resetLocalDataMutation.isPending ? '초기화 중...' : '🧹 로컬 데이터만 삭제'}
-              </button>
-            </div>
-          </section>
-
-          {/* Full Sync Section */}
-          {needsFullSyncQuery.data && (
-            <section className="bg-white rounded-xl p-6 shadow-sm border border-orange-200">
-              <h2 className="text-lg font-bold text-orange-600 mb-4 flex items-center gap-2">
-                <span className="text-xl">🔄</span> 서버 동기화 필요
-              </h2>
-
-              <div className="p-4 bg-orange-50 rounded-lg border border-orange-100 mb-4">
-                <h3 className="font-bold text-orange-800 mb-2">
-                  리모트 데이터베이스가 리셋되었습니다
-                </h3>
-                <p className="text-sm text-orange-600 mb-4">
-                  로컬에 저장된 데이터를 서버에 동기화하시겠습니까?
-                </p>
-
-                {/* 로컬 이벤트 통계 */}
-                <div className="bg-white rounded-lg p-4 mb-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">로컬 이벤트 통계</p>
-                  <p className="text-2xl font-bold text-orange-600">총 {localEventCount ?? 0}건</p>
-                </div>
-
-                {/* 최신 이벤트 10건 */}
-                {latestEvents && latestEvents.length > 0 && (
-                  <div className="bg-white rounded-lg p-4 mb-4">
-                    <p className="text-sm font-medium text-gray-700 mb-2">최신 이벤트 10건</p>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {latestEvents.map((event) => (
-                        <div
-                          key={event.sequence}
-                          className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded"
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-800">
-                              {event.eventType === 'EXPENSE'
-                                ? `💸 ${event.storeName || '지출'}`
-                                : `💰 ${event.description || '예산'}`}
-                            </p>
-                            <p className="text-gray-500">
-                              {new Date(event.eventDate).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <p className="font-bold text-gray-900">
-                            {formatCurrency(event.amount)}원
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 액션 버튼 */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleIgnoreFullSync}
-                    className="flex-1 py-2 bg-white border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 font-medium transition-colors"
-                    disabled={isSyncing || ignoreFullSyncMutation.isPending}
-                  >
-                    무시
-                  </button>
-                  <button
-                    onClick={handleFullSync}
-                    className="flex-1 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
-                    disabled={isSyncing || fullSyncMutation.isPending}
-                  >
-                    {isSyncing ? '동기화 중...' : '🔄 동기화'}
-                  </button>
+                  예산 변경 시 다음 달부터 적용됩니다.
                 </div>
               </div>
             </section>
-          )}
-        </main>
 
-        {/* Budget Edit Modal */}
-        {isBudgetModalOpen && (
+            {/* Push Notifications */}
+            <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="text-xl">🔔</span> 푸시 알림
+              </h2>
+
+              {!isPushSupported ? (
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-600">
+                    현재 브라우저는 푸시 알림을 지원하지 않습니다.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">푸시 알림</p>
+                      <p className="text-sm text-gray-500">
+                        {isPushEnabled
+                          ? '새로운 지출 및 예산 알림을 받습니다'
+                          : '알림을 활성화하여 업데이트를 받으세요'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleTogglePushNotifications}
+                      disabled={isPushLoading}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        isPushEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                      } ${isPushLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      data-testid="push-notification-toggle"
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          isPushEnabled ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {isPushEnabled && (
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                      <p className="text-sm text-blue-700 mb-3">
+                        푸시 알림이 활성화되었습니다. 테스트 알림을 보내보세요!
+                      </p>
+                      <button
+                        onClick={handleTestNotification}
+                        className="btn-secondary text-sm py-1.5 px-3"
+                        data-testid="test-notification-button"
+                      >
+                        테스트 알림 전송
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 text-sm bg-gray-50 p-3 rounded-lg text-gray-600">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    PWA로 설치 후 사용하면 백그라운드에서도 알림을 받을 수 있습니다.
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Reset Data */}
+            <section className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <h2 className="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
+                <span className="text-xl">⚠️</span> 위험 구역
+              </h2>
+
+              <div className="p-4 bg-red-50 rounded-lg border border-red-100">
+                <h3 className="font-bold text-red-800 mb-1">데이터 초기화 및 초기 예산 설정</h3>
+                <p className="text-sm text-red-600 mb-4">
+                  모든 지출 내역과 예산이 삭제되고 초기 예산이 설정됩니다. 이 작업은 되돌릴 수
+                  없습니다.
+                </p>
+                <button
+                  onClick={() => {
+                    setInitialBudget(1000000);
+                    setIsResetModalOpen(true);
+                  }}
+                  className="w-full py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 font-medium transition-colors"
+                  disabled={isResetting}
+                  data-testid="reset-all-data-button"
+                >
+                  🚨 모든 데이터 삭제 및 초기 예산 설정
+                </button>
+              </div>
+
+              <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+                <h3 className="font-bold text-yellow-800 mb-1">로컬 데이터만 초기화</h3>
+                <p className="text-sm text-yellow-700 mb-4">
+                  IndexedDB를 비우고 서버에서 다시 내려받아 최신 상태로 복구합니다. 서버 데이터는
+                  변경되지 않습니다.
+                </p>
+                <button
+                  onClick={handleResetLocalData}
+                  className="w-full py-2 bg-white border border-yellow-200 text-yellow-700 rounded-lg hover:bg-yellow-100 font-medium transition-colors"
+                  disabled={resetLocalDataMutation.isPending}
+                  data-testid="reset-local-data-button"
+                >
+                  {resetLocalDataMutation.isPending ? '초기화 중...' : '🧹 로컬 데이터만 삭제'}
+                </button>
+              </div>
+            </section>
+
+            {/* Full Sync Section */}
+            {needsFullSyncQuery.data && (
+              <section className="bg-white rounded-xl p-6 shadow-sm border border-orange-200">
+                <h2 className="text-lg font-bold text-orange-600 mb-4 flex items-center gap-2">
+                  <span className="text-xl">🔄</span> 서버 동기화 필요
+                </h2>
+
+                <div className="p-4 bg-orange-50 rounded-lg border border-orange-100 mb-4">
+                  <h3 className="font-bold text-orange-800 mb-2">
+                    리모트 데이터베이스가 리셋되었습니다
+                  </h3>
+                  <p className="text-sm text-orange-600 mb-4">
+                    로컬에 저장된 데이터를 서버에 동기화하시겠습니까?
+                  </p>
+
+                  {/* 로컬 이벤트 통계 */}
+                  <div className="bg-white rounded-lg p-4 mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">로컬 이벤트 통계</p>
+                    <p className="text-2xl font-bold text-orange-600">
+                      총 {localEventCount ?? 0}건
+                    </p>
+                  </div>
+
+                  {/* 최신 이벤트 10건 */}
+                  {latestEvents && latestEvents.length > 0 && (
+                    <div className="bg-white rounded-lg p-4 mb-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">최신 이벤트 10건</p>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {latestEvents.map((event) => (
+                          <div
+                            key={event.sequence}
+                            className="flex justify-between items-center text-xs p-2 bg-gray-50 rounded"
+                          >
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-800">
+                                {event.eventType === 'EXPENSE'
+                                  ? `💸 ${event.storeName || '지출'}`
+                                  : `💰 ${event.description || '예산'}`}
+                              </p>
+                              <p className="text-gray-500">
+                                {new Date(event.eventDate).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <p className="font-bold text-gray-900">
+                              {formatCurrency(event.amount)}원
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 액션 버튼 */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleIgnoreFullSync}
+                      className="flex-1 py-2 bg-white border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 font-medium transition-colors"
+                      disabled={isSyncing || ignoreFullSyncMutation.isPending}
+                    >
+                      무시
+                    </button>
+                    <button
+                      onClick={handleFullSync}
+                      className="flex-1 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+                      disabled={isSyncing || fullSyncMutation.isPending}
+                    >
+                      {isSyncing ? '동기화 중...' : '🔄 동기화'}
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Budget Edit Modal */}
+            {isBudgetModalOpen && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 rounded-xl">
             <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
               <h3 className="text-lg font-bold text-gray-900 mb-4">예산 변경</h3>
@@ -594,11 +621,11 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 </button>
               </div>
             </div>
-          </div>
-        )}
+            </div>
+            )}
 
-        {/* Budget Adjustment Modal */}
-        {isAdjustModalOpen && (
+            {/* Budget Adjustment Modal */}
+            {isAdjustModalOpen && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 rounded-xl">
             <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
               <h3 className="text-lg font-bold text-gray-900 mb-4">이번달 예산 조정</h3>
@@ -672,11 +699,11 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 </button>
               </div>
             </div>
-          </div>
-        )}
+            </div>
+            )}
 
-        {/* Reset Modal */}
-        {isResetModalOpen && (
+            {/* Reset Modal */}
+            {isResetModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
             <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
               <h3 className="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
@@ -740,7 +767,9 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 </button>
               </div>
             </div>
-          </div>
+            </div>
+            )}
+          </main>
         )}
       </div>
     </div>

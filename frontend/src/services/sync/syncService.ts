@@ -2,6 +2,7 @@ import { eventService } from '../local/eventService';
 import { eventApi, settingsApi } from '../api';
 import { pendingEventService } from '../local/pendingEventService';
 import { settingsService } from '../local/settingsService';
+import { syncStatusService } from '../local/syncStatusService';
 import { db } from '../db/database';
 
 async function pushPendingEvents(): Promise<number> {
@@ -89,6 +90,10 @@ export const syncService = {
         console.log('[Sync] Server DB reset detected (from server response)');
         await settingsService.setNeedsFullSync(true);
       }
+
+      // 동기화 성공 시 상태 업데이트
+      const remainingPendingCount = await pendingEventService.count();
+      await syncStatusService.recordSuccess(remainingPendingCount > 0);
 
       if (events.length === 0) {
         return { newEvents: 0, pushedEvents, lastSequence };
@@ -193,9 +198,20 @@ export const syncService = {
 
       console.log(`Synced ${events.length} new events`);
       await settingsService.setInitialSyncCompleted(true);
+
+      // 최종 동기화 성공 상태 업데이트
+      const finalPendingCount = await pendingEventService.count();
+      await syncStatusService.recordSuccess(finalPendingCount > 0);
+
       return { newEvents: events.length, pushedEvents, lastSequence: serverSequence };
     } catch (error) {
       console.error('Sync failed:', error);
+
+      // 동기화 실패 시 상태 기록
+      const errorMessage = error instanceof Error ? error.message : 'Unknown sync error';
+      const pendingCount = await pendingEventService.count();
+      await syncStatusService.recordError(errorMessage, pendingCount > 0);
+
       throw error;
     }
   },

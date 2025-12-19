@@ -162,34 +162,41 @@ pnpm --filter frontend build
 ### 검증 절차 상세
 
 #### 1단계: 코드 품질 검사
+
 ```bash
 pnpm lint && pnpm format:check
 ```
+
 - ESLint로 코드 스타일 및 잠재적 오류 검사
 - Prettier로 포맷 일관성 검사
 - ✅ 통과: 다음 단계 진행
 - ❌ 실패: 2단계로 이동
 
 #### 2단계: 자동 수정
+
 ```bash
 pnpm lint:fix && pnpm format
 ```
+
 - ESLint 자동 수정 가능한 문제 해결
 - Prettier로 코드 포맷 자동 정리
 - 수정 후 1단계 재실행 필수
 
 #### 3단계: 타입 검사 및 빌드
+
 ```bash
 # Backend 빌드
 pnpm --filter backend build
 
-# Frontend 빌드  
+# Frontend 빌드
 pnpm --filter frontend build
 ```
+
 - TypeScript 컴파일 오류 검증
 - 빌드 성공 확인
 - ✅ 모두 통과: 작업 완료
 - ❌ 실패: 타입 에러 수정 후 1단계부터 재실행
+
 ```
 
 ## Key Files
@@ -218,16 +225,20 @@ pnpm --filter frontend build
 ### 복식부기 공식:
 
 ```
+
 이전 달 잔액 + 이번 달 예산 유입 - 이번 달 지출 = 이번 달 잔액
+
 ```
 
 ### 예시:
 
 ```
+
 1월: BUDGET_IN(300,000) - EXPENSE(50,000) = 잔액 250,000
 2월: BUDGET_IN(300,000) + 이월(250,000) = 총 550,000
-     ↑ 이월은 1월 잔액을 재계산한 값 (이벤트 아님!)
-```
+↑ 이월은 1월 잔액을 재계산한 값 (이벤트 아님!)
+
+````
 
 **상세 문서**: `docs/DOUBLE_ENTRY_ACCOUNTING.md`
 
@@ -248,7 +259,7 @@ try {
   // 이미 생성됨 → 무시
 }
 return calculateMonthlyBudget(year, month);
-```
+````
 
 **상세**: `docs/RACE_CONDITION_PREVENTION.md`
 

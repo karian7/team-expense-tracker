@@ -56,4 +56,8 @@ export const pendingEventService = {
   async remove(id: string): Promise<void> {
     await db.pendingEvents.delete(id);
   },
+
+  async count(): Promise<number> {
+    return await db.pendingEvents.count();
+  },
 };
