@@ -584,190 +584,198 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
 
             {/* Budget Edit Modal */}
             {isBudgetModalOpen && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 rounded-xl">
-            <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">예산 변경</h3>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">월 예산 금액</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={newBudget}
-                    onChange={(e) => setNewBudget(Number(e.target.value))}
-                    className="input-field pr-8 font-bold text-lg"
-                    placeholder="0"
-                    data-testid="monthly-budget-input"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-                    원
-                  </span>
+              <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 rounded-xl">
+                <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">예산 변경</h3>
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      월 예산 금액
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={newBudget}
+                        onChange={(e) => setNewBudget(Number(e.target.value))}
+                        className="input-field pr-8 font-bold text-lg"
+                        placeholder="0"
+                        data-testid="monthly-budget-input"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                        원
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setIsBudgetModalOpen(false)}
+                      className="btn-secondary flex-1"
+                      data-testid="cancel-budget-button"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleUpdateBudget}
+                      className="btn-primary flex-1"
+                      disabled={isUpdating}
+                      data-testid="save-budget-button"
+                    >
+                      {isUpdating ? '저장 중...' : '저장'}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setIsBudgetModalOpen(false)}
-                  className="btn-secondary flex-1"
-                  data-testid="cancel-budget-button"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={handleUpdateBudget}
-                  className="btn-primary flex-1"
-                  disabled={isUpdating}
-                  data-testid="save-budget-button"
-                >
-                  {isUpdating ? '저장 중...' : '저장'}
-                </button>
-              </div>
-            </div>
-            </div>
             )}
 
             {/* Budget Adjustment Modal */}
             {isAdjustModalOpen && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 rounded-xl">
-            <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">이번달 예산 조정</h3>
+              <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 rounded-xl">
+                <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">이번달 예산 조정</h3>
 
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1">현재 남은 예산</p>
-                <p className="text-lg font-bold text-gray-900">
-                  {formatCurrency(currentBudget.balance)}원
-                </p>
-              </div>
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-500 mb-1">현재 남은 예산</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatCurrency(currentBudget.balance)}원
+                    </p>
+                  </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">목표 잔액</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={targetBalance}
-                    onChange={(e) => setTargetBalance(Number(e.target.value))}
-                    className="input-field pr-8 font-bold text-lg"
-                    placeholder="0"
-                    data-testid="target-balance-input"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-                    원
-                  </span>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      목표 잔액
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={targetBalance}
+                        onChange={(e) => setTargetBalance(Number(e.target.value))}
+                        className="input-field pr-8 font-bold text-lg"
+                        placeholder="0"
+                        data-testid="target-balance-input"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                        원
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      조정 내용
+                    </label>
+                    <textarea
+                      value={adjustDescription}
+                      onChange={(e) => setAdjustDescription(e.target.value)}
+                      className="input-field resize-none"
+                      rows={3}
+                      placeholder="예산 조정 사유를 입력하세요"
+                      data-testid="adjust-description-input"
+                    />
+                  </div>
+
+                  {targetBalance !== currentBudget.balance && (
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                      <p className="text-xs text-blue-600 mb-1">조정 금액</p>
+                      <p
+                        className={`text-lg font-bold ${targetBalance > currentBudget.balance ? 'text-blue-600' : 'text-red-600'}`}
+                      >
+                        {targetBalance > currentBudget.balance ? '+' : ''}
+                        {formatCurrency(targetBalance - currentBudget.balance)}원
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setIsAdjustModalOpen(false);
+                        setAdjustDescription('');
+                      }}
+                      className="btn-secondary flex-1"
+                      data-testid="cancel-adjust-button"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={handleAdjustBudget}
+                      className="btn-primary flex-1"
+                      disabled={isAdjusting}
+                      data-testid="save-adjust-button"
+                    >
+                      {isAdjusting ? '조정 중...' : '조정'}
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">조정 내용</label>
-                <textarea
-                  value={adjustDescription}
-                  onChange={(e) => setAdjustDescription(e.target.value)}
-                  className="input-field resize-none"
-                  rows={3}
-                  placeholder="예산 조정 사유를 입력하세요"
-                  data-testid="adjust-description-input"
-                />
-              </div>
-
-              {targetBalance !== currentBudget.balance && (
-                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                  <p className="text-xs text-blue-600 mb-1">조정 금액</p>
-                  <p
-                    className={`text-lg font-bold ${targetBalance > currentBudget.balance ? 'text-blue-600' : 'text-red-600'}`}
-                  >
-                    {targetBalance > currentBudget.balance ? '+' : ''}
-                    {formatCurrency(targetBalance - currentBudget.balance)}원
-                  </p>
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setIsAdjustModalOpen(false);
-                    setAdjustDescription('');
-                  }}
-                  className="btn-secondary flex-1"
-                  data-testid="cancel-adjust-button"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={handleAdjustBudget}
-                  className="btn-primary flex-1"
-                  disabled={isAdjusting}
-                  data-testid="save-adjust-button"
-                >
-                  {isAdjusting ? '조정 중...' : '조정'}
-                </button>
-              </div>
-            </div>
-            </div>
             )}
 
             {/* Reset Modal */}
             {isResetModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
-              <h3 className="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
-                <span className="text-xl">⚠️</span> 데이터 초기화 및 초기 예산 설정
-              </h3>
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+                <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+                  <h3 className="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
+                    <span className="text-xl">⚠️</span> 데이터 초기화 및 초기 예산 설정
+                  </h3>
 
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-red-800 font-medium mb-2">경고:</p>
-                <ul className="text-sm text-red-700 space-y-1 list-disc list-inside">
-                  <li>모든 지출 내역이 삭제됩니다</li>
-                  <li>모든 예산 기록이 삭제됩니다</li>
-                  <li>모든 설정이 초기화됩니다</li>
-                  <li>이 작업은 되돌릴 수 없습니다!</li>
-                </ul>
-              </div>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-red-800 font-medium mb-2">경고:</p>
+                    <ul className="text-sm text-red-700 space-y-1 list-disc list-inside">
+                      <li>모든 지출 내역이 삭제됩니다</li>
+                      <li>모든 예산 기록이 삭제됩니다</li>
+                      <li>모든 설정이 초기화됩니다</li>
+                      <li>이 작업은 되돌릴 수 없습니다!</li>
+                    </ul>
+                  </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  초기 예산 설정 (원)
-                </label>
-                <input
-                  type="number"
-                  value={initialBudget}
-                  onChange={(e) => setInitialBudget(parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="예: 1000000"
-                  min="0"
-                  step="10000"
-                  data-testid="initial-budget-input"
-                />
-                <p className="text-xs text-gray-500 mt-1">초기화 후 설정될 기본 월별 예산입니다.</p>
-              </div>
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      초기 예산 설정 (원)
+                    </label>
+                    <input
+                      type="number"
+                      value={initialBudget}
+                      onChange={(e) => setInitialBudget(parseInt(e.target.value) || 0)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="예: 1000000"
+                      min="0"
+                      step="10000"
+                      data-testid="initial-budget-input"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      초기화 후 설정될 기본 월별 예산입니다.
+                    </p>
+                  </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setIsResetModalOpen(false);
-                    setInitialBudget(0);
-                  }}
-                  className="btn-secondary flex-1"
-                  disabled={isResetting}
-                  data-testid="cancel-reset-button"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        '⚠️ 마지막 확인\n\n정말로 모든 데이터를 삭제하고 초기화하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다!'
-                      )
-                    ) {
-                      handleReset();
-                    }
-                  }}
-                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex-1"
-                  disabled={isResetting}
-                  data-testid="confirm-reset-button"
-                >
-                  {isResetting ? '초기화 중...' : '초기화 실행'}
-                </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setIsResetModalOpen(false);
+                        setInitialBudget(0);
+                      }}
+                      className="btn-secondary flex-1"
+                      disabled={isResetting}
+                      data-testid="cancel-reset-button"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            '⚠️ 마지막 확인\n\n정말로 모든 데이터를 삭제하고 초기화하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다!'
+                          )
+                        ) {
+                          handleReset();
+                        }
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex-1"
+                      disabled={isResetting}
+                      data-testid="confirm-reset-button"
+                    >
+                      {isResetting ? '초기화 중...' : '초기화 실행'}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-            </div>
             )}
           </main>
         )}

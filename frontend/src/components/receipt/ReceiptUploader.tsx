@@ -50,23 +50,36 @@ export default function ReceiptUploader({ onUploadSuccess, onUploadError }: Rece
   };
 
   const handleRetryUpload = async () => {
-    const lastReceipt = await receiptStorageService.getLastReceipt();
-    if (!lastReceipt) return;
-
-    // base64를 Blob으로 변환
-    const response = await fetch(lastReceipt.imageData);
-    const blob = await response.blob();
-    const file = new File([blob], lastReceipt.fileName, { type: blob.type });
-
-    // 업로드 재시도
     try {
+      const lastReceipt = await receiptStorageService.getLastReceipt();
+      if (!lastReceipt) {
+        console.warn('[ReceiptUploader] 재시도할 영수증 이미지가 없습니다');
+        return;
+      }
+
+      // base64를 Blob으로 변환
+      const response = await fetch(lastReceipt.imageData);
+      const blob = await response.blob();
+
+      // MIME 타입 검증 (이미지가 아니면 기본값 사용)
+      const mimeType = blob.type.startsWith('image/') ? blob.type : 'image/jpeg';
+      const file = new File([blob], lastReceipt.fileName, { type: mimeType });
+
+      console.log('[ReceiptUploader] 영수증 재시도:', {
+        fileName: lastReceipt.fileName,
+        size: blob.size,
+        type: mimeType,
+      });
+
+      // 업로드 재시도
       const result = await uploadMutation.mutateAsync(file);
       onUploadSuccess(result);
+
       // 성공 시 로컬 이미지 삭제
       await receiptStorageService.clearLastReceipt();
       setHasLastReceipt(false);
     } catch (error) {
-      console.error('Retry upload error:', error);
+      console.error('[ReceiptUploader] 재시도 실패:', error);
       if (onUploadError) {
         onUploadError(error as Error);
       }
@@ -74,10 +87,18 @@ export default function ReceiptUploader({ onUploadSuccess, onUploadError }: Rece
   };
 
   const handleLoadLastReceipt = async () => {
-    const lastReceipt = await receiptStorageService.getLastReceipt();
-    if (!lastReceipt) return;
+    try {
+      const lastReceipt = await receiptStorageService.getLastReceipt();
+      if (!lastReceipt) {
+        console.warn('[ReceiptUploader] 불러올 영수증 이미지가 없습니다');
+        return;
+      }
 
-    setPreview(lastReceipt.imageData);
+      setPreview(lastReceipt.imageData);
+      console.log('[ReceiptUploader] 저장된 영수증 로드:', lastReceipt.fileName);
+    } catch (error) {
+      console.error('[ReceiptUploader] 영수증 로드 실패:', error);
+    }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,9 +135,17 @@ export default function ReceiptUploader({ onUploadSuccess, onUploadError }: Rece
   };
 
   const handleClearLastReceipt = async () => {
-    await receiptStorageService.clearLastReceipt();
-    setHasLastReceipt(false);
-    setPreview(null);
+    try {
+      await receiptStorageService.clearLastReceipt();
+      setHasLastReceipt(false);
+      setPreview(null);
+      console.log('[ReceiptUploader] 저장된 영수증 삭제 완료');
+    } catch (error) {
+      console.error('[ReceiptUploader] 영수증 삭제 실패:', error);
+      // 삭제 실패해도 UI 상태는 초기화
+      setHasLastReceipt(false);
+      setPreview(null);
+    }
   };
 
   return (
