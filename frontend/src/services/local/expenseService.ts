@@ -16,7 +16,14 @@ export const expenseService = {
     const deletedSequences = getDeletedExpenseSequences(events as Expense[]);
 
     return events
-      .filter((event) => event.eventType === 'EXPENSE' && !deletedSequences.has(event.sequence))
+      .filter((event) => {
+        // EXPENSE와 EXPENSE_REVERSAL 모두 포함
+        if (event.eventType === 'EXPENSE_REVERSAL') {
+          return true; // 환불/취소 내역은 모두 표시
+        }
+        // EXPENSE는 삭제되지 않은 것만 표시
+        return event.eventType === 'EXPENSE' && !deletedSequences.has(event.sequence);
+      })
       .sort(
         (a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime()
       ) as Expense[];

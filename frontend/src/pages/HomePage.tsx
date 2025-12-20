@@ -451,9 +451,8 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Recent List */}
+              {/* Expense List */}
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 px-1">최근 사용 내역</h2>
                 <ExpenseList
                   initialSelectedSequence={deepLinkSequence}
                   onSequenceHandled={() => setDeepLinkSequence(null)}

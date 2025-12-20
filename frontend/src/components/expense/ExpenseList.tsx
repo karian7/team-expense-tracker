@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
-import { useCurrentBudget } from '../../hooks/useBudget';
+import { useBudgetByMonth } from '../../hooks/useBudget';
 import { syncService } from '../../services/sync/syncService';
 import { formatCurrency, formatDateTimeKorean } from '../../utils/format';
 
@@ -119,8 +119,13 @@ export default function ExpenseList({
   initialSelectedSequence,
   onSequenceHandled,
 }: ExpenseListProps = {}) {
-  const budget = useCurrentBudget();
-  const expenses = useExpenses(budget ? { year: budget.year, month: budget.month } : undefined);
+  // 월별 네비게이션 상태
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+
+  const budget = useBudgetByMonth(selectedYear, selectedMonth);
+  const expenses = useExpenses({ year: selectedYear, month: selectedMonth });
   const sortedExpenses = useMemo(() => {
     if (!expenses) {
       return [];
@@ -139,6 +144,33 @@ export default function ExpenseList({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useDeleteExpense();
+
+  // 월별 네비게이션 핸들러
+  const goToPreviousMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedYear(selectedYear - 1);
+      setSelectedMonth(12);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
+
+  const goToNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedYear(selectedYear + 1);
+      setSelectedMonth(1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
+  const goToCurrentMonth = () => {
+    const now = new Date();
+    setSelectedYear(now.getFullYear());
+    setSelectedMonth(now.getMonth() + 1);
+  };
+
+  const isCurrentMonth = selectedYear === now.getFullYear() && selectedMonth === now.getMonth() + 1;
   const selectedReceiptImage = selectedExpense
     ? normalizeReceiptImage(selectedExpense.receiptImage as unknown)
     : null;
@@ -236,7 +268,61 @@ export default function ExpenseList({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* 월별 네비게이션 헤더 */}
+      <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 p-3">
+        <button
+          onClick={goToPreviousMonth}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          aria-label="이전 달"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 text-gray-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-900">
+            {selectedYear}년 {selectedMonth}월
+          </h3>
+          {!isCurrentMonth && (
+            <button
+              onClick={goToCurrentMonth}
+              className="px-3 py-1 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-full transition-colors"
+            >
+              이번 달로
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={goToNextMonth}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          aria-label="다음 달"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 text-gray-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
       {/* List */}
       <div className="space-y-3">
         {sortedExpenses.length === 0 ? (
@@ -245,50 +331,74 @@ export default function ExpenseList({
             <p className="mt-1 text-sm text-gray-500">새로운 지출을 추가해보세요.</p>
           </div>
         ) : (
-          sortedExpenses.map((expense: Expense) => (
-            <div
-              key={expense.sequence}
-              className="group bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer"
-              onClick={() => {
-                setDeleteError(null);
-                setSelectedExpense(expense);
-              }}
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center text-primary-600 font-semibold text-sm">
-                    {expense.authorName.slice(0, 1)}
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">
-                      {expense.storeName || '상호명 없음'}
-                    </h3>
-                    <div className="text-sm text-gray-500 mt-0.5">
-                      {expense.authorName} · {formatDateTimeKorean(expense.eventDate)}
+          sortedExpenses.map((expense: Expense) => {
+            const isReversal = expense.eventType === 'EXPENSE_REVERSAL';
+            return (
+              <div
+                key={expense.sequence}
+                className={`group rounded-lg border p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer ${
+                  isReversal ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'
+                }`}
+                onClick={() => {
+                  setDeleteError(null);
+                  setSelectedExpense(expense);
+                }}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm ${
+                        isReversal
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-primary-50 text-primary-600'
+                      }`}
+                    >
+                      {isReversal ? '↩' : expense.authorName.slice(0, 1)}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-gray-900">
+                          {expense.storeName || '상호명 없음'}
+                        </h3>
+                        {isReversal && (
+                          <span className="text-xs px-2 py-0.5 bg-green-600 text-white rounded-full font-medium">
+                            환불
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-500 mt-0.5">
+                        {expense.authorName} · {formatDateTimeKorean(expense.eventDate)}
+                      </div>
+                      {isReversal && expense.description && (
+                        <div className="text-xs text-gray-600 mt-1">{expense.description}</div>
+                      )}
                     </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-gray-900 flex items-center justify-end gap-2">
-                    <span>{formatCurrency(expense.amount)}원</span>
-                    {renderSyncBadge(expense)}
+                  <div className="text-right">
+                    <div className="font-bold flex items-center justify-end gap-2">
+                      <span className={isReversal ? 'text-green-600' : 'text-gray-900'}>
+                        {isReversal ? '+' : ''}
+                        {formatCurrency(expense.amount)}원
+                      </span>
+                      {renderSyncBadge(expense)}
+                    </div>
+                    {expense.syncState === 'failed' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRetrySync();
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700 mt-2"
+                        disabled={isSyncing}
+                      >
+                        재시도
+                      </button>
+                    )}
                   </div>
-                  {expense.syncState === 'failed' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRetrySync();
-                      }}
-                      className="text-xs text-red-600 hover:text-red-700 mt-2"
-                      disabled={isSyncing}
-                    >
-                      재시도
-                    </button>
-                  )}
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -302,17 +412,111 @@ export default function ExpenseList({
             className="bg-white rounded-xl max-w-md w-full overflow-hidden shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative h-48 bg-gray-100 flex items-center justify-center">
-              {selectedReceiptImage ? (
-                <img
-                  src={`data:image/jpeg;base64,${selectedReceiptImage}`}
-                  alt="Receipt"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `
+            {selectedExpense.eventType === 'EXPENSE_REVERSAL' ? (
+              // EXPENSE_REVERSAL 모달
+              <>
+                <div className="relative h-48 bg-green-100 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-20 h-20 mx-auto mb-4 bg-green-600 rounded-full flex items-center justify-center">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-12 w-12 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                        />
+                      </svg>
+                    </div>
+                    <p className="text-2xl font-bold text-green-800">환불 내역</p>
+                  </div>
+                  <button
+                    onClick={closeModal}
+                    className="absolute top-4 right-4 p-1 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {selectedExpense.storeName || '상호명 없음'}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {formatDateTimeKorean(selectedExpense.eventDate)}
+                      </p>
+                    </div>
+                    <div className="text-xl font-bold text-green-600">
+                      +{formatCurrency(selectedExpense.amount)}원
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm text-gray-500">작성자</span>
+                      <span className="font-medium text-gray-900">
+                        {selectedExpense.authorName}
+                      </span>
+                    </div>
+
+                    {selectedExpense.description && (
+                      <div className="p-3 bg-green-50 rounded-lg">
+                        <p className="text-xs text-green-700 font-medium mb-1">환불 사유</p>
+                        <p className="text-sm text-green-900">{selectedExpense.description}</p>
+                      </div>
+                    )}
+
+                    {selectedExpense.referenceSequence && (
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <p className="text-xs text-blue-600 font-medium mb-1">참조 정보</p>
+                        <p className="text-xs text-blue-800">
+                          원본 지출 ID: #{selectedExpense.referenceSequence}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-6">
+                    <button onClick={closeModal} className="btn-secondary w-full">
+                      닫기
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // EXPENSE 모달
+              <>
+                <div className="relative h-48 bg-gray-100 flex items-center justify-center">
+                  {selectedReceiptImage ? (
+                    <img
+                      src={`data:image/jpeg;base64,${selectedReceiptImage}`}
+                      alt="Receipt"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `
                         <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <rect x="10" y="10" width="100" height="100" rx="8" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="8 4" fill="#F3F4F6"/>
                           <circle cx="60" cy="45" r="15" fill="#D1D5DB"/>
@@ -320,124 +524,128 @@ export default function ExpenseList({
                           <text x="60" y="108" text-anchor="middle" fill="#6B7280" font-size="12" font-family="system-ui, -apple-system, sans-serif">영수증 없음</text>
                         </svg>
                       `;
-                    }
-                  }}
-                />
-              ) : (
-                <svg
-                  width="120"
-                  height="120"
-                  viewBox="0 0 120 120"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <rect
-                    x="10"
-                    y="10"
-                    width="100"
-                    height="100"
-                    rx="8"
-                    stroke="#9CA3AF"
-                    strokeWidth="2"
-                    strokeDasharray="8 4"
-                    fill="#F3F4F6"
-                  />
-                  <circle cx="60" cy="45" r="15" fill="#D1D5DB" />
-                  <path d="M30 85 L45 65 L60 75 L75 55 L90 70 L90 95 L30 95 Z" fill="#E5E7EB" />
-                  <text
-                    x="60"
-                    y="108"
-                    textAnchor="middle"
-                    fill="#6B7280"
-                    fontSize="12"
-                    fontFamily="system-ui, -apple-system, sans-serif"
-                  >
-                    영수증 없음
-                  </text>
-                </svg>
-              )}
-              <button
-                onClick={closeModal}
-                className="absolute top-4 right-4 p-1 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-colors"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {selectedExpense.storeName || '상호명 없음'}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {formatDateTimeKorean(selectedExpense.eventDate)}
-                  </p>
-                </div>
-                <div className="text-xl font-bold text-primary-600">
-                  {formatCurrency(selectedExpense.amount)}원
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-500">작성자</span>
-                  <span className="font-medium text-gray-900">{selectedExpense.authorName}</span>
-                </div>
-
-                {selectedExpense.ocrRawData && (
-                  <div className="p-3 bg-blue-50 rounded-lg">
-                    <p className="text-xs text-blue-600 font-medium mb-1">AI 분석 정보</p>
-                    <p className="text-xs text-blue-800">
-                      신뢰도:{' '}
-                      {(() => {
-                        try {
-                          const parsed =
-                            typeof selectedExpense.ocrRawData === 'string'
-                              ? (JSON.parse(selectedExpense.ocrRawData) as OcrResult)
-                              : (selectedExpense.ocrRawData as OcrResult);
-                          return `${(parsed.confidence * 100).toFixed(0)}%`;
-                        } catch {
-                          return 'N/A';
                         }
-                      })()}
-                    </p>
+                      }}
+                    />
+                  ) : (
+                    <svg
+                      width="120"
+                      height="120"
+                      viewBox="0 0 120 120"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <rect
+                        x="10"
+                        y="10"
+                        width="100"
+                        height="100"
+                        rx="8"
+                        stroke="#9CA3AF"
+                        strokeWidth="2"
+                        strokeDasharray="8 4"
+                        fill="#F3F4F6"
+                      />
+                      <circle cx="60" cy="45" r="15" fill="#D1D5DB" />
+                      <path d="M30 85 L45 65 L60 75 L75 55 L90 70 L90 95 L30 95 Z" fill="#E5E7EB" />
+                      <text
+                        x="60"
+                        y="108"
+                        textAnchor="middle"
+                        fill="#6B7280"
+                        fontSize="12"
+                        fontFamily="system-ui, -apple-system, sans-serif"
+                      >
+                        영수증 없음
+                      </text>
+                    </svg>
+                  )}
+                  <button
+                    onClick={closeModal}
+                    className="absolute top-4 right-4 p-1 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {selectedExpense.storeName || '상호명 없음'}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {formatDateTimeKorean(selectedExpense.eventDate)}
+                      </p>
+                    </div>
+                    <div className="text-xl font-bold text-primary-600">
+                      {formatCurrency(selectedExpense.amount)}원
+                    </div>
                   </div>
-                )}
-              </div>
 
-              {deleteError && (
-                <p className="mt-6 text-sm text-red-600" role="alert">
-                  {deleteError}
-                </p>
-              )}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm text-gray-500">작성자</span>
+                      <span className="font-medium text-gray-900">
+                        {selectedExpense.authorName}
+                      </span>
+                    </div>
 
-              <div className="mt-6 flex gap-3">
-                <button onClick={closeModal} className="btn-secondary flex-1">
-                  닫기
-                </button>
-                <button
-                  onClick={handleDeleteExpense}
-                  className="btn-danger flex-1"
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? '삭제 중...' : '지출 삭제'}
-                </button>
-              </div>
-            </div>
+                    {selectedExpense.ocrRawData && (
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <p className="text-xs text-blue-600 font-medium mb-1">AI 분석 정보</p>
+                        <p className="text-xs text-blue-800">
+                          신뢰도:{' '}
+                          {(() => {
+                            try {
+                              const parsed =
+                                typeof selectedExpense.ocrRawData === 'string'
+                                  ? (JSON.parse(selectedExpense.ocrRawData) as OcrResult)
+                                  : (selectedExpense.ocrRawData as OcrResult);
+                              return `${(parsed.confidence * 100).toFixed(0)}%`;
+                            } catch {
+                              return 'N/A';
+                            }
+                          })()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {deleteError && (
+                    <p className="mt-6 text-sm text-red-600" role="alert">
+                      {deleteError}
+                    </p>
+                  )}
+
+                  <div className="mt-6 flex gap-3">
+                    <button onClick={closeModal} className="btn-secondary flex-1">
+                      닫기
+                    </button>
+                    <button
+                      onClick={handleDeleteExpense}
+                      className="btn-danger flex-1"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? '삭제 중...' : '지출 삭제'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
