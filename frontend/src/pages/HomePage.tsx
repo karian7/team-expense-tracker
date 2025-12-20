@@ -23,11 +23,28 @@ export default function HomePage() {
   const [showReport, setShowReport] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [deepLinkSequence, setDeepLinkSequence] = useState<number | null>(null);
+  const [hasStoredReceipt, setHasStoredReceipt] = useState(false);
 
   // Hooks and Refs
   const uploadMutation = useUploadReceipt();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  // 저장된 영수증 확인 (화면 진입 시)
+  useEffect(() => {
+    const checkStoredReceipt = async () => {
+      const hasReceipt = await receiptStorageService.hasLastReceipt();
+      setHasStoredReceipt(hasReceipt);
+      if (hasReceipt) {
+        console.log('[HomePage] 저장된 영수증이 발견되었습니다.');
+      }
+    };
+
+    // list 화면일 때만 확인
+    if (currentStep === 'list') {
+      checkStoredReceipt();
+    }
+  }, [currentStep]);
 
   // Deep Link 처리: Push 알림에서 /#expense/123 형식으로 접근 시 자동 오픈
   useEffect(() => {
@@ -145,6 +162,7 @@ export default function HomePage() {
 
       // 성공 시 로컬 이미지 삭제
       await receiptStorageService.clearLastReceipt();
+      setHasStoredReceipt(false);
     } catch (error) {
       console.error('[HomePage] 재시도 실패:', error);
       handleUploadError(error as Error);
@@ -183,6 +201,7 @@ export default function HomePage() {
 
       // 성공 시 로컬 이미지 삭제
       await receiptStorageService.clearLastReceipt();
+      setHasStoredReceipt(false);
     } catch (error) {
       handleUploadError(error as Error);
     }
@@ -297,6 +316,68 @@ export default function HomePage() {
               {/* Quick Actions */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                 <div className="flex flex-col gap-3">
+                  {/* Stored Receipt Retry Banner */}
+                  {hasStoredReceipt && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <div className="flex items-start gap-3">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-amber-800 font-medium text-sm mb-1">
+                            이전에 업로드 실패한 영수증이 있습니다
+                          </p>
+                          <p className="text-amber-700 text-xs mb-2">
+                            저장된 영수증을 다시 업로드하시겠습니까?
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                await receiptStorageService.clearLastReceipt();
+                                setHasStoredReceipt(false);
+                                toast.success('저장된 영수증을 삭제했습니다.');
+                              }}
+                              className="px-3 py-1.5 bg-white hover:bg-gray-50 text-amber-700 border border-amber-300 rounded-md text-xs font-medium transition-colors"
+                            >
+                              무시
+                            </button>
+                            <button
+                              onClick={handleRetryUpload}
+                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-xs font-medium transition-colors flex items-center gap-1"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-3.5 w-3.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
+                              </svg>
+                              다시 시도
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Camera Button (Primary) */}
                   <button
                     onClick={() => fileInputRef.current?.click()}
