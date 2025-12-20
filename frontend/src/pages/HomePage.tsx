@@ -318,11 +318,11 @@ export default function HomePage() {
                 <div className="flex flex-col gap-3">
                   {/* Stored Receipt Retry Banner */}
                   {hasStoredReceipt && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                       <div className="flex items-start gap-3">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5"
+                          className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -335,10 +335,10 @@ export default function HomePage() {
                           />
                         </svg>
                         <div className="flex-1 min-w-0">
-                          <p className="text-amber-800 font-medium text-sm mb-1">
+                          <p className="text-yellow-800 font-medium text-sm mb-1">
                             이전에 업로드 실패한 영수증이 있습니다
                           </p>
-                          <p className="text-amber-700 text-xs mb-2">
+                          <p className="text-yellow-700 text-xs mb-2">
                             저장된 영수증을 다시 업로드하시겠습니까?
                           </p>
                           <div className="flex gap-2">
@@ -348,13 +348,13 @@ export default function HomePage() {
                                 setHasStoredReceipt(false);
                                 toast.success('저장된 영수증을 삭제했습니다.');
                               }}
-                              className="px-3 py-1.5 bg-white hover:bg-gray-50 text-amber-700 border border-amber-300 rounded-md text-xs font-medium transition-colors"
+                              className="px-3 py-1.5 bg-white hover:bg-gray-50 text-yellow-700 border border-yellow-300 rounded-md text-xs font-medium transition-colors"
                             >
                               무시
                             </button>
                             <button
                               onClick={handleRetryUpload}
-                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-xs font-medium transition-colors flex items-center gap-1"
+                              className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md text-xs font-medium transition-colors flex items-center gap-1"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
