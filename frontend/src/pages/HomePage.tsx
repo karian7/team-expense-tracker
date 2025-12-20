@@ -10,13 +10,15 @@ import SyncStatusIndicator from '../components/sync/SyncStatusIndicator';
 import type { ReceiptUploadResponse } from '../types';
 import { useUploadReceipt } from '../hooks/useReceipt';
 import { eventService } from '../services/local/eventService';
+import { receiptStorageService } from '../services/local/receiptStorageService';
 
-type Step = 'list' | 'upload' | 'form' | 'processing';
+type Step = 'list' | 'upload' | 'form' | 'processing' | 'error';
 
 export default function HomePage() {
   const [currentStep, setCurrentStep] = useState<Step>('list');
   const [uploadResult, setUploadResult] = useState<ReceiptUploadResponse | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<Error | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -90,22 +92,63 @@ export default function HomePage() {
   const handleFormSuccess = () => {
     setUploadResult(null);
     setPreviewImage(null);
+    setUploadError(null);
     setCurrentStep('list');
   };
 
   const handleCancel = () => {
     setUploadResult(null);
     setPreviewImage(null);
+    setUploadError(null);
     setCurrentStep('list');
   };
 
   const handleUploadError = (error: Error) => {
-    console.error('Upload error:', error);
-    toast.error('영수증 업로드 중 오류가 발생했습니다.\n다시 시도해 주세요.', {
-      duration: 4000,
+    console.error('[HomePage] Upload error:', error);
+    setUploadError(error);
+    setCurrentStep('error');
+    toast.error('영수증 업로드 중 오류가 발생했습니다.', {
+      duration: 3000,
     });
-    setPreviewImage(null);
-    setCurrentStep('list');
+  };
+
+  const handleRetryUpload = async () => {
+    try {
+      const lastReceipt = await receiptStorageService.getLastReceipt();
+      if (!lastReceipt) {
+        console.warn('[HomePage] 재시도할 영수증 이미지가 없습니다');
+        toast.error('재시도할 이미지가 없습니다.');
+        setCurrentStep('list');
+        return;
+      }
+
+      setPreviewImage(lastReceipt.imageData);
+      setUploadError(null);
+      setCurrentStep('processing');
+
+      // base64를 Blob으로 변환
+      const response = await fetch(lastReceipt.imageData);
+      const blob = await response.blob();
+
+      // MIME 타입 검증
+      const mimeType = blob.type.startsWith('image/') ? blob.type : 'image/jpeg';
+      const file = new File([blob], lastReceipt.fileName, { type: mimeType });
+
+      console.log('[HomePage] 영수증 재시도:', {
+        fileName: lastReceipt.fileName,
+        size: blob.size,
+        type: mimeType,
+      });
+
+      const result = await uploadMutation.mutateAsync(file);
+      handleUploadSuccess(result);
+
+      // 성공 시 로컬 이미지 삭제
+      await receiptStorageService.clearLastReceipt();
+    } catch (error) {
+      console.error('[HomePage] 재시도 실패:', error);
+      handleUploadError(error as Error);
+    }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,9 +160,19 @@ export default function HomePage() {
 
     // Show preview immediately
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreviewImage(reader.result as string);
+    reader.onloadend = async () => {
+      const imageData = reader.result as string;
+      setPreviewImage(imageData);
       setCurrentStep('processing');
+
+      // 로컬에 이미지 저장 (재시도용)
+      try {
+        await receiptStorageService.saveLastReceipt(imageData, file.name);
+        console.log('[HomePage] 영수증 이미지 로컬 저장 완료:', file.name);
+      } catch (error) {
+        console.error('[HomePage] 영수증 이미지 로컬 저장 실패:', error);
+        // 저장 실패해도 업로드는 계속 진행
+      }
     };
     reader.readAsDataURL(file);
 
@@ -127,6 +180,9 @@ export default function HomePage() {
     try {
       const result = await uploadMutation.mutateAsync(file);
       handleUploadSuccess(result);
+
+      // 성공 시 로컬 이미지 삭제
+      await receiptStorageService.clearLastReceipt();
     } catch (error) {
       handleUploadError(error as Error);
     }
@@ -367,6 +423,133 @@ export default function HomePage() {
                     AI가 영수증을 분석하고 있습니다
                   </p>
                   <p className="text-gray-500 text-sm mt-2">잠시만 기다려주세요...</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 'error' && previewImage && (
+            <div className="card">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-red-600">업로드 실패</h2>
+                <button
+                  onClick={handleCancel}
+                  className="text-gray-400 hover:text-gray-600"
+                  data-testid="close-error-button"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="relative rounded-xl overflow-hidden border border-red-200 bg-gray-50 aspect-[3/4] sm:aspect-video w-full mb-4">
+                <img
+                  src={previewImage}
+                  alt="Receipt preview"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              {/* Error Message */}
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+                <div className="flex items-start gap-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 text-red-500 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-red-800 font-medium mb-1">영수증 업로드에 실패했습니다</p>
+                    <p className="text-red-600 text-sm">
+                      {uploadError?.message ||
+                        '네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleRetryUpload}
+                  className="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  disabled={uploadMutation.isPending}
+                >
+                  {uploadMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      재시도 중...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                      다시 시도
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Info Box */}
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-blue-700 text-sm">
+                    영수증 이미지가 로컬에 저장되어 있어 네트워크가 복구되면 언제든 다시 시도할 수
+                    있습니다.
+                  </p>
                 </div>
               </div>
             </div>
