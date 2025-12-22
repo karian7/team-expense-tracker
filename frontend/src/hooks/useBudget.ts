@@ -32,6 +32,18 @@ export function useBudgetByMonth(year: number, month: number) {
   const { isInitialSyncCompleted, waitForInitialSync } = useInitialSyncStatus();
   useEffect(() => {
     if (!year || !month) return;
+
+    // 현재 달인지 확인
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const isCurrentMonth = year === currentYear && month === currentMonth;
+
+    // 현재 달만 자동 생성, 과거/미래 달은 조회만
+    if (!isCurrentMonth) {
+      return;
+    }
+
     const ensureBudget = async () => {
       if (!isInitialSyncCompleted) {
         await waitForInitialSync();
