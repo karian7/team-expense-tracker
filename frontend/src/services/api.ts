@@ -20,6 +20,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 5000, // 5초 타임아웃 (서버 다운 시 무한 대기 방지)
 });
 
 // Event API (Event Sourcing)
@@ -53,6 +54,7 @@ export const receiptApi = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 60000, // OCR 처리 시간 고려하여 60초
       }
     );
     return data.data!;
