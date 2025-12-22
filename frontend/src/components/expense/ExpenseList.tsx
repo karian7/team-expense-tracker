@@ -376,6 +376,48 @@ export default function ExpenseList({
             </div>
           ))
         )}
+
+        {/* 이월 정보 표시 (하단 고정) */}
+        {budget && budget.previousBalance !== 0 && (
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                  />
+                </svg>
+                <span className="text-sm font-medium text-gray-700">전월 이월액</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-lg font-bold ${
+                    budget.previousBalance > 0 ? 'text-blue-600' : 'text-red-600'
+                  }`}
+                >
+                  {budget.previousBalance > 0 ? '+' : ''}
+                  {formatCurrency(budget.previousBalance)}원
+                </span>
+              </div>
+            </div>
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>
+                  {selectedYear}년 {selectedMonth}월 총 예산에 자동 반영됨
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Detail Modal */}
