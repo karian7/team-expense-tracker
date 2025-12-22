@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import toast from 'react-hot-toast';
 import { db } from '../../services/db/database';
 
 export default function SyncStatusIndicator() {
@@ -23,9 +24,33 @@ export default function SyncStatusIndicator() {
 
   const statusMessage = getStatusMessage();
 
+  // 클릭 시 상세 정보 표시
+  const handleClick = () => {
+    if (hasError) {
+      const errorMessage = syncStatus?.lastErrorMessage || '알 수 없는 오류';
+      const errorTime = syncStatus?.lastErrorTime
+        ? new Date(syncStatus.lastErrorTime).toLocaleString('ko-KR')
+        : '알 수 없음';
+
+      toast.error(`동기화 오류\n\n${errorMessage}\n\n발생 시간: ${errorTime}`, {
+        duration: 5000,
+        icon: '⚠️',
+      });
+    } else if (hasPending) {
+      toast(
+        `동기화 대기 중\n\n${pendingCount}건의 이벤트가 서버 동기화를 기다리고 있습니다.\n\n자동으로 동기화됩니다.`,
+        {
+          duration: 4000,
+          icon: '🔄',
+        }
+      );
+    }
+  };
+
   return (
     <div className="relative">
       <button
+        onClick={handleClick}
         className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors relative"
         title={statusMessage}
         aria-label={statusMessage}
