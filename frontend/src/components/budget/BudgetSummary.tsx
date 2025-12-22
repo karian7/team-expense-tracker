@@ -16,7 +16,6 @@ export default function BudgetSummary() {
 
   const balance = budget.balance;
   const totalBudget = budget.totalBudget;
-  const previousBalance = budget.previousBalance;
   const totalSpent = budget.totalSpent;
   const percentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
@@ -47,12 +46,6 @@ export default function BudgetSummary() {
           <div className="text-sm text-gray-500 mb-1">총 예산</div>
           <div className="font-medium text-gray-900" data-testid="total-budget">
             {formatCurrency(totalBudget)}원
-            {previousBalance !== 0 && (
-              <span className="ml-2 text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                이월 {previousBalance > 0 ? '+' : ''}
-                {formatCurrency(previousBalance)}
-              </span>
-            )}
           </div>
         </div>
       </div>
