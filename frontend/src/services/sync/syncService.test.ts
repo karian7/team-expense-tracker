@@ -204,6 +204,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
       vi.mocked(settingsApi.get).mockResolvedValue({
         defaultMonthlyBudget: 500000,
         initialBudget: 500000,
+        needsFullSync: false,
       });
 
       vi.mocked(eventApi.sync).mockResolvedValue({
@@ -240,6 +241,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
           },
         ],
         lastSequence: 101,
+        needsFullSync: false,
       });
 
       // When: 동기화 실행
@@ -341,6 +343,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
           },
         ],
         lastSequence: 102,
+        needsFullSync: false,
       });
 
       // When: 동기화 실행
@@ -417,6 +420,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
           },
         ],
         lastSequence: 100,
+        needsFullSync: false,
       });
 
       // When: 동기화 실행
@@ -476,6 +480,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
       vi.mocked(settingsApi.get).mockResolvedValue({
         defaultMonthlyBudget: 500000,
         initialBudget: 500000,
+        needsFullSync: false,
       });
 
       vi.mocked(eventApi.sync).mockResolvedValue({
@@ -512,6 +517,7 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
           },
         ],
         lastSequence: 101,
+        needsFullSync: false,
       });
 
       // When: 동기화 실행

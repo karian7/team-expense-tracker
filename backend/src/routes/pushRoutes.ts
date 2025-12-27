@@ -1,7 +1,7 @@
-import { Router } from 'express';
+import { Router, type Router as RouterType } from 'express';
 import { pushController } from '../controllers/pushController';
 
-const router = Router();
+const router: RouterType = Router();
 
 // Subscribe to push notifications
 router.post('/subscribe', pushController.subscribe);
