@@ -23,6 +23,9 @@ const apiClient = axios.create({
   timeout: 5000, // 5초 타임아웃 (서버 다운 시 무한 대기 방지)
 });
 
+// Export for testing
+export { apiClient };
+
 // Event API (Event Sourcing)
 export const eventApi = {
   sync: async (sinceSequence: number = 0) => {

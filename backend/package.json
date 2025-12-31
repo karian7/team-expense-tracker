@@ -7,7 +7,11 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsup",
+    "typecheck": "tsc --noEmit",
     "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
@@ -50,6 +54,7 @@
     "@types/web-push": "^3.6.4",
     "@typescript-eslint/eslint-plugin": "^8.49.0",
     "@typescript-eslint/parser": "^8.49.0",
+    "@vitest/coverage-v8": "^4.0.16",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
@@ -59,6 +64,8 @@
     "tsup": "^8.5.1",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.49.0"
+    "typescript-eslint": "^8.49.0",
+    "vitest": "^4.0.16",
+    "vitest-mock-extended": "^3.1.0"
   }
 }

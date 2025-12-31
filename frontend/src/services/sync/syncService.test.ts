@@ -542,3 +542,166 @@ describe('syncService - BUDGET_RESET and Sequence Reassignment', () => {
     });
   });
 });
+
+describe('syncService - Push Pending Events', () => {
+  beforeEach(async () => {
+    await db.delete();
+    await db.open();
+    vi.clearAllMocks();
+  });
+
+  describe('지수 백오프 (Exponential Backoff)', () => {
+    it('should apply exponential backoff delays (1s, 2s, 4s, 8s, 16s)', async () => {
+      // Given: pending 이벤트
+      const pending = await pendingEventService.enqueue(
+        {
+          eventType: 'EXPENSE',
+          eventDate: '2025-01-15T12:00:00.000Z',
+          year: 2025,
+          month: 1,
+          authorName: 'User A',
+          amount: 30000,
+          description: '테스트 지출',
+        },
+        -1000
+      );
+
+      await eventService.saveEvent({
+        sequence: -1000,
+        eventType: 'EXPENSE',
+        eventDate: '2025-01-15T12:00:00.000Z',
+        year: 2025,
+        month: 1,
+        authorName: 'User A',
+        amount: 30000,
+        storeName: null,
+        description: '테스트 지출',
+        receiptImage: null,
+        ocrRawData: null,
+        referenceSequence: null,
+        createdAt: '2025-01-15T12:00:00.000Z',
+        isLocalOnly: true,
+        syncState: 'pending',
+        pendingId: pending.id,
+      });
+
+      // retryCount를 1로 설정하고 lastSyncAttempt을 현재 시간으로 설정
+      // 백오프 기간 내이면 건너뜀
+      await db.pendingEvents.update(pending.id, {
+        retryCount: 1,
+        lastSyncAttempt: new Date().toISOString(), // 방금 시도
+      });
+
+      vi.mocked(eventApi.sync).mockResolvedValue({
+        events: [],
+        lastSequence: 0,
+        needsFullSync: false,
+      });
+
+      // When: 동기화 실행
+      await syncService.sync();
+
+      // Then: 백오프 기간 내이므로 createEvent가 호출되지 않음
+      expect(eventApi.createEvent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('재시도 5회 초과', () => {
+    it('should skip pending event after 5 retries', async () => {
+      // Given: retryCount가 5인 pending 이벤트
+      const pending = await pendingEventService.enqueue(
+        {
+          eventType: 'EXPENSE',
+          eventDate: '2025-01-15T12:00:00.000Z',
+          year: 2025,
+          month: 1,
+          authorName: 'User A',
+          amount: 30000,
+          description: '최대 재시도 초과',
+        },
+        -1000
+      );
+
+      await db.pendingEvents.update(pending.id, { retryCount: 5 });
+
+      await eventService.saveEvent({
+        sequence: -1000,
+        eventType: 'EXPENSE',
+        eventDate: '2025-01-15T12:00:00.000Z',
+        year: 2025,
+        month: 1,
+        authorName: 'User A',
+        amount: 30000,
+        storeName: null,
+        description: '최대 재시도 초과',
+        receiptImage: null,
+        ocrRawData: null,
+        referenceSequence: null,
+        createdAt: '2025-01-15T12:00:00.000Z',
+        isLocalOnly: true,
+        syncState: 'pending',
+        pendingId: pending.id,
+      });
+
+      vi.mocked(eventApi.sync).mockResolvedValue({
+        events: [],
+        lastSequence: 0,
+        needsFullSync: false,
+      });
+
+      // When: 동기화 실행
+      await syncService.sync();
+
+      // Then: createEvent가 호출되지 않음 (건너뜀)
+      expect(eventApi.createEvent).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('네트워크 에러 처리', () => {
+    it('should increment retryCount on network error', async () => {
+      // Given: pending 이벤트
+      const pending = await pendingEventService.enqueue(
+        {
+          eventType: 'EXPENSE',
+          eventDate: '2025-01-15T12:00:00.000Z',
+          year: 2025,
+          month: 1,
+          authorName: 'User A',
+          amount: 30000,
+          description: '네트워크 에러 테스트',
+        },
+        -1000
+      );
+
+      await eventService.saveEvent({
+        sequence: -1000,
+        eventType: 'EXPENSE',
+        eventDate: '2025-01-15T12:00:00.000Z',
+        year: 2025,
+        month: 1,
+        authorName: 'User A',
+        amount: 30000,
+        storeName: null,
+        description: '네트워크 에러 테스트',
+        receiptImage: null,
+        ocrRawData: null,
+        referenceSequence: null,
+        createdAt: '2025-01-15T12:00:00.000Z',
+        isLocalOnly: true,
+        syncState: 'pending',
+        pendingId: pending.id,
+      });
+
+      // 네트워크 에러 시뮬레이션
+      vi.mocked(eventApi.createEvent).mockRejectedValue(new Error('Network error'));
+
+      // When: 동기화 실행 (에러 발생 예상)
+      await expect(syncService.sync()).rejects.toThrow('Network error');
+
+      // Then: retryCount가 증가됨
+      const updatedPending = await db.pendingEvents.get(pending.id);
+      expect(updatedPending?.retryCount).toBe(1);
+      expect(updatedPending?.status).toBe('failed');
+    });
+  });
+});

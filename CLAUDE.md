@@ -152,9 +152,11 @@ pnpm lint && pnpm format:check
 # 2. 문제 발견 시 자동 수정
 pnpm lint:fix && pnpm format
 
-# 3. TypeScript 컴파일 확인
-pnpm --filter backend build
-pnpm --filter frontend build
+# 3. TypeScript 타입 검사
+pnpm typecheck
+
+# 4. 빌드 확인 (필요시)
+pnpm build
 ```
 
 **검증 통과 없이 작업 완료 보고 금지**
@@ -182,22 +184,26 @@ pnpm lint:fix && pnpm format
 - Prettier로 코드 포맷 자동 정리
 - 수정 후 1단계 재실행 필수
 
-#### 3단계: 타입 검사 및 빌드
+#### 3단계: 타입 검사
 
 ```bash
-# Backend 빌드
-pnpm --filter backend build
-
-# Frontend 빌드
-pnpm --filter frontend build
+pnpm typecheck
 ```
 
-- TypeScript 컴파일 오류 검증
-- 빌드 성공 확인
-- ✅ 모두 통과: 작업 완료
+- Backend: `tsc --noEmit`로 타입 오류 검증
+- Frontend: `tsc -b`로 타입 오류 검증
+- ✅ 통과: 작업 완료
 - ❌ 실패: 타입 에러 수정 후 1단계부터 재실행
 
+#### 4단계: 빌드 확인 (선택)
+
+```bash
+pnpm build
 ```
+
+- Backend: tsup으로 번들링
+- Frontend: tsc + vite build
+- 배포 전 또는 중요 변경 시 실행 권장
 
 ## Key Files
 

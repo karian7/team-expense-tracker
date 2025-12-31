@@ -11,6 +11,11 @@ import { pushService } from './pushService';
 // key: "YYYY-MM", value: 마지막 알림 임계값 (80 | 90 | 100)
 const notificationCache = new Map<string, number>();
 
+// 테스트용: 알림 캐시 초기화
+export function clearNotificationCache(): void {
+  notificationCache.clear();
+}
+
 const isDefaultMonthlyBudgetPayload = (data: CreateBudgetEventRequest) =>
   data.eventType === 'BUDGET_IN' &&
   data.authorName === BUDGET_EVENT_CONSTANTS.SYSTEM_AUTHOR &&
@@ -50,7 +55,7 @@ async function getLastResetSequence(): Promise<number> {
 /**
  * 월별 잔액 계산 (푸시 알림 임계값 체크용)
  */
-async function calculateMonthlyBalance(
+export async function calculateMonthlyBalance(
   year: number,
   month: number
 ): Promise<{
@@ -128,7 +133,7 @@ async function sendPushNotificationForEvent(
 /**
  * 예산 임계값 체크 (80%, 100%)
  */
-async function checkBudgetThreshold(year: number, month: number): Promise<void> {
+export async function checkBudgetThreshold(year: number, month: number): Promise<void> {
   const {
     totalBudget: _totalBudget,
     balance,
@@ -282,11 +287,16 @@ const toReceiptImageBuffer = (input?: unknown): PrismaBytes | null => {
   throw new Error('Unsupported receiptImage format. Provide a base64 string or binary data.');
 };
 
+export interface CreateEventOptions {
+  sendPushNotification?: boolean;
+}
+
 /**
  * 이벤트 생성 (Append-Only)
  */
 export async function createBudgetEvent(
-  data: CreateBudgetEventRequest
+  data: CreateBudgetEventRequest,
+  options: CreateEventOptions = {}
 ): Promise<BudgetEventResponse> {
   const eventDate = new Date(data.eventDate);
 
@@ -310,9 +320,11 @@ export async function createBudgetEvent(
     const eventResponse = toBudgetEventResponse(event);
 
     // 푸시 알림 전송 (비동기, 에러 무시)
-    sendPushNotificationForEvent(data, eventResponse).catch((error) => {
-      console.error('Failed to send push notification:', error);
-    });
+    if (options.sendPushNotification !== false) {
+      sendPushNotificationForEvent(data, eventResponse).catch((error) => {
+        console.error('Failed to send push notification:', error);
+      });
+    }
 
     return eventResponse;
   } catch (error) {
