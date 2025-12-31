@@ -30,13 +30,13 @@
 
 ### 테스트 도구
 
-| 영역 | 도구 | 용도 |
-|------|------|------|
-| Backend | Vitest + vitest-mock-extended | 단위 테스트, Prisma mock |
-| Frontend | Vitest + @testing-library/react | 단위 테스트, 훅 테스트 |
-| Frontend | fake-indexeddb | IndexedDB mock |
-| Frontend | axios-mock-adapter | API 호출 mock |
-| E2E | Playwright | 브라우저 자동화 테스트 |
+| 영역     | 도구                            | 용도                     |
+| -------- | ------------------------------- | ------------------------ |
+| Backend  | Vitest + vitest-mock-extended   | 단위 테스트, Prisma mock |
+| Frontend | Vitest + @testing-library/react | 단위 테스트, 훅 테스트   |
+| Frontend | fake-indexeddb                  | IndexedDB mock           |
+| Frontend | axios-mock-adapter              | API 호출 mock            |
+| E2E      | Playwright                      | 브라우저 자동화 테스트   |
 
 ---
 
@@ -52,20 +52,20 @@
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| `createBudgetEvent`: 이벤트 생성 | 기본적인 이벤트 생성 및 저장 |
+| 테스트 케이스                            | 검증 내용                             |
+| ---------------------------------------- | ------------------------------------- |
+| `createBudgetEvent`: 이벤트 생성         | 기본적인 이벤트 생성 및 저장          |
 | `createBudgetEvent`: Race Condition 처리 | 동시에 같은 월 예산 생성 시 중복 방지 |
-| `syncEvents`: sequence 기반 조회 | 특정 sequence 이후 이벤트만 반환 |
-| `syncEvents`: BUDGET_RESET 필터링 | 리셋 이벤트 이후 데이터만 반환 |
-| `syncEvents`: needsFullSync 플래그 | DB 비어있을 때 Full Sync 필요 표시 |
-| `calculateMonthlyBalance`: 예산 계산 | BUDGET_IN + EXPENSE 정확한 계산 |
-| `calculateMonthlyBalance`: 조정 반영 | BUDGET_ADJUSTMENT 증감 반영 |
-| `calculateMonthlyBalance`: 퍼센트 | spentPercentage 정확도 |
-| `checkBudgetThreshold`: 80% 경고 | 예산 80% 소진 시 알림 |
-| `checkBudgetThreshold`: 90% 위험 | 예산 90% 소진 시 알림 |
-| `checkBudgetThreshold`: 100% 초과 | 예산 초과(적자) 시 알림 |
-| `checkBudgetThreshold`: 중복 방지 | 같은 임계값 알림 재발송 방지 |
+| `syncEvents`: sequence 기반 조회         | 특정 sequence 이후 이벤트만 반환      |
+| `syncEvents`: BUDGET_RESET 필터링        | 리셋 이벤트 이후 데이터만 반환        |
+| `syncEvents`: needsFullSync 플래그       | DB 비어있을 때 Full Sync 필요 표시    |
+| `calculateMonthlyBalance`: 예산 계산     | BUDGET_IN + EXPENSE 정확한 계산       |
+| `calculateMonthlyBalance`: 조정 반영     | BUDGET_ADJUSTMENT 증감 반영           |
+| `calculateMonthlyBalance`: 퍼센트        | spentPercentage 정확도                |
+| `checkBudgetThreshold`: 80% 경고         | 예산 80% 소진 시 알림                 |
+| `checkBudgetThreshold`: 90% 위험         | 예산 90% 소진 시 알림                 |
+| `checkBudgetThreshold`: 100% 초과        | 예산 초과(적자) 시 알림               |
+| `checkBudgetThreshold`: 중복 방지        | 같은 임계값 알림 재발송 방지          |
 
 #### How (어떻게 테스트하는가?)
 
@@ -85,6 +85,7 @@ expect(prismaMock.budgetEvent.create).toHaveBeenCalledOnce();
 ```
 
 **핵심 테스트 패턴**:
+
 - `sendPushNotification: false` 옵션으로 푸시 알림 비활성화 (테스트 격리)
 - `clearNotificationCache()` 호출로 테스트 간 상태 초기화
 - Prisma 에러 시뮬레이션으로 Race Condition 테스트
@@ -101,15 +102,15 @@ expect(prismaMock.budgetEvent.create).toHaveBeenCalledOnce();
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| `getSetting`: 값 반환 | 저장된 설정 값 조회 |
-| `getSetting`: null 반환 | 존재하지 않는 키 처리 |
-| `setSetting`: upsert 동작 | 설정 생성/업데이트 |
-| `getAppSettings`: 기본값 | 설정 없을 때 기본값 반환 |
-| `getAppSettings`: 저장된 값 | 설정 있을 때 해당 값 반환 |
+| 테스트 케이스                             | 검증 내용                  |
+| ----------------------------------------- | -------------------------- |
+| `getSetting`: 값 반환                     | 저장된 설정 값 조회        |
+| `getSetting`: null 반환                   | 존재하지 않는 키 처리      |
+| `setSetting`: upsert 동작                 | 설정 생성/업데이트         |
+| `getAppSettings`: 기본값                  | 설정 없을 때 기본값 반환   |
+| `getAppSettings`: 저장된 값               | 설정 있을 때 해당 값 반환  |
 | `getAppSettings`: needsFullSync 자동 해제 | 이벤트 존재 시 플래그 리셋 |
-| `setInitialBudget`: 트랜잭션 | 초기/기본 예산 동시 설정 |
+| `setInitialBudget`: 트랜잭션              | 초기/기본 예산 동시 설정   |
 
 #### How (어떻게 테스트하는가?)
 
@@ -138,15 +139,15 @@ expect(result.defaultMonthlyBudget).toBe(300000);
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| `sendNotification`: 성공 | 정상 전송 시 success: true |
-| `sendNotification`: 404/410 | 무효 구독 → shouldRemove: true |
-| `sendNotification`: 401/403 | 인증 실패 → shouldRemove: true |
-| `sendNotification`: 429 | Rate limit → shouldRemove: false (재시도 가능) |
-| `sendToAll`: 모든 구독 전송 | 등록된 모든 구독에 전송 |
-| `sendToAll`: 무효 구독 삭제 | 전송 실패한 구독 자동 정리 |
-| `createOrUpdateSubscription`: Upsert | 구독 생성/업데이트 |
+| 테스트 케이스                        | 검증 내용                                      |
+| ------------------------------------ | ---------------------------------------------- |
+| `sendNotification`: 성공             | 정상 전송 시 success: true                     |
+| `sendNotification`: 404/410          | 무효 구독 → shouldRemove: true                 |
+| `sendNotification`: 401/403          | 인증 실패 → shouldRemove: true                 |
+| `sendNotification`: 429              | Rate limit → shouldRemove: false (재시도 가능) |
+| `sendToAll`: 모든 구독 전송          | 등록된 모든 구독에 전송                        |
+| `sendToAll`: 무효 구독 삭제          | 전송 실패한 구독 자동 정리                     |
+| `createOrUpdateSubscription`: Upsert | 구독 생성/업데이트                             |
 
 #### How (어떻게 테스트하는가?)
 
@@ -181,14 +182,14 @@ expect(result.shouldRemove).toBe(true);
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| BUDGET_RESET 필터링 | 리셋 이후 이벤트만 조회 |
-| BUDGET_RESET 음수 sequence | 로컬 리셋(음수)도 정상 처리 |
-| `calculateMonthlyBudget`: 이월 계산 | 이전 달 잔액 → 다음 달 이월 |
-| `calculateMonthlyBudget`: 복식부기 | BUDGET_IN + ADJUSTMENT - EXPENSE |
-| `createLocalEvent`: 음수 sequence | 로컬 이벤트는 음수 sequence 생성 |
-| `clearAll`: 데이터 초기화 | 모든 로컬 데이터 삭제 |
+| 테스트 케이스                       | 검증 내용                        |
+| ----------------------------------- | -------------------------------- |
+| BUDGET_RESET 필터링                 | 리셋 이후 이벤트만 조회          |
+| BUDGET_RESET 음수 sequence          | 로컬 리셋(음수)도 정상 처리      |
+| `calculateMonthlyBudget`: 이월 계산 | 이전 달 잔액 → 다음 달 이월      |
+| `calculateMonthlyBudget`: 복식부기  | BUDGET_IN + ADJUSTMENT - EXPENSE |
+| `createLocalEvent`: 음수 sequence   | 로컬 이벤트는 음수 sequence 생성 |
+| `clearAll`: 데이터 초기화           | 모든 로컬 데이터 삭제            |
 
 #### How (어떻게 테스트하는가?)
 
@@ -209,6 +210,7 @@ expect(result.previousBalance).toBe(250000);
 ```
 
 **핵심 포인트**:
+
 - `fake-indexeddb`로 실제 IndexedDB 동작 시뮬레이션
 - `createEvent` 헬퍼 함수로 테스트 데이터 생성 간소화
 
@@ -224,16 +226,16 @@ expect(result.previousBalance).toBe(250000);
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| BUDGET_RESET 이후 이벤트만 계산 | 리셋 이전 데이터 무시 |
-| 시간 기반 pending 필터링 | 리셋 이전 pending 삭제, 이후 유지 |
-| Sequence 재할당 (1개) | 서버 최신 + 1로 재할당 |
-| Sequence 재할당 (여러 개) | 순차적으로 +1, +2, +3... |
-| BUDGET_RESET + Sequence 재할당 | 복합 시나리오 |
-| 지수 백오프 | 재시도 간격: 1s, 2s, 4s... |
-| 5회 초과 재시도 | 최대 재시도 후 건너뛰기 |
-| 네트워크 에러 처리 | 에러 시 retryCount 증가 |
+| 테스트 케이스                   | 검증 내용                         |
+| ------------------------------- | --------------------------------- |
+| BUDGET_RESET 이후 이벤트만 계산 | 리셋 이전 데이터 무시             |
+| 시간 기반 pending 필터링        | 리셋 이전 pending 삭제, 이후 유지 |
+| Sequence 재할당 (1개)           | 서버 최신 + 1로 재할당            |
+| Sequence 재할당 (여러 개)       | 순차적으로 +1, +2, +3...          |
+| BUDGET_RESET + Sequence 재할당  | 복합 시나리오                     |
+| 지수 백오프                     | 재시도 간격: 1s, 2s, 4s...        |
+| 5회 초과 재시도                 | 최대 재시도 후 건너뛰기           |
+| 네트워크 에러 처리              | 에러 시 retryCount 증가           |
 
 #### How (어떻게 테스트하는가?)
 
@@ -272,15 +274,15 @@ expect(pending[0].tempSequence).toBe(101); // 재할당됨
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| `enqueue`: pending 생성 | 대기열에 이벤트 추가 |
-| `enqueue`: 음수 tempSequence | 로컬 식별자로 음수 사용 |
-| `enqueue`: createdAt 타임스탬프 | 생성 시간 기록 |
-| `getAll`: createdAt 순 정렬 | 오래된 것부터 처리 |
-| `getAll`: 동일 시간 시 tempSequence 역순 | 정렬 규칙 |
-| `updateStatus`: 상태 전이 | pending → syncing → failed |
-| `updateStatus`: lastError 설정 | 에러 메시지 저장 |
+| 테스트 케이스                            | 검증 내용                  |
+| ---------------------------------------- | -------------------------- |
+| `enqueue`: pending 생성                  | 대기열에 이벤트 추가       |
+| `enqueue`: 음수 tempSequence             | 로컬 식별자로 음수 사용    |
+| `enqueue`: createdAt 타임스탬프          | 생성 시간 기록             |
+| `getAll`: createdAt 순 정렬              | 오래된 것부터 처리         |
+| `getAll`: 동일 시간 시 tempSequence 역순 | 정렬 규칙                  |
+| `updateStatus`: 상태 전이                | pending → syncing → failed |
+| `updateStatus`: lastError 설정           | 에러 메시지 저장           |
 
 #### How (어떻게 테스트하는가?)
 
@@ -308,13 +310,13 @@ expect(updated?.lastError).toBe('Network error');
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| `ensureMonthlyBudget`: 초기 동기화 미완료 시 건너뜀 | 서버 연결 전 생성 방지 |
-| `ensureMonthlyBudget`: 이미 존재 시 false | 중복 생성 방지 |
-| `ensureMonthlyBudget`: 서버에서 가져와 생성 | defaultBudget 조회 후 생성 |
-| `ensureMonthlyBudget`: TaskMap 중복 방지 | 동시 호출 시 한 번만 실행 |
-| `getMonthlyBudget`: eventService 위임 | 계산 로직 위임 |
+| 테스트 케이스                                       | 검증 내용                  |
+| --------------------------------------------------- | -------------------------- |
+| `ensureMonthlyBudget`: 초기 동기화 미완료 시 건너뜀 | 서버 연결 전 생성 방지     |
+| `ensureMonthlyBudget`: 이미 존재 시 false           | 중복 생성 방지             |
+| `ensureMonthlyBudget`: 서버에서 가져와 생성         | defaultBudget 조회 후 생성 |
+| `ensureMonthlyBudget`: TaskMap 중복 방지            | 동시 호출 시 한 번만 실행  |
+| `getMonthlyBudget`: eventService 위임               | 계산 로직 위임             |
 
 #### How (어떻게 테스트하는가?)
 
@@ -346,14 +348,14 @@ expect(settingsApi.getDefaultMonthlyBudget).toHaveBeenCalledTimes(1);
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| `getExpensesByMonth`: EXPENSE만 필터링 | 다른 이벤트 타입 제외 |
-| `getExpensesByMonth`: REVERSAL 제외 | 삭제된 지출 목록에서 제외 |
-| `getExpensesByMonth`: eventDate 순 정렬 | 날짜순 정렬 |
-| `isExpenseDeleted`: REVERSAL 존재 시 true | 삭제 여부 확인 |
-| `isExpenseDeleted`: 미삭제 시 false | 활성 지출 확인 |
-| `getExpenseById`: 삭제된 지출 undefined | 삭제된 항목 조회 불가 |
+| 테스트 케이스                             | 검증 내용                 |
+| ----------------------------------------- | ------------------------- |
+| `getExpensesByMonth`: EXPENSE만 필터링    | 다른 이벤트 타입 제외     |
+| `getExpensesByMonth`: REVERSAL 제외       | 삭제된 지출 목록에서 제외 |
+| `getExpensesByMonth`: eventDate 순 정렬   | 날짜순 정렬               |
+| `isExpenseDeleted`: REVERSAL 존재 시 true | 삭제 여부 확인            |
+| `isExpenseDeleted`: 미삭제 시 false       | 활성 지출 확인            |
+| `getExpenseById`: 삭제된 지출 undefined   | 삭제된 항목 조회 불가     |
 
 #### How (어떻게 테스트하는가?)
 
@@ -366,7 +368,7 @@ await eventService.saveEvents([
 
 // 삭제된 지출은 목록에서 제외
 const expenses = await expenseService.getExpensesByMonth(2025, 1);
-expect(expenses.find(e => e.sequence === 1)).toBeUndefined();
+expect(expenses.find((e) => e.sequence === 1)).toBeUndefined();
 
 // isExpenseDeleted 검증
 expect(await expenseService.isExpenseDeleted(1)).toBe(true);
@@ -384,15 +386,15 @@ API 클라이언트는 서버와의 통신을 담당합니다. 요청 형식, �
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| `eventApi.sync`: since 파라미터 | 쿼리 파라미터 정확히 전달 |
-| `eventApi.sync`: 5초 타임아웃 | 타임아웃 설정 확인 |
-| `eventApi.sync`: needsFullSync 플래그 | 응답 플래그 반환 |
-| `eventApi.createEvent`: 성공 | 이벤트 생성 요청 |
-| `eventApi.createEvent`: 서버 에러 | 500 에러 처리 |
-| `settingsApi.get`: 설정 조회 | 앱 설정 반환 |
-| `settingsApi.setInitialBudget`: 초기 예산 | 요청 본문 검증 |
+| 테스트 케이스                             | 검증 내용                 |
+| ----------------------------------------- | ------------------------- |
+| `eventApi.sync`: since 파라미터           | 쿼리 파라미터 정확히 전달 |
+| `eventApi.sync`: 5초 타임아웃             | 타임아웃 설정 확인        |
+| `eventApi.sync`: needsFullSync 플래그     | 응답 플래그 반환          |
+| `eventApi.createEvent`: 성공              | 이벤트 생성 요청          |
+| `eventApi.createEvent`: 서버 에러         | 500 에러 처리             |
+| `settingsApi.get`: 설정 조회              | 앱 설정 반환              |
+| `settingsApi.setInitialBudget`: 초기 예산 | 요청 본문 검증            |
 
 #### How (어떻게 테스트하는가?)
 
@@ -424,11 +426,11 @@ expect(mock.history.get[0].url).toBe('/events/sync?since=100');
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| `useAdjustCurrentBudget`: 양수 조정 | BUDGET_ADJUSTMENT_INCREASE 생성 |
-| `useAdjustCurrentBudget`: 음수 조정 | BUDGET_ADJUSTMENT_DECREASE 생성 |
-| `useAdjustCurrentBudget`: 동기화 실패 시 | 로컬 이벤트 유지 |
+| 테스트 케이스                            | 검증 내용                       |
+| ---------------------------------------- | ------------------------------- |
+| `useAdjustCurrentBudget`: 양수 조정      | BUDGET_ADJUSTMENT_INCREASE 생성 |
+| `useAdjustCurrentBudget`: 음수 조정      | BUDGET_ADJUSTMENT_DECREASE 생성 |
+| `useAdjustCurrentBudget`: 동기화 실패 시 | 로컬 이벤트 유지                |
 
 #### How (어떻게 테스트하는가?)
 
@@ -471,14 +473,14 @@ expect(eventService.createLocalEvent).toHaveBeenCalledWith(
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 케이스 | 검증 내용 |
-|--------------|----------|
-| `useCreateExpense`: 지출 생성 | EXPENSE 이벤트 생성 |
-| `useCreateExpense`: 음수 sequence | 로컬 이벤트 식별자 |
-| `useDeleteExpense`: REVERSAL 생성 | EXPENSE_REVERSAL 이벤트 |
-| `useDeleteExpense`: referenceSequence | 원본 지출 참조 |
-| `useDeleteExpense`: 지출 없음 에러 | 존재하지 않는 지출 |
-| `useDeleteExpense`: 이미 삭제됨 에러 | 중복 삭제 방지 |
+| 테스트 케이스                         | 검증 내용               |
+| ------------------------------------- | ----------------------- |
+| `useCreateExpense`: 지출 생성         | EXPENSE 이벤트 생성     |
+| `useCreateExpense`: 음수 sequence     | 로컬 이벤트 식별자      |
+| `useDeleteExpense`: REVERSAL 생성     | EXPENSE_REVERSAL 이벤트 |
+| `useDeleteExpense`: referenceSequence | 원본 지출 참조          |
+| `useDeleteExpense`: 지출 없음 에러    | 존재하지 않는 지출      |
+| `useDeleteExpense`: 이미 삭제됨 에러  | 중복 삭제 방지          |
 
 #### How (어떻게 테스트하는가?)
 
@@ -517,11 +519,11 @@ expect(eventService.createLocalEvent).toHaveBeenCalledWith(
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 시나리오 | 검증 내용 |
-|----------------|----------|
-| 영수증 없이 직접 입력 | 폼 입력 → 저장 → 목록 표시 |
-| 지출 목록 표시 | 예산 정보 및 지출 목록 UI |
-| 지출 삭제 | 삭제 버튼 → 확인 → 목록에서 제거 |
+| 테스트 시나리오       | 검증 내용                        |
+| --------------------- | -------------------------------- |
+| 영수증 없이 직접 입력 | 폼 입력 → 저장 → 목록 표시       |
+| 지출 목록 표시        | 예산 정보 및 지출 목록 UI        |
+| 지출 삭제             | 삭제 버튼 → 확인 → 목록에서 제거 |
 
 #### How (어떻게 테스트하는가?)
 
@@ -533,14 +535,14 @@ test('영수증 없이 직접 입력', async ({ page }) => {
 
   // 지출 등록 페이지
   await page.goto('/expense/new');
-  
+
   // 폼 입력
   await page.getByLabel(/이름/).fill('테스트유저');
   await page.getByLabel(/금액/).fill('50000');
-  
+
   // 저장
   await page.getByRole('button', { name: /저장/ }).click();
-  
+
   // 결과 확인
   await expect(page).toHaveURL(/\/$|\/expense/);
 });
@@ -558,12 +560,12 @@ test('영수증 없이 직접 입력', async ({ page }) => {
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 시나리오 | 검증 내용 |
-|----------------|----------|
-| 현재 월 예산 표시 | 예산 금액 UI 표시 |
-| 지출 후 잔액 감소 | 300,000 - 50,000 = 250,000 |
-| 예산 조정 (증가) | BUDGET_ADJUSTMENT_INCREASE 반영 |
-| 예산 조정 (감소) | BUDGET_ADJUSTMENT_DECREASE 반영 |
+| 테스트 시나리오   | 검증 내용                       |
+| ----------------- | ------------------------------- |
+| 현재 월 예산 표시 | 예산 금액 UI 표시               |
+| 지출 후 잔액 감소 | 300,000 - 50,000 = 250,000      |
+| 예산 조정 (증가)  | BUDGET_ADJUSTMENT_INCREASE 반영 |
+| 예산 조정 (감소)  | BUDGET_ADJUSTMENT_DECREASE 반영 |
 
 ---
 
@@ -577,11 +579,11 @@ test('영수증 없이 직접 입력', async ({ page }) => {
 
 #### What (무엇을 테스트하는가?)
 
-| 테스트 시나리오 | 검증 내용 |
-|----------------|----------|
+| 테스트 시나리오                    | 검증 내용                           |
+| ---------------------------------- | ----------------------------------- |
 | 오프라인 지출 등록 → 온라인 동기화 | 오프라인 저장 → 복귀 후 서버 동기화 |
-| 동기화 상태 표시 | 동기화 인디케이터 UI |
-| 네트워크 복구 후 pending 동기화 | 여러 pending 이벤트 일괄 동기화 |
+| 동기화 상태 표시                   | 동기화 인디케이터 UI                |
+| 네트워크 복구 후 pending 동기화    | 여러 pending 이벤트 일괄 동기화     |
 
 #### How (어떻게 테스트하는가?)
 
@@ -589,18 +591,18 @@ test('영수증 없이 직접 입력', async ({ page }) => {
 test('오프라인 지출 등록', async ({ page, context }) => {
   // 오프라인 전환
   await context.setOffline(true);
-  
+
   // 지출 등록 (로컬 저장)
   await page.goto('/expense/new');
   await page.getByLabel(/금액/).fill('50000');
   await page.getByRole('button', { name: /저장/ }).click();
-  
+
   // 온라인 복귀
   await context.setOffline(false);
-  
+
   // 동기화 대기
   await page.waitForTimeout(3000);
-  
+
   // 데이터 유지 확인
   await page.reload();
   await expect(page.getByText(/50,000/)).toBeVisible();
@@ -654,8 +656,8 @@ pnpm test:e2e:report    # 리포트 보기
 
 ```typescript
 beforeEach(async () => {
-  vi.clearAllMocks();      // Mock 초기화
-  await db.delete();        // DB 초기화
+  vi.clearAllMocks(); // Mock 초기화
+  await db.delete(); // DB 초기화
   await db.open();
 });
 ```
@@ -676,10 +678,10 @@ it('should return shouldRemove: true on 404 status code', ...);
 it('should calculate balance correctly', async () => {
   // Arrange (준비)
   await eventService.saveEvents([...]);
-  
+
   // Act (실행)
   const result = await eventService.calculateMonthlyBudget(2025, 1);
-  
+
   // Assert (검증)
   expect(result.balance).toBe(250000);
 });

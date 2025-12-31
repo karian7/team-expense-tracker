@@ -92,9 +92,7 @@ describe('settingsService', () => {
         .mockResolvedValueOnce(createSettingsMock('initial_budget', '500000'))
         .mockResolvedValueOnce(createSettingsMock('needsFullSync', 'true'));
       prismaMock.budgetEvent.count.mockResolvedValue(5);
-      prismaMock.settings.upsert.mockResolvedValue(
-        createSettingsMock('needsFullSync', 'false')
-      );
+      prismaMock.settings.upsert.mockResolvedValue(createSettingsMock('needsFullSync', 'false'));
 
       const result = await getAppSettings();
 
@@ -113,9 +111,7 @@ describe('settingsService', () => {
       const mockTransaction = vi.fn().mockImplementation(async (callback) => {
         const tx = {
           settings: {
-            upsert: vi.fn().mockResolvedValue(
-              createSettingsMock('test', '300000')
-            ),
+            upsert: vi.fn().mockResolvedValue(createSettingsMock('test', '300000')),
           },
         };
         return callback(tx);

@@ -244,7 +244,7 @@ pnpm build
 2월: BUDGET_IN(300,000) + 이월(250,000) = 총 550,000
 ↑ 이월은 1월 잔액을 재계산한 값 (이벤트 아님!)
 
-````
+```
 
 **상세 문서**: `docs/DOUBLE_ENTRY_ACCOUNTING.md`
 
@@ -265,7 +265,7 @@ try {
   // 이미 생성됨 → 무시
 }
 return calculateMonthlyBudget(year, month);
-````
+```
 
 **상세**: `docs/RACE_CONDITION_PREVENTION.md`
 

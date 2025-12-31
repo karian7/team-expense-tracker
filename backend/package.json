@@ -1,5 +1,5 @@
 {
-  "name": "team-expense-tracker-backend",
+  "name": "backend",
   "version": "1.0.0",
   "type": "module",
   "description": "Team meal expense tracker backend API",
@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsup",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:watch": "vitest",

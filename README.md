@@ -178,8 +178,8 @@ docker-compose up --build
 
 ### 로컬 SQLite 초기화 플로우
 
-1. `pnpm db:reset` (또는 `pnpm --filter team-expense-tracker-backend exec prisma migrate reset --force`)
-2. 손상 시 `rm backend/prisma/dev.db` 후 `pnpm --filter team-expense-tracker-backend exec prisma migrate deploy`
+1. `pnpm db:reset` (또는 `pnpm --filter backend exec prisma migrate reset --force`)
+2. 손상 시 `rm backend/prisma/dev.db` 후 `pnpm --filter backend exec prisma migrate deploy`
 3. UI 또는 `POST /api/settings/initial-budget` 로 초기 예산 재설정
 
 ## 테스트 & QA
