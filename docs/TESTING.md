@@ -7,8 +7,6 @@
 - [테스트 전략](#테스트-전략)
 - [Backend 테스트](#backend-테스트)
 - [Frontend 테스트](#frontend-테스트)
-- [E2E 테스트](#e2e-테스트)
-- [테스트 실행 방법](#테스트-실행-방법)
 
 ---
 
@@ -18,14 +16,13 @@
 
 ```
         /\
-       /  \     E2E 테스트 (3개 시나리오)
-      /----\    - 실제 브라우저에서 전체 플로우 검증
+       /  \    통합 테스트 (서비스 레벨)
+      /----\   - API, 훅, 서비스 간 상호작용
      /      \
-    /--------\  통합 테스트 (서비스 레벨)
-   /          \ - API, 훅, 서비스 간 상호작용
-  /------------\
- /   단위 테스트  \ - 개별 함수/모듈의 로직 검증
-/________________\
+    /--------\
+   /          \  단위 테스트
+  /------------\ - 개별 함수/모듈의 로직 검증
+ /______________\
 ```
 
 ### 테스트 도구
@@ -36,7 +33,6 @@
 | Frontend | Vitest + @testing-library/react | 단위 테스트, 훅 테스트   |
 | Frontend | fake-indexeddb                  | IndexedDB mock           |
 | Frontend | axios-mock-adapter              | API 호출 mock            |
-| E2E      | Playwright                      | 브라우저 자동화 테스트   |
 
 ---
 
@@ -507,110 +503,6 @@ expect(eventService.createLocalEvent).toHaveBeenCalledWith(
 
 ---
 
-## E2E 테스트
-
-### 1. expense-flow.spec.ts
-
-**파일 위치**: `e2e/tests/expense-flow.spec.ts`
-
-#### Why (왜 테스트하는가?)
-
-실제 사용자 시나리오를 검증합니다. 지출 등록부터 삭제까지 전체 플로우가 정상 동작해야 합니다.
-
-#### What (무엇을 테스트하는가?)
-
-| 테스트 시나리오       | 검증 내용                        |
-| --------------------- | -------------------------------- |
-| 영수증 없이 직접 입력 | 폼 입력 → 저장 → 목록 표시       |
-| 지출 목록 표시        | 예산 정보 및 지출 목록 UI        |
-| 지출 삭제             | 삭제 버튼 → 확인 → 목록에서 제거 |
-
-#### How (어떻게 테스트하는가?)
-
-```typescript
-test('영수증 없이 직접 입력', async ({ page }) => {
-  // DB 초기화
-  await resetDatabase();
-  await seedInitialBudget(300000);
-
-  // 지출 등록 페이지
-  await page.goto('/expense/new');
-
-  // 폼 입력
-  await page.getByLabel(/이름/).fill('테스트유저');
-  await page.getByLabel(/금액/).fill('50000');
-
-  // 저장
-  await page.getByRole('button', { name: /저장/ }).click();
-
-  // 결과 확인
-  await expect(page).toHaveURL(/\/$|\/expense/);
-});
-```
-
----
-
-### 2. budget-view.spec.ts
-
-**파일 위치**: `e2e/tests/budget-view.spec.ts`
-
-#### Why (왜 테스트하는가?)
-
-예산 표시와 조정 기능을 검증합니다. 복식부기 원칙이 UI에 정확히 반영되어야 합니다.
-
-#### What (무엇을 테스트하는가?)
-
-| 테스트 시나리오   | 검증 내용                       |
-| ----------------- | ------------------------------- |
-| 현재 월 예산 표시 | 예산 금액 UI 표시               |
-| 지출 후 잔액 감소 | 300,000 - 50,000 = 250,000      |
-| 예산 조정 (증가)  | BUDGET_ADJUSTMENT_INCREASE 반영 |
-| 예산 조정 (감소)  | BUDGET_ADJUSTMENT_DECREASE 반영 |
-
----
-
-### 3. offline-sync.spec.ts
-
-**파일 위치**: `e2e/tests/offline-sync.spec.ts`
-
-#### Why (왜 테스트하는가?)
-
-로컬 퍼스트 아키텍처의 핵심 기능입니다. 오프라인에서도 작동하고, 온라인 복귀 시 동기화되어야 합니다.
-
-#### What (무엇을 테스트하는가?)
-
-| 테스트 시나리오                    | 검증 내용                           |
-| ---------------------------------- | ----------------------------------- |
-| 오프라인 지출 등록 → 온라인 동기화 | 오프라인 저장 → 복귀 후 서버 동기화 |
-| 동기화 상태 표시                   | 동기화 인디케이터 UI                |
-| 네트워크 복구 후 pending 동기화    | 여러 pending 이벤트 일괄 동기화     |
-
-#### How (어떻게 테스트하는가?)
-
-```typescript
-test('오프라인 지출 등록', async ({ page, context }) => {
-  // 오프라인 전환
-  await context.setOffline(true);
-
-  // 지출 등록 (로컬 저장)
-  await page.goto('/expense/new');
-  await page.getByLabel(/금액/).fill('50000');
-  await page.getByRole('button', { name: /저장/ }).click();
-
-  // 온라인 복귀
-  await context.setOffline(false);
-
-  // 동기화 대기
-  await page.waitForTimeout(3000);
-
-  // 데이터 유지 확인
-  await page.reload();
-  await expect(page.getByText(/50,000/)).toBeVisible();
-});
-```
-
----
-
 ## 테스트 실행 방법
 
 ### Backend 테스트
@@ -629,16 +521,6 @@ cd frontend
 pnpm test           # 테스트 실행
 pnpm test:watch     # 감시 모드
 pnpm test:ui        # Vitest UI
-```
-
-### E2E 테스트
-
-```bash
-# 프로젝트 루트에서
-pnpm test:e2e           # E2E 실행
-pnpm test:e2e:ui        # Playwright UI
-pnpm test:e2e:headed    # 브라우저 표시
-pnpm test:e2e:report    # 리포트 보기
 ```
 
 ### 전체 테스트 (CI)
@@ -701,6 +583,5 @@ it('should calculate balance correctly', async () => {
 
 - [Vitest 공식 문서](https://vitest.dev/)
 - [Testing Library 공식 문서](https://testing-library.com/)
-- [Playwright 공식 문서](https://playwright.dev/)
 - [복식부기 원칙](./DOUBLE_ENTRY_ACCOUNTING.md)
 - [Race Condition 방지](./RACE_CONDITION_PREVENTION.md)

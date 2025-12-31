@@ -9,7 +9,7 @@
 - **로컬 퍼스트 UX**: Dexie 기반 IndexedDB, pending 이벤트 큐, 서비스 워커 캐시로 오프라인에서도 즉시 작성 및 동기화 재시도 지원
 - **이미지 BLOB 저장**: HEIC/JPEG → 480px 리사이즈 후 base64(BLOB)로 SQLite에 저장해 파일 시스템 의존 제거 및 백업 단순화
 - **PWA + Web Push**: `/sw.js` 서비스 워커, VAPID 기반 푸시 알림, 캐시 전략, 오프라인 라우팅 지원
-- **DevOps 친화성**: Docker Compose, Makefile 기반 S3 + CloudFront + PM2 배포, Playwright/Vitest 테스트 및 상세 TEST_CASES 문서 제공
+- **DevOps 친화성**: Docker Compose, Makefile 기반 S3 + CloudFront + PM2 배포, Vitest 테스트 및 상세 TEST_CASES 문서 제공
 
 ## 기술 스택
 
@@ -29,7 +29,7 @@
 ### 공통 & 인프라
 
 - pnpm 10.x 스크립트, Docker Compose, Makefile 배포 플로우
-- Playwright 1.57 E2E (`playwright.config.ts`), ESLint/Prettier/Format 스크립트, 독립형 CI 대응
+- ESLint/Prettier/Format 스크립트, 독립형 CI 대응
 - Docs: `docs/*.md`
 
 ## 아키텍처 개요
@@ -92,7 +92,6 @@ team-expense-tracker/
 ├── docs/                    # 아키텍처/운영 문서
 ├── docker-compose.yml       # 백/프론트 동시 실행 (개발/테스트)
 ├── Makefile                 # 빌드·배포·서버 제어 명령어
-├── playwright.config.ts     # Playwright 테스트 설정
 └── README.md
 ```
 
@@ -100,7 +99,7 @@ team-expense-tracker/
 
 ### 요구사항
 
-- Node.js 20+ / pnpm 10+ (루트·frontend·backend 각각 설치 필요)
+- Node.js 20+ / pnpm 10+
 - SQLite (better-sqlite3에 포함) 및 libvips(Sharp 변환용) 설치
 - Docker & Docker Compose (선택)
 - OCR 자격 증명: OpenAI API Key 또는 Google 서비스 계정 JSON
@@ -116,7 +115,7 @@ cd team-expense-tracker
 ### 2. 의존성 설치
 
 ```bash
-pnpm install                # 루트 dev 스크립트/Playwright 등
+pnpm install                # 루트 dev 스크립트
 pnpm --dir backend install  # 백엔드 전용
 pnpm --dir frontend install # 프론트엔드 전용
 ```
@@ -184,15 +183,12 @@ docker-compose up --build
 
 ## 테스트 & QA
 
-| 범위                 | 명령어                              | 비고                                             |
-| -------------------- | ----------------------------------- | ------------------------------------------------ |
-| Frontend 단위 테스트 | `cd frontend && pnpm test`          | Vitest + jsdom                                   |
-| Frontend TDD         | `pnpm test:watch`, `pnpm test:ui`   | 실시간/브라우저 UI                               |
-| End-to-End           | `pnpm test:e2e`                     | `playwright.config.ts` 가 서버 두 개를 자동 기동 |
-| E2E UI 모드          | `pnpm test:e2e:ui`                  | 시나리오 디버깅                                  |
-| E2E 리포트           | `pnpm test:e2e:report`              | `playwright-report/index.html` 생성              |
-| 린트                 | `pnpm lint`                         | 프론트/백엔드 동시 검증                          |
-| 포맷                 | `pnpm format` / `pnpm format:check` | Prettier 3                                       |
+| 범위                 | 명령어                              | 비고                    |
+| -------------------- | ----------------------------------- | ----------------------- |
+| Frontend 단위 테스트 | `cd frontend && pnpm test`          | Vitest + jsdom          |
+| Frontend TDD         | `pnpm test:watch`, `pnpm test:ui`   | 실시간/브라우저 UI      |
+| 린트                 | `pnpm lint`                         | 프론트/백엔드 동시 검증 |
+| 포맷                 | `pnpm format` / `pnpm format:check` | Prettier 3              |
 
 ## 배포
 
