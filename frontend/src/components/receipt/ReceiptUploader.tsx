@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useUploadReceipt } from '../../hooks/useReceipt';
 import { receiptStorageService } from '../../services/local/receiptStorageService';
 import type { ReceiptUploadResponse } from '../../types';
+import OcrLoadingOverlay from './OcrLoadingOverlay';
 
 interface ReceiptUploaderProps {
   onUploadSuccess: (result: ReceiptUploadResponse) => void;
@@ -238,12 +239,7 @@ export default function ReceiptUploader({ onUploadSuccess, onUploadError }: Rece
         <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
           <img src={preview} alt="Receipt preview" className="w-full h-64 object-contain" />
 
-          {uploadMutation.isPending && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mb-3"></div>
-              <p className="text-primary-600 font-medium">AI가 영수증을 분석하고 있습니다...</p>
-            </div>
-          )}
+          {uploadMutation.isPending && <OcrLoadingOverlay isVisible />}
 
           {!uploadMutation.isPending && (
             <button

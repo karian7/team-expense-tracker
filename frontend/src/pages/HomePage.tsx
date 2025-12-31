@@ -7,6 +7,7 @@ import SettingsPage from './SettingsPage';
 import MonthlyReportPage from './MonthlyReportPage';
 import HelpPage from './HelpPage';
 import SyncStatusIndicator from '../components/sync/SyncStatusIndicator';
+import OcrLoadingOverlay from '../components/receipt/OcrLoadingOverlay';
 import type { ReceiptUploadResponse } from '../types';
 import { useUploadReceipt } from '../hooks/useReceipt';
 import { eventService } from '../services/local/eventService';
@@ -497,13 +498,7 @@ export default function HomePage() {
                   />
                 )}
 
-                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-primary-600 mb-4"></div>
-                  <p className="text-primary-700 font-bold text-lg animate-pulse">
-                    AI가 영수증을 분석하고 있습니다
-                  </p>
-                  <p className="text-gray-500 text-sm mt-2">잠시만 기다려주세요...</p>
-                </div>
+                <OcrLoadingOverlay isVisible />
               </div>
             </div>
           )}
