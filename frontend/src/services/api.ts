@@ -20,7 +20,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 5000, // 5초 타임아웃 (서버 다운 시 무한 대기 방지)
+  timeout: 10000, // 10초 타임아웃 (Lambda cold start 대비)
 });
 
 // Export for testing

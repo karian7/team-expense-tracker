@@ -8,6 +8,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **📚 상세 정보**: [README.md](README.md), [OCR 설정](docs/OCR_CONFIGURATION.md)
 
+**인프라 아키텍처**:
+
+```
+Frontend (S3+CloudFront) → API Gateway (HTTP API) → Lambda (Docker) → Supabase (PostgreSQL)
+```
+
 ## Essential Commands
 
 ```bash
@@ -23,6 +29,10 @@ cd backend
 npx prisma migrate dev           # 마이그레이션
 npx prisma studio                # GUI
 npx prisma generate              # Client 재생성
+
+# 배포
+make deploy-backend              # SAM build + deploy (Lambda)
+make deploy-frontend             # S3 + CloudFront
 
 # VAPID 키 생성 (Push Notification)
 cd backend
@@ -126,8 +136,9 @@ convertDecimalsToNumbers(budget);
 ## Environment Variables
 
 ```bash
-# Backend 필수
-DATABASE_URL="file:./dev.db"
+# Backend 필수 (Supabase PostgreSQL)
+DATABASE_URL="postgresql://postgres.[ref]:[pw]@pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://postgres.[ref]:[pw]@pooler.supabase.com:5432/postgres"
 OCR_PROVIDER=openai
 OPENAI_API_KEY=sk-proj-xxxxx
 
@@ -137,7 +148,7 @@ VAPID_PRIVATE_KEY=<base64>
 VAPID_EMAIL=mailto:ops@example.com
 
 # Frontend
-VITE_API_URL=http://localhost:3001
+VITE_API_URL=https://{api-id}.execute-api.ap-northeast-2.amazonaws.com
 VITE_PUSH_PUBLIC_KEY=<동일한 VAPID Public Key>
 ```
 
@@ -207,10 +218,16 @@ pnpm build
 
 ## Key Files
 
+- `backend/src/app.ts` - Express 앱 정의 (Lambda/로컬 공유)
+- `backend/src/server.ts` - 로컬 개발 서버 진입점
+- `backend/src/lambda.ts` - Lambda 핸들러 진입점
 - `backend/src/services/budgetEventService.ts` - 이벤트 처리 로직
 - `backend/src/services/pushService.ts` - 푸시 알림 전송
 - `backend/src/services/ocr/OcrProviderFactory.ts` - OCR 프로바이더 선택
 - `backend/prisma/schema.prisma` - 데이터베이스 스키마 (BudgetEvent, Settings, PushSubscription)
+- `backend/prisma.config.ts` - Prisma 설정 (DB 연결 URL)
+- `backend/template.yaml` - AWS SAM 템플릿
+- `backend/Dockerfile.lambda` - Lambda Docker 이미지
 - `frontend/src/hooks/` - React Query 기반 API 훅
 - `frontend/src/services/pushNotificationService.ts` - 푸시 구독 관리
 - `frontend/public/sw.js` - PWA 서비스 워커

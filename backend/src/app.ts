@@ -1,0 +1,91 @@
+import express, { type Express, type Request, type Response } from 'express';
+import cors from 'cors';
+import receiptRoutes from './routes/receiptRoutes';
+import settingsRoutes from './routes/settingsRoutes';
+import eventRoutes from './routes/eventRoutes';
+import pushRoutes from './routes/pushRoutes';
+import { errorHandler } from './middleware/errorHandler';
+
+const app: Express = express();
+const parseOrigins = (raw: string | undefined): string[] =>
+  raw
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean) ?? [];
+
+const defaultOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://kit.dev.9rum.cc:5173',
+  'https://kit.dev.9rum.cc',
+  'http://kit.dev.9rum.cc',
+];
+
+const allowedOrigins = [
+  ...new Set([...parseOrigins(process.env.ALLOWED_ORIGINS), ...defaultOrigins]),
+];
+
+const jsonBodyLimit = process.env.JSON_BODY_LIMIT ?? '15mb';
+const urlEncodedBodyLimit = process.env.URLENCODED_BODY_LIMIT ?? jsonBodyLimit;
+
+const isOriginAllowed = (origin: string): boolean => {
+  const normalized = origin.replace(/\/$/, '');
+  const withoutPort = normalized.replace(/:\d+$/, '');
+
+  return allowedOrigins.some((allowed) => {
+    const allowedNormalized = allowed.replace(/\/$/, '');
+    const allowedWithoutPort = allowedNormalized.replace(/:\d+$/, '');
+    return (
+      allowedNormalized === normalized ||
+      allowedWithoutPort === normalized ||
+      allowedNormalized === withoutPort ||
+      allowedWithoutPort === withoutPort
+    );
+  });
+};
+
+// Middleware
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Not allowed by CORS: ${origin}`));
+      }
+    },
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: jsonBodyLimit }));
+app.use(express.urlencoded({ extended: true, limit: urlEncodedBodyLimit }));
+
+// Health check
+app.get('/api/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// API Routes
+app.use('/api/events', eventRoutes);
+app.use('/api/receipts', receiptRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/push', pushRoutes);
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found',
+  });
+});
+
+// Error handler
+app.use(errorHandler);
+
+export default app;

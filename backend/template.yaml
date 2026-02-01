@@ -1,0 +1,106 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Team Expense Tracker - Lambda Backend
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 512
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      AllowHeaders: "'Content-Type,Authorization'"
+      AllowOrigin: "'*'"
+
+Parameters:
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+  DirectUrl:
+    Type: String
+    NoEcho: true
+  OcrProvider:
+    Type: String
+    Default: openai
+  OpenaiApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+  VapidPublicKey:
+    Type: String
+    Default: ''
+  VapidPrivateKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+  VapidEmail:
+    Type: String
+    Default: 'mailto:ops@example.com'
+  AllowedOrigins:
+    Type: String
+    Default: 'https://kit.dev.9rum.cc'
+
+Resources:
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          NODE_ENV: production
+          DATABASE_URL: !Ref DatabaseUrl
+          DIRECT_URL: !Ref DirectUrl
+          OCR_PROVIDER: !Ref OcrProvider
+          OPENAI_API_KEY: !Ref OpenaiApiKey
+          VAPID_PUBLIC_KEY: !Ref VapidPublicKey
+          VAPID_PRIVATE_KEY: !Ref VapidPrivateKey
+          VAPID_EMAIL: !Ref VapidEmail
+          ALLOWED_ORIGINS: !Ref AllowedOrigins
+          JSON_BODY_LIMIT: '15mb'
+      Events:
+        ProxyApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: ANY
+        RootApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /
+            Method: ANY
+    Metadata:
+      Dockerfile: Dockerfile.lambda
+      DockerContext: .
+      DockerTag: latest
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      CorsConfiguration:
+        AllowOrigins:
+          - 'https://kit.dev.9rum.cc'
+          - 'http://localhost:5173'
+          - 'http://localhost:3000'
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowCredentials: true
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+  FunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt ApiFunction.Arn

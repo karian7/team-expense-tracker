@@ -1,0 +1,12 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "team-expense-tracker"
+resolve_s3 = true
+resolve_image_repos = true
+capabilities = "CAPABILITY_IAM"
+region = "ap-northeast-2"
+confirm_changeset = true
+
+[default.build.parameters]
+use_container = false

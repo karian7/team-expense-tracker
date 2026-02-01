@@ -34,10 +34,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@codegenie/serverless-express": "^4.16.0",
     "@google-cloud/vision": "^5.3.4",
-    "@prisma/adapter-better-sqlite3": "^7.1.0",
+    "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.1.0",
-    "better-sqlite3": "^12.5.0",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "decimal.js": "^10.4.3",
@@ -71,5 +71,12 @@
     "typescript-eslint": "^8.49.0",
     "vitest": "^4.0.16",
     "vitest-mock-extended": "^3.1.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp",
+      "prisma",
+      "@prisma/engines"
+    ]
   }
 }

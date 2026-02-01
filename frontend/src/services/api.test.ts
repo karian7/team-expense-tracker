@@ -30,8 +30,8 @@ describe('API Client', () => {
       expect(mock.history.get[0].url).toBe('/events/sync?since=100');
     });
 
-    it('should have 5 second timeout', () => {
-      expect(apiClient.defaults.timeout).toBe(5000);
+    it('should have 10 second timeout', () => {
+      expect(apiClient.defaults.timeout).toBe(10000);
     });
 
     it('should return needsFullSync flag', async () => {

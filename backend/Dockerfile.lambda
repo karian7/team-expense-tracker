@@ -1,0 +1,23 @@
+FROM public.ecr.aws/lambda/nodejs:20
+
+# sharp, heic-convert 네이티브 바이너리 빌드 의존성
+RUN dnf install -y gcc-c++ make python3
+
+# pnpm 설치
+RUN npm install -g pnpm
+
+# 전체 의존성 설치 (prisma CLI가 devDependencies에 있어 generate에 필요)
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# Prisma 클라이언트 생성
+COPY prisma/ ./prisma/
+RUN pnpm prisma:generate
+
+# dev 의존성 제거하여 이미지 경량화
+RUN pnpm prune --prod
+
+# 빌드된 Lambda 핸들러 복사
+COPY dist/lambda.js dist/lambda.js.map ./dist/
+
+CMD ["dist/lambda.handler"]
