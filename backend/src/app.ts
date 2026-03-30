@@ -19,6 +19,7 @@ const defaultOrigins = [
   'http://kit.dev.9rum.cc:5173',
   'https://kit.dev.9rum.cc',
   'http://kit.dev.9rum.cc',
+  'https://team-expenses.koasu.kim',
 ];
 
 const allowedOrigins = [
