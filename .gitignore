@@ -55,3 +55,9 @@ Thumbs.db
 # Misc
 .cache/
 *.tsbuildinfo
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate*
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars

@@ -1,0 +1,47 @@
+# AWS Region
+region       = "ap-northeast-2"
+project_name = "team-expense-tracker"
+
+# S3 Frontend
+s3_bucket_name = "team-expense-tracker-fe"
+
+# CloudFront
+domain_name          = "team-expenses.koasu.kim"
+acm_certificate_domain = "*.koasu.kim"
+
+# Lambda (SAM-generated names - change only if recreating)
+lambda_function_name = "team-expense-tracker-ApiFunction-kfud5RBOQhBP"
+lambda_image_tag     = "latest"
+lambda_memory_size   = 512
+lambda_timeout       = 60
+
+# ECR (SAM-generated name)
+ecr_repository_name = "teamexpensetrackerc8d13315/apifunction51503098repo"
+
+# IAM (SAM-generated name)
+iam_role_name = "team-expense-tracker-ApiFunctionRole-oYyTu5DtkvnS"
+
+# Database (Supabase PostgreSQL) - SENSITIVE
+database_url = "postgresql://postgres.[ref]:[password]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+direct_url   = "postgresql://postgres.[ref]:[password]@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres"
+
+# OCR
+ocr_provider   = "openai"
+openai_api_key = "sk-proj-xxxxx"
+
+# Push Notification (VAPID)
+vapid_public_key  = "BASE64_VAPID_PUBLIC_KEY"
+vapid_private_key = "BASE64_VAPID_PRIVATE_KEY"
+vapid_email       = "mailto:ops@example.com"
+
+# CORS
+allowed_origins = "https://kit.dev.9rum.cc"
+cors_allowed_origins = [
+  "https://kit.dev.9rum.cc",
+  "https://team-expenses.koasu.kim",
+  "http://localhost:5173",
+  "http://localhost:3000",
+]
+
+# Lambda
+json_body_limit = "15mb"
