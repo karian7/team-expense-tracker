@@ -185,9 +185,9 @@ type PrismaBytes = Uint8Array<ArrayBuffer>;
 const toBudgetEventResponse = (event: unknown): BudgetEventResponse => {
   const rawEvent = event as Record<string, unknown>;
 
-  // Buffer를 base64로 변환
-  if (rawEvent.receiptImage && Buffer.isBuffer(rawEvent.receiptImage)) {
-    rawEvent.receiptImage = rawEvent.receiptImage.toString('base64');
+  // Buffer 또는 Uint8Array를 base64로 변환 (PrismaPg 어댑터는 Uint8Array 반환)
+  if (rawEvent.receiptImage instanceof Uint8Array) {
+    rawEvent.receiptImage = Buffer.from(rawEvent.receiptImage).toString('base64');
   }
 
   return convertDecimalsToNumbers(rawEvent) as unknown as BudgetEventResponse;
